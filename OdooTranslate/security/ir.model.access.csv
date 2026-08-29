@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_dynamic_translatable_field_config,dynamic.translatable.field.config,model_dynamic_translatable_field_config,base.group_system,1,1,1,1
+access_dynamic_translation,dynamic.translation,model_dynamic_translation,base.group_system,1,1,1,1
+access_odoo_translate_config,odoo_translate.config,model_odoo_translate_config,base.group_system,1,1,1,1
