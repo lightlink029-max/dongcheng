@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Form View -->
+    <record id="odoo_translate_config_form_view" model="ir.ui.view">
+        <field name="name">odoo_translate.config.form</field>
+        <field name="model">odoo_translate.config</field>
+        <field name="arch" type="xml">
+            <form string="OdooTranslate Configuration" create="false" delete="false" duplicate="false">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="status_emoji" class="oe_inline" readonly="1"/>
+                            <span> OdooTranslate Connection</span>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group string="Connection Status">
+                            <field name="status_label" widget="text" readonly="1" nolabel="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Disconnected State -->
+                    <div invisible="connection_status != 'disconnected'" class="alert alert-warning" role="alert">
+                        <h4 class="alert-heading">🔴 Not Connected</h4>
+                        <p>Connect your Odoo module to your OdooTranslate account to enable translations.</p>
+                        <hr/>
+                        <button name="action_connect" type="object" string="Connect to OdooTranslate" class="btn btn-primary"/>
+                    </div>
+
+                    <!-- Pending State -->
+                    <div invisible="connection_status != 'pending'" class="alert alert-warning" role="alert">
+                        <h4 class="alert-heading">🔴 Connection Pending</h4>
+                        <p>Please complete the registration in the OdooTranslate app window that was opened.</p>
+                        <p>If the window was closed, click the button below to try again.</p>
+                        <hr/>
+                        <button name="action_connect" type="object" string="Retry Connection" class="btn btn-primary me-2"/>
+                        <button name="action_refresh_status" type="object" string="Refresh Status" class="btn btn-secondary"/>
+                    </div>
+
+                    <!-- Connected but no API Key -->
+                    <div invisible="connection_status != 'connected' or has_api_key" class="alert alert-warning" role="alert">
+                        <h4 class="alert-heading">🟠 API Key Required</h4>
+                        <p>Your module is connected, but you need to configure your Odoo API key in the OdooTranslate app to enable translations.</p>
+                        <hr/>
+                        <button name="action_configure_api_key" type="object" string="Configure API Key" class="btn btn-primary me-2"/>
+                        <button name="action_refresh_status" type="object" string="Refresh Status" class="btn btn-secondary me-2"/>
+                        <button name="action_disconnect" type="object" string="Disconnect" class="btn btn-outline-danger" confirm="Are you sure you want to disconnect from OdooTranslate?"/>
+                    </div>
+
+                    <!-- Fully Connected -->
+                    <div invisible="connection_status != 'connected' or not has_api_key" class="alert alert-success" role="alert">
+                        <h4 class="alert-heading">🟢 Connected and Ready</h4>
+                        <p>Your Odoo module is connected to OdooTranslate and ready to translate!</p>
+                        <hr/>
+                        <button name="action_refresh_status" type="object" string="Refresh Status" class="btn btn-secondary me-2"/>
+                        <button name="action_disconnect" type="object" string="Disconnect" class="btn btn-outline-danger" confirm="Are you sure you want to disconnect from OdooTranslate?"/>
+                    </div>
+
+                    <group string="Connection Details" invisible="connection_status != 'connected'">
+                        <group>
+                            <field name="linked_email" readonly="1"/>
+                            <field name="connected_at" readonly="1"/>
+                            <field name="has_api_key" readonly="1" widget="boolean"/>
+                        </group>
+                        <group>
+                            <field name="module_uuid" readonly="1" groups="base.group_no_one"/>
+                            <field name="last_status_check" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Data Management -->
+                    <group string="Data Management">
+                        <div class="alert alert-danger" role="alert">
+                            <p class="mb-2"><strong>Remove All Translations</strong></p>
+                            <p class="text-muted small">Removes all translations for non-natively translatable fields (e.g. mail body, knowledge articles). Native Odoo translations are not affected. This action cannot be undone.</p>
+                            <button name="action_remove_all_translations" 
+                                    type="object" 
+                                    string="Remove All Translations" 
+                                    class="btn btn-danger"
+                                    confirm="Are you sure you want to remove all translations for non-natively translatable fields? Native Odoo translations are not affected. This action cannot be undone."/>
+                        </div>
+                    </group>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action to open the config (singleton) -->
+    <record id="action_odoo_translate_config" model="ir.actions.server">
+        <field name="name">OdooTranslate Configuration</field>
+        <field name="model_id" ref="model_odoo_translate_config"/>
+        <field name="state">code</field>
+        <field name="code">
+config = env['odoo_translate.config'].get_config()
+action = {
+    'type': 'ir.actions.act_window',
+    'name': 'OdooTranslate',
+    'res_model': 'odoo_translate.config',
+    'view_mode': 'form',
+    'res_id': config.id,
+    'target': 'inline',
+    'context': {'create': False, 'delete': False, 'duplicate': False},
+}
+        </field>
+    </record>
+
+    <!-- Menu in Settings app left sidebar -->
+    <menuitem
+        id="menu_odoo_translate_settings"
+        name="OdooTranslate"
+        parent="base.menu_administration"
+        action="action_odoo_translate_config"
+        sequence="99"
+        groups="base.group_system"
+    />
+
+</odoo>
