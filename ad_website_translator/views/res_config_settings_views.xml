@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="res_config_settings_view_form_inherit_translator" model="ir.ui.view">
+            <field name="name">res.config.settings.view.form.inherit.website.translator</field>
+            <field name="model">res.config.settings</field>
+            <field name="inherit_id" ref="website.res_config_settings_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//block[@id='website_info_settings']" position="after">
+                    <block title="Google Translator Customizer" id="google_translator_settings">
+                        <setting string="Google Translator Settings" help="Configure active languages, widget layout, positioning, and theme color.">
+                            <div class="content-group mt16">
+                                <div class="row mt8">
+                                    <label for="translator_lang_ids" class="col-lg-3" string="Languages"/>
+                                    <field name="translator_lang_ids" widget="many2many_tags" options="{'no_create_edit': True}"/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="translator_position" class="col-lg-3" string="Position"/>
+                                    <field name="translator_position"/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="translator_style" class="col-lg-3" string="Layout Style"/>
+                                    <field name="translator_style"/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="translator_primary_color" class="col-lg-3" string="Theme Accent Color"/>
+                                    <field name="translator_primary_color" widget="color"/>
+                                </div>
+                            </div>
+                        </setting>
+                    </block>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

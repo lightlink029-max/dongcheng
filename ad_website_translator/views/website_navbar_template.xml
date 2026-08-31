@@ -1,0 +1,72 @@
+<odoo>
+    <data>
+
+        <template id="language_selector_default_1" inherit_id="website.header_call_to_action">
+            <xpath expr="//div" position="after">
+                <div id="google_translate_element" class="ml-2 d-none d-lg-inline-block notranslate"></div>
+            </xpath>
+        </template>
+
+        <template id="language_selector_layout_inherit" inherit_id="website.layout">
+
+            <xpath expr="//head" position="inside">
+                <link rel="preconnect" href="https://translate.google.com" crossorigin="anonymous"/>
+                <link rel="preconnect" href="https://translate.googleapis.com" crossorigin="anonymous"/>
+                <link rel="dns-prefetch" href="https://translate.google.com"/>
+                <link rel="dns-prefetch" href="https://translate.googleapis.com"/>
+                <link rel="preload" href="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" as="script"/>
+
+                <style>
+                    html.ot-pre-translate body { opacity: 0 !important; pointer-events: none !important; }
+                    html.ot-pre-translate .translator-loader { opacity: 1 !important; visibility: visible !important; }
+                </style>
+
+                <script type="text/javascript">
+                    (function(){
+                        var v = '; ' + document.cookie;
+                        var p = v.split('; googtrans=');
+                        if (p.length !== 2) return;
+                        var val = p.pop().split(';').shift();
+                        if (!val) return;
+                        if (val === '/en/en') return;
+                        if (val === '/en/') return;
+                        if (val === 'null') return;
+
+                        /* Cookie is active — hide body immediately */
+                        document.documentElement.classList.add('ot-pre-translate');
+
+                        /* Create hidden mount for Google Translate widget */
+                        var el = document.createElement('div');
+                        el.id = 'google_translate_element_hidden';
+                        el.style.display = 'none';
+                        document.documentElement.appendChild(el);
+
+                        /* Define the init callback */
+                        window.googleTranslateElementInit = function() {
+                            if (window.google) {
+                                new google.translate.TranslateElement({
+                                    pageLanguage: 'en',
+                                    layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                                    autoDisplay: false
+                                }, 'google_translate_element_hidden');
+                            }
+                        };
+
+                        /* Start downloading Google Translate script RIGHT NOW — during head parsing */
+                        var s = document.createElement('script');
+                        s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+                        document.documentElement.appendChild(s);
+                    })();
+                </script>
+            </xpath>
+
+            <xpath expr="//div[@id='wrapwrap']" position="attributes">
+                <attribute name="t-att-data-translator-languages-json">website.get_translator_languages_json()</attribute>
+                <attribute name="t-att-data-translator-position">website.translator_position or 'both'</attribute>
+                <attribute name="t-att-data-translator-style">website.translator_style or 'pill'</attribute>
+                <attribute name="t-att-data-translator-primary-color">website.translator_primary_color or '#714B67'</attribute>
+            </xpath>
+        </template>
+
+    </data>
+</odoo>
