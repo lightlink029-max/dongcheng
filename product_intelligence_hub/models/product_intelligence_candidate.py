@@ -1,8 +1,11 @@
 import hashlib
 import html
+import logging
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
+
+_logger = logging.getLogger(__name__)
 
 
 class ProductIntelligenceCandidate(models.Model):
@@ -36,6 +39,13 @@ class ProductIntelligenceCandidate(models.Model):
     external_id = fields.Char(string="外部产品 ID", index=True)
     external_url = fields.Char(string="产品链接")
     image_url = fields.Char(string="主图链接")
+    original_image_url = fields.Char(string="原始主图链接", copy=False)
+    oss_object_key = fields.Char(string="OSS 对象 Key", copy=False, readonly=True)
+    image_storage_state = fields.Selection(
+        [("external", "外部链接"), ("stored", "已存入 OSS"), ("failed", "OSS 上传失败")],
+        string="图片存储状态", default="external", copy=False, readonly=True,
+    )
+    image_storage_error = fields.Char(string="图片存储错误", copy=False, readonly=True)
     image_preview = fields.Html(string="主图", compute="_compute_image_preview", sanitize=False)
     supplier_name = fields.Char(string="供应商", index=True)
     keyword_text = fields.Text(string="关键词")
@@ -159,6 +169,7 @@ class ProductIntelligenceCandidate(models.Model):
             "external_id": str(external_id)[:128],
             "external_url": external_url,
             "image_url": first("image_url", "image", "main_image", "主图"),
+            "original_image_url": first("image_url", "image", "main_image", "主图"),
             "category": first("category", "category_name", "类目"),
             "supplier_name": first("supplier_name", "supplier", "company_name", "供应商"),
             "keyword_text": first("keywords", "keyword_text", "关键词"),
@@ -193,7 +204,47 @@ class ProductIntelligenceCandidate(models.Model):
                 values["reference"] = sequence.next_by_code(
                     "product.intelligence.candidate"
                 ) or _("新建")
-        return super().create(values_list)
+        records = super().create(values_list)
+        records._store_images_if_enabled()
+        return records
+
+    def _store_images_if_enabled(self):
+        storage = self.env["product.image.storage.oss"]
+        if not storage._config()["enabled"]:
+            return
+        for record in self:
+            source_url = record.original_image_url or record.image_url
+            if not source_url or record.oss_object_key:
+                continue
+            try:
+                key, public_url = storage.store_url(source_url, record.external_id or str(record.id))
+                record.with_context(skip_oss_storage=True).write({
+                    "image_url": public_url,
+                    "oss_object_key": key,
+                    "image_storage_state": "stored",
+                    "image_storage_error": False,
+                })
+            except Exception as exc:
+                _logger.exception("OSS image upload failed for candidate %s", record.id)
+                record.with_context(skip_oss_storage=True).write({
+                    "image_storage_state": "failed", "image_storage_error": str(exc)[:512],
+                })
+
+    def action_store_image_oss(self):
+        self._store_images_if_enabled()
+        return {"type": "ir.actions.client", "tag": "reload"}
+
+    def unlink(self):
+        storage = self.env["product.image.storage.oss"]
+        config = storage._config()
+        keys = list(filter(None, self.mapped("oss_object_key"))) if config["delete_on_unlink"] else []
+        result = super().unlink()
+        for key in keys:
+            try:
+                storage.delete_object(key)
+            except Exception:
+                _logger.exception("Unable to delete OSS object %s", key)
+        return result
 
     @api.depends("supplier_price", "target_sale_price", "logistics_cost", "other_cost")
     def _compute_estimated_margin(self):
