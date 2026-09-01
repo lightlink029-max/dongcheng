@@ -1,0 +1,20 @@
+{
+    "name": "Product Intelligence Hub",
+    "version": "19.0.1.0.1",
+    "summary": "Collect, score, review, and convert product opportunities",
+    "category": "Sales",
+    "author": "LightLink",
+    "license": "LGPL-3",
+    "depends": ["base_setup", "mail", "product"],
+    "data": [
+        "security/product_intelligence_security.xml",
+        "security/ir.model.access.csv",
+        "data/product_intelligence_cron.xml",
+        "views/product_intelligence_source_views.xml",
+        "views/product_intelligence_candidate_views.xml",
+        "views/res_config_settings_views.xml",
+        "views/product_intelligence_menus.xml",
+    ],
+    "application": True,
+    "installable": True,
+}

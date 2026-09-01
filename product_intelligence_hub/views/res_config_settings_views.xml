@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_product_intelligence" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.product.intelligence</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app string="Product Intelligence" name="product_intelligence_hub" groups="product_intelligence_hub.group_product_intelligence_manager">
+                    <block title="Decision Thresholds">
+                        <setting string="Approval threshold" help="Candidates at or above this score are recommended for approval.">
+                            <field name="pi_approval_threshold"/>
+                        </setting>
+                        <setting string="Review threshold" help="Candidates below this score are recommended for rejection.">
+                            <field name="pi_review_threshold"/>
+                        </setting>
+                    </block>
+                    <block title="Scoring Weights" help="Weights must total 100%.">
+                        <setting string="Demand"><field name="pi_weight_demand"/></setting>
+                        <setting string="Growth"><field name="pi_weight_growth"/></setting>
+                        <setting string="Margin"><field name="pi_weight_margin"/></setting>
+                        <setting string="Competition"><field name="pi_weight_competition"/></setting>
+                        <setting string="Logistics"><field name="pi_weight_logistics"/></setting>
+                        <setting string="Compliance"><field name="pi_weight_compliance"/></setting>
+                        <setting string="Content potential"><field name="pi_weight_content"/></setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>
+
