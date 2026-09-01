@@ -4,5 +4,5 @@
     <menuitem id="menu_product_intelligence_candidates" name="OODA Board" parent="menu_product_intelligence_root" action="action_product_intelligence_candidate" sequence="10"/>
     <menuitem id="menu_product_intelligence_configuration" name="Configuration" parent="menu_product_intelligence_root" sequence="90" groups="product_intelligence_hub.group_product_intelligence_manager"/>
     <menuitem id="menu_product_intelligence_sources" name="Data Sources" parent="menu_product_intelligence_configuration" action="action_product_intelligence_source" sequence="10"/>
-    <menuitem id="menu_product_intelligence_settings" name="Settings" parent="menu_product_intelligence_configuration" action="base.action_res_config_settings" sequence="20"/>
+    <menuitem id="menu_product_intelligence_settings" name="Settings" parent="menu_product_intelligence_configuration" action="base_setup.action_general_configuration" sequence="20"/>
 </odoo>
