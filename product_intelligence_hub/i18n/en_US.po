@@ -482,3 +482,51 @@ msgstr "Total Score"
 #. module: product_intelligence_hub
 msgid "建议"
 msgstr "Recommendation"
+
+#. module: product_intelligence_hub
+msgid "启用阿里云 OSS"
+msgstr "Enable Alibaba Cloud OSS"
+
+#. module: product_intelligence_hub
+msgid "存储目录"
+msgstr "Storage Prefix"
+
+#. module: product_intelligence_hub
+msgid "公开访问域名"
+msgstr "Public Base URL"
+
+#. module: product_intelligence_hub
+msgid "删除记录时同步删除 OSS 图片"
+msgstr "Delete OSS Images with Records"
+
+#. module: product_intelligence_hub
+msgid "原始主图链接"
+msgstr "Original Image URL"
+
+#. module: product_intelligence_hub
+msgid "OSS 对象 Key"
+msgstr "OSS Object Key"
+
+#. module: product_intelligence_hub
+msgid "图片存储状态"
+msgstr "Image Storage Status"
+
+#. module: product_intelligence_hub
+msgid "外部链接"
+msgstr "External URL"
+
+#. module: product_intelligence_hub
+msgid "已存入 OSS"
+msgstr "Stored in OSS"
+
+#. module: product_intelligence_hub
+msgid "OSS 上传失败"
+msgstr "OSS Upload Failed"
+
+#. module: product_intelligence_hub
+msgid "图片存储错误"
+msgstr "Image Storage Error"
+
+#. module: product_intelligence_hub
+msgid "保存图片到 OSS"
+msgstr "Store Image in OSS"
