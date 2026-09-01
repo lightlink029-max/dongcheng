@@ -6,27 +6,26 @@
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
-                <app string="Product Intelligence" name="product_intelligence_hub" groups="product_intelligence_hub.group_product_intelligence_manager">
-                    <block title="Decision Thresholds">
-                        <setting string="Approval threshold" help="Candidates at or above this score are recommended for approval.">
+                <app string="产品智能" name="product_intelligence_hub" groups="product_intelligence_hub.group_product_intelligence_manager">
+                    <block title="决策阈值">
+                        <setting string="批准阈值" help="达到或超过该分数的候选产品将被建议批准。">
                             <field name="pi_approval_threshold"/>
                         </setting>
-                        <setting string="Review threshold" help="Candidates below this score are recommended for rejection.">
+                        <setting string="复核阈值" help="低于该分数的候选产品将被建议淘汰。">
                             <field name="pi_review_threshold"/>
                         </setting>
                     </block>
-                    <block title="Scoring Weights" help="Weights must total 100%.">
-                        <setting string="Demand"><field name="pi_weight_demand"/></setting>
-                        <setting string="Growth"><field name="pi_weight_growth"/></setting>
-                        <setting string="Margin"><field name="pi_weight_margin"/></setting>
-                        <setting string="Competition"><field name="pi_weight_competition"/></setting>
-                        <setting string="Logistics"><field name="pi_weight_logistics"/></setting>
-                        <setting string="Compliance"><field name="pi_weight_compliance"/></setting>
-                        <setting string="Content potential"><field name="pi_weight_content"/></setting>
+                    <block title="评分权重" help="各项权重之和必须为 100%。">
+                        <setting string="需求"><field name="pi_weight_demand"/></setting>
+                        <setting string="增长"><field name="pi_weight_growth"/></setting>
+                        <setting string="利润"><field name="pi_weight_margin"/></setting>
+                        <setting string="竞争"><field name="pi_weight_competition"/></setting>
+                        <setting string="物流"><field name="pi_weight_logistics"/></setting>
+                        <setting string="合规"><field name="pi_weight_compliance"/></setting>
+                        <setting string="内容潜力"><field name="pi_weight_content"/></setting>
                     </block>
                 </app>
             </xpath>
         </field>
     </record>
 </odoo>
-
