@@ -232,7 +232,7 @@
     <record id="action_product_intelligence_candidate" model="ir.actions.act_window">
         <field name="name">产品机会</field>
         <field name="res_model">product.intelligence.candidate</field>
-        <field name="view_mode">kanban,list,form,graph,pivot</field>
+        <field name="view_mode">list,kanban,form,graph,pivot</field>
         <field name="search_view_id" ref="view_product_intelligence_candidate_search"/>
         <field name="context">{'search_default_my_candidates': 1}</field>
         <field name="help" type="html">
