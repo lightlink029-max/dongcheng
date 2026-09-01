@@ -25,12 +25,16 @@ function mainProductImage(card){
 }
 function productCard(link){
   let node=link;
+  let fallback=null;
   for(let i=0;i<8&&node?.parentElement;i++,node=node.parentElement){
     const txt=node.innerText||'';
     const count=node.querySelectorAll?.('a[href*="/product-detail/"]').length||0;
-    if(txt.length>80&&txt.length<2200&&count>=1&&count<=5&&/(最低起订量|Min\. Order|已售|sold)/i.test(txt)) return node;
+    if(txt.length>80&&txt.length<2200&&count>=1&&count<=5&&/(最低起订量|Min\. Order|已售|sold)/i.test(txt)){
+      fallback ||= node;
+      if(node.querySelector('img.searchx-product-e-slider__img')) return node;
+    }
   }
-  return link.closest('div')||link.parentElement;
+  return fallback||link.closest('div')||link.parentElement;
 }
 function captureAlibaba(){
   const keyword=new URL(location.href).searchParams.get('SearchText')||document.querySelector('input[placeholder*="Search"]')?.value||'';
