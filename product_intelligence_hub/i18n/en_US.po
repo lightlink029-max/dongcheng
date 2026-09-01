@@ -470,3 +470,15 @@ msgstr "Only Product Intelligence Managers can bulk-delete candidates."
 #. module: product_intelligence_hub
 msgid "删除后无法恢复，确认删除所选候选产品吗？"
 msgstr "Deletion cannot be undone. Delete the selected candidates?"
+
+#. module: product_intelligence_hub
+msgid "预计利润率 %"
+msgstr "Estimated Margin %"
+
+#. module: product_intelligence_hub
+msgid "综合评分"
+msgstr "Total Score"
+
+#. module: product_intelligence_hub
+msgid "建议"
+msgstr "Recommendation"
