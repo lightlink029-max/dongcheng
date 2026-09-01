@@ -9,7 +9,7 @@ _logger = logging.getLogger(__name__)
 
 class ProductIntelligenceSource(models.Model):
     _name = "product.intelligence.source"
-    _description = "Product Intelligence Data Source"
+    _description = "产品智能数据来源"
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "sequence, name"
 
@@ -18,12 +18,12 @@ class ProductIntelligenceSource(models.Model):
     active = fields.Boolean(default=True)
     source_type = fields.Selection(
         [
-            ("manual", "Manual"),
-            ("supplier", "Supplier"),
-            ("marketplace", "Marketplace"),
-            ("search", "Search Trends"),
-            ("social", "Social Media"),
-            ("api", "Custom API"),
+            ("manual", "手工录入"),
+            ("supplier", "供应商"),
+            ("marketplace", "电商平台"),
+            ("search", "搜索趋势"),
+            ("social", "社交媒体"),
+            ("api", "自定义 API"),
         ],
         required=True,
         default="manual",
@@ -35,12 +35,12 @@ class ProductIntelligenceSource(models.Model):
         "Secrets must not be stored on this record."
     )
     sync_interval = fields.Selection(
-        [("manual", "Manual"), ("daily", "Daily"), ("weekly", "Weekly")],
+        [("manual", "手动"), ("daily", "每天"), ("weekly", "每周")],
         default="manual",
         required=True,
     )
     status = fields.Selection(
-        [("draft", "Not Tested"), ("connected", "Connected"), ("error", "Error")],
+        [("draft", "未测试"), ("connected", "已连接"), ("error", "错误")],
         default="draft",
         readonly=True,
         tracking=True,
@@ -73,7 +73,7 @@ class ProductIntelligenceSource(models.Model):
         if self.source_type == "manual":
             return []
         raise UserError(
-            _("No connector is installed for data source '%s'.") % self.display_name
+            _("数据来源“%s”尚未安装连接器。") % self.display_name
         )
 
     def action_sync(self):
@@ -90,7 +90,7 @@ class ProductIntelligenceSource(models.Model):
                     {
                         "status": "connected",
                         "last_sync_at": fields.Datetime.now(),
-                        "last_sync_message": _("Imported %s candidate(s).")
+                        "last_sync_message": _("已导入 %s 个候选产品。")
                         % len(values_list),
                     }
                 )
@@ -122,4 +122,3 @@ class ProductIntelligenceSource(models.Model):
         action["domain"] = [("source_id", "=", self.id)]
         action["context"] = {"default_source_id": self.id}
         return action
-

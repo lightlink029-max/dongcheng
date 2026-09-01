@@ -1,0 +1,228 @@
+# Translation of Odoo Server.
+# Module: product_intelligence_hub
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "产品智能中心"
+msgstr "Product Intelligence Hub"
+
+msgid "产品智能"
+msgstr "Product Intelligence"
+
+msgid "产品机会"
+msgstr "Product Opportunities"
+
+msgid "产品机会候选"
+msgstr "Product Opportunity Candidate"
+
+msgid "产品机会分析"
+msgstr "Product Opportunity Analysis"
+
+msgid "机会评分"
+msgstr "Opportunity Scores"
+
+msgid "OODA 决策看板"
+msgstr "OODA Board"
+
+msgid "OODA 阶段"
+msgstr "OODA Stage"
+
+msgid "配置"
+msgstr "Configuration"
+
+msgid "数据来源"
+msgstr "Data Sources"
+
+msgid "设置"
+msgstr "Settings"
+
+msgid "用户"
+msgstr "User"
+
+msgid "管理员"
+msgstr "Manager"
+
+msgid "观察"
+msgstr "Observe"
+
+msgid "研判"
+msgstr "Orient"
+
+msgid "决策审核"
+msgstr "Decision Review"
+
+msgid "已批准"
+msgstr "Approved"
+
+msgid "已淘汰"
+msgstr "Rejected"
+
+msgid "已执行"
+msgstr "Executed"
+
+msgid "淘汰"
+msgstr "Reject"
+
+msgid "复核"
+msgstr "Review"
+
+msgid "批准"
+msgstr "Approve"
+
+msgid "高潜力"
+msgstr "High Potential"
+
+msgid "待复核"
+msgstr "Needs Review"
+
+msgid "我的候选产品"
+msgstr "My Candidates"
+
+msgid "来源"
+msgstr "Source"
+
+msgid "目标国家/地区"
+msgstr "Target Country"
+
+msgid "分类"
+msgstr "Category"
+
+msgid "利润率 %"
+msgstr "Margin %"
+
+msgid "开始分析"
+msgstr "Start Analysis"
+
+msgid "提交决策"
+msgstr "Submit for Decision"
+
+msgid "创建 Odoo 产品"
+msgstr "Create Odoo Product"
+
+msgid "Odoo 产品"
+msgstr "Odoo Product"
+
+msgid "市场数据"
+msgstr "Market Data"
+
+msgid "商业数据"
+msgstr "Commercial"
+
+msgid "市场"
+msgstr "Market"
+
+msgid "评分"
+msgstr "Scoring"
+
+msgid "产品简报"
+msgstr "Product Brief"
+
+msgid "决策"
+msgstr "Decision"
+
+msgid "同步"
+msgstr "Synchronize"
+
+msgid "候选产品"
+msgstr "Candidates"
+
+msgid "最近同步"
+msgstr "Last synchronization"
+
+msgid "备注"
+msgstr "Notes"
+
+msgid "手工录入"
+msgstr "Manual"
+
+msgid "供应商"
+msgstr "Supplier"
+
+msgid "电商平台"
+msgstr "Marketplace"
+
+msgid "搜索趋势"
+msgstr "Search Trends"
+
+msgid "社交媒体"
+msgstr "Social Media"
+
+msgid "自定义 API"
+msgstr "Custom API"
+
+msgid "手动"
+msgstr "Manual"
+
+msgid "每天"
+msgstr "Daily"
+
+msgid "每周"
+msgstr "Weekly"
+
+msgid "未测试"
+msgstr "Not Tested"
+
+msgid "已连接"
+msgstr "Connected"
+
+msgid "错误"
+msgstr "Error"
+
+msgid "决策阈值"
+msgstr "Decision Thresholds"
+
+msgid "批准阈值"
+msgstr "Approval threshold"
+
+msgid "复核阈值"
+msgstr "Review threshold"
+
+msgid "评分权重"
+msgstr "Scoring Weights"
+
+msgid "需求"
+msgstr "Demand"
+
+msgid "增长"
+msgstr "Growth"
+
+msgid "利润"
+msgstr "Margin"
+
+msgid "竞争"
+msgstr "Competition"
+
+msgid "物流"
+msgstr "Logistics"
+
+msgid "合规"
+msgstr "Compliance"
+
+msgid "内容潜力"
+msgstr "Content potential"
+
+msgid "新建"
+msgstr "New"
+
+msgid "每项评分必须在 0 到 100 之间。"
+msgstr "Every component score must be between 0 and 100."
+
+msgid "创建 Odoo 产品前，请先批准该候选产品。"
+msgstr "Approve the candidate before creating an Odoo product."
+
+msgid "尚未创建 Odoo 产品。"
+msgstr "No Odoo product has been created yet."
+
+msgid "数据来源“%s”尚未安装连接器。"
+msgstr "No connector is installed for data source '%s'."
+
+msgid "已导入 %s 个候选产品。"
+msgstr "Imported %s candidate(s)."
+
+msgid "产品智能评分权重之和必须为 100%。"
+msgstr "Product intelligence scoring weights must total 100%."

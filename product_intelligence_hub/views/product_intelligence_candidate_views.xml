@@ -11,15 +11,15 @@
                 <field name="category"/>
                 <field name="target_country_id"/>
                 <field name="owner_id"/>
-                <filter name="high_potential" string="High Potential" domain="[('recommendation', '=', 'approve')]"/>
-                <filter name="needs_review" string="Needs Review" domain="[('stage', '=', 'review')]"/>
+                <filter name="high_potential" string="高潜力" domain="[('recommendation', '=', 'approve')]"/>
+                <filter name="needs_review" string="待复核" domain="[('stage', '=', 'review')]"/>
                 <separator/>
-                <filter name="my_candidates" string="My Candidates" domain="[('owner_id', '=', uid)]"/>
+                <filter name="my_candidates" string="我的候选产品" domain="[('owner_id', '=', uid)]"/>
                 <group name="group_by">
-                    <filter name="group_stage" string="OODA Stage" context="{'group_by': 'stage'}"/>
-                    <filter name="group_source" string="Source" context="{'group_by': 'source_id'}"/>
-                    <filter name="group_country" string="Target Country" context="{'group_by': 'target_country_id'}"/>
-                    <filter name="group_category" string="Category" context="{'group_by': 'category'}"/>
+                    <filter name="group_stage" string="OODA 阶段" context="{'group_by': 'stage'}"/>
+                    <filter name="group_source" string="来源" context="{'group_by': 'source_id'}"/>
+                    <filter name="group_country" string="目标国家/地区" context="{'group_by': 'target_country_id'}"/>
+                    <filter name="group_category" string="分类" context="{'group_by': 'category'}"/>
                 </group>
             </search>
         </field>
@@ -37,7 +37,7 @@
                 <field name="target_country_id" optional="show"/>
                 <field name="supplier_price" optional="show"/>
                 <field name="target_sale_price" optional="show"/>
-                <field name="estimated_margin_percent" string="Margin %" optional="show"/>
+                <field name="estimated_margin_percent" string="利润率 %" optional="show"/>
                 <field name="total_score" widget="progressbar"/>
                 <field name="recommendation" widget="badge"/>
                 <field name="stage" widget="badge"/>
@@ -70,7 +70,7 @@
                             <i class="fa fa-globe me-1"/><field name="target_country_id"/>
                         </div>
                         <div class="mt-2">
-                            <span class="fw-bold">Score: </span><field name="total_score"/>
+                            <span class="fw-bold">评分：</span><field name="total_score"/>
                         </div>
                         <footer class="mt-2">
                             <field name="owner_id" widget="many2one_avatar_user"/>
@@ -87,17 +87,17 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_orient" type="object" string="Start Analysis" class="btn-primary" invisible="stage != 'observe'"/>
-                    <button name="action_submit_review" type="object" string="Submit for Decision" class="btn-primary" invisible="stage != 'orient'"/>
-                    <button name="action_approve" type="object" string="Approve" class="btn-primary" invisible="stage != 'review'" groups="product_intelligence_hub.group_product_intelligence_manager"/>
-                    <button name="action_reject" type="object" string="Reject" invisible="stage not in ('review', 'approved')" groups="product_intelligence_hub.group_product_intelligence_manager"/>
-                    <button name="action_create_product" type="object" string="Create Odoo Product" class="btn-primary" invisible="stage != 'approved'"/>
+                    <button name="action_orient" type="object" string="开始分析" class="btn-primary" invisible="stage != 'observe'"/>
+                    <button name="action_submit_review" type="object" string="提交决策" class="btn-primary" invisible="stage != 'orient'"/>
+                    <button name="action_approve" type="object" string="批准" class="btn-primary" invisible="stage != 'review'" groups="product_intelligence_hub.group_product_intelligence_manager"/>
+                    <button name="action_reject" type="object" string="淘汰" invisible="stage not in ('review', 'approved')" groups="product_intelligence_hub.group_product_intelligence_manager"/>
+                    <button name="action_create_product" type="object" string="创建 Odoo 产品" class="btn-primary" invisible="stage != 'approved'"/>
                     <field name="stage" widget="statusbar" statusbar_visible="observe,orient,review,approved,executed"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_open_product" type="object" class="oe_stat_button" icon="fa-cube" invisible="not product_tmpl_id">
-                            <span class="o_stat_text">Odoo Product</span>
+                            <span class="o_stat_text">Odoo 产品</span>
                         </button>
                     </div>
                     <field name="product_tmpl_id" invisible="1"/>
@@ -124,16 +124,16 @@
                         </group>
                     </group>
                     <notebook>
-                        <page string="Market Data">
+                        <page string="市场数据">
                             <group>
-                                <group string="Commercial">
+                                <group string="商业数据">
                                     <field name="supplier_price"/>
                                     <field name="target_sale_price"/>
                                     <field name="logistics_cost"/>
                                     <field name="other_cost"/>
                                     <field name="estimated_margin_percent" readonly="1"/>
                                 </group>
-                                <group string="Market">
+                                <group string="市场">
                                     <field name="monthly_search_volume"/>
                                     <field name="trend_growth_percent"/>
                                     <field name="competitor_count"/>
@@ -143,7 +143,7 @@
                                 </group>
                             </group>
                         </page>
-                        <page string="Scoring">
+                        <page string="评分">
                             <group>
                                 <group>
                                     <field name="demand_score"/>
@@ -158,10 +158,10 @@
                                 </group>
                             </group>
                         </page>
-                        <page string="Product Brief">
+                        <page string="产品简报">
                             <field name="description"/>
                         </page>
-                        <page string="Decision">
+                        <page string="决策">
                             <field name="decision_notes"/>
                             <field name="rejection_reason" invisible="stage != 'rejected'"/>
                         </page>
@@ -176,7 +176,7 @@
         <field name="name">product.intelligence.candidate.graph</field>
         <field name="model">product.intelligence.candidate</field>
         <field name="arch" type="xml">
-            <graph string="Opportunity Scores" type="bar">
+            <graph string="机会评分" type="bar">
                 <field name="stage"/>
                 <field name="total_score" type="measure"/>
             </graph>
@@ -187,7 +187,7 @@
         <field name="name">product.intelligence.candidate.pivot</field>
         <field name="model">product.intelligence.candidate</field>
         <field name="arch" type="xml">
-            <pivot string="Product Opportunity Analysis">
+            <pivot string="产品机会分析">
                 <field name="source_id" type="row"/>
                 <field name="stage" type="col"/>
                 <field name="total_score" type="measure"/>
@@ -197,14 +197,14 @@
     </record>
 
     <record id="action_product_intelligence_candidate" model="ir.actions.act_window">
-        <field name="name">Product Opportunities</field>
+        <field name="name">产品机会</field>
         <field name="res_model">product.intelligence.candidate</field>
         <field name="view_mode">kanban,list,form,graph,pivot</field>
         <field name="search_view_id" ref="view_product_intelligence_candidate_search"/>
         <field name="context">{'search_default_my_candidates': 1}</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Create your first product opportunity</p>
-            <p>Collect evidence, score the opportunity, and move it through the OODA decision flow.</p>
+            <p class="o_view_nocontent_smiling_face">创建第一个产品机会</p>
+            <p>收集证据、评估机会，并按照 OODA 决策流程推进。</p>
         </field>
     </record>
 </odoo>

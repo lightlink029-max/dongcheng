@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
     <record id="seq_product_intelligence_candidate" model="ir.sequence">
-        <field name="name">Product Opportunity Candidate</field>
+        <field name="name">产品机会候选</field>
         <field name="code">product.intelligence.candidate</field>
         <field name="prefix">PIH/%(year)s/</field>
         <field name="padding">5</field>
@@ -9,7 +9,7 @@
     </record>
 
     <record id="ir_cron_product_intelligence_sync" model="ir.cron">
-        <field name="name">Product Intelligence: Synchronize Sources</field>
+        <field name="name">产品智能：同步数据来源</field>
         <field name="model_id" ref="model_product_intelligence_source"/>
         <field name="state">code</field>
         <field name="code">model._cron_sync_sources()</field>
@@ -18,4 +18,3 @@
         <field name="active">False</field>
     </record>
 </odoo>
-

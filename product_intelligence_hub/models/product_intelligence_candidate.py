@@ -4,22 +4,22 @@ from odoo.exceptions import UserError, ValidationError
 
 class ProductIntelligenceCandidate(models.Model):
     _name = "product.intelligence.candidate"
-    _description = "Product Opportunity Candidate"
+    _description = "产品机会候选"
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "total_score desc, write_date desc"
     _check_company_auto = True
 
     name = fields.Char(required=True, tracking=True)
-    reference = fields.Char(copy=False, readonly=True, default=lambda self: _("New"))
+    reference = fields.Char(string="编号", copy=False, readonly=True, default=lambda self: _("新建"))
     active = fields.Boolean(default=True)
     stage = fields.Selection(
         [
-            ("observe", "Observe"),
-            ("orient", "Orient"),
-            ("review", "Decision Review"),
-            ("approved", "Approved"),
-            ("rejected", "Rejected"),
-            ("executed", "Executed"),
+            ("observe", "观察"),
+            ("orient", "研判"),
+            ("review", "决策审核"),
+            ("approved", "已批准"),
+            ("rejected", "已淘汰"),
+            ("executed", "已执行"),
         ],
         default="observe",
         required=True,
@@ -81,7 +81,7 @@ class ProductIntelligenceCandidate(models.Model):
         compute="_compute_total_score", store=True, digits=(5, 2), tracking=True
     )
     recommendation = fields.Selection(
-        [("reject", "Reject"), ("review", "Review"), ("approve", "Approve")],
+        [("reject", "淘汰"), ("review", "复核"), ("approve", "批准")],
         compute="_compute_recommendation",
         store=True,
     )
@@ -104,10 +104,10 @@ class ProductIntelligenceCandidate(models.Model):
     def create(self, values_list):
         sequence = self.env["ir.sequence"]
         for values in values_list:
-            if values.get("reference", _("New")) == _("New"):
+            if values.get("reference", _("新建")) == _("新建"):
                 values["reference"] = sequence.next_by_code(
                     "product.intelligence.candidate"
-                ) or _("New")
+                ) or _("新建")
         return super().create(values_list)
 
     @api.depends("supplier_price", "target_sale_price", "logistics_cost", "other_cost")
@@ -175,7 +175,7 @@ class ProductIntelligenceCandidate(models.Model):
         ]
         for record in self:
             if any(not 0.0 <= record[field_name] <= 100.0 for field_name in score_fields):
-                raise ValidationError(_("Every component score must be between 0 and 100."))
+                raise ValidationError(_("每项评分必须在 0 到 100 之间。"))
 
     def action_orient(self):
         self.write({"stage": "orient"})
@@ -192,7 +192,7 @@ class ProductIntelligenceCandidate(models.Model):
     def action_create_product(self):
         self.ensure_one()
         if self.stage != "approved":
-            raise UserError(_("Approve the candidate before creating an Odoo product."))
+            raise UserError(_("创建 Odoo 产品前，请先批准该候选产品。"))
         if self.product_tmpl_id:
             return self.action_open_product()
         product = self.env["product.template"].create(
@@ -213,7 +213,7 @@ class ProductIntelligenceCandidate(models.Model):
     def action_open_product(self):
         self.ensure_one()
         if not self.product_tmpl_id:
-            raise UserError(_("No Odoo product has been created yet."))
+            raise UserError(_("尚未创建 Odoo 产品。"))
         return {
             "type": "ir.actions.act_window",
             "name": self.product_tmpl_id.display_name,
@@ -221,4 +221,3 @@ class ProductIntelligenceCandidate(models.Model):
             "view_mode": "form",
             "res_id": self.product_tmpl_id.id,
         }
-

@@ -48,5 +48,4 @@ class ResConfigSettings(models.TransientModel):
                 ]
             )
             if abs(total - 100.0) > 0.01:
-                raise ValidationError("Product intelligence scoring weights must total 100%.")
-
+                raise ValidationError("产品智能评分权重之和必须为 100%。")
