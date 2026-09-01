@@ -126,6 +126,7 @@ class ProductIntelligenceSource(models.Model):
             ], limit=1)
             if existing:
                 existing.write(values)
+                existing._store_images_if_enabled()
                 updated += 1
             else:
                 Candidate.create(values)
