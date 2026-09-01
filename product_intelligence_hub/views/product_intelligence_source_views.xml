@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_intelligence_source_list" model="ir.ui.view">
+        <field name="name">product.intelligence.source.list</field>
+        <field name="model">product.intelligence.source</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="source_type"/>
+                <field name="sync_interval"/>
+                <field name="status" widget="badge"/>
+                <field name="last_sync_at"/>
+                <field name="candidate_count"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_product_intelligence_source_form" model="ir.ui.view">
+        <field name="name">product.intelligence.source.form</field>
+        <field name="model">product.intelligence.source</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_sync" type="object" string="Synchronize" class="btn-primary"/>
+                    <field name="status" widget="statusbar" statusbar_visible="draft,connected,error"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_candidates" type="object" class="oe_stat_button" icon="fa-cubes">
+                            <field name="candidate_count" widget="statinfo" string="Candidates"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                    <field name="active" invisible="1"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="source_type"/>
+                            <field name="base_url" widget="url"/>
+                            <field name="credential_parameter" groups="product_intelligence_hub.group_product_intelligence_manager"/>
+                        </group>
+                        <group>
+                            <field name="sync_interval"/>
+                            <field name="last_sync_at"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <group string="Last synchronization">
+                        <field name="last_sync_message" nolabel="1" readonly="1"/>
+                    </group>
+                    <notebook>
+                        <page string="Notes">
+                            <field name="notes"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_product_intelligence_source" model="ir.actions.act_window">
+        <field name="name">Data Sources</field>
+        <field name="res_model">product.intelligence.source</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
+
