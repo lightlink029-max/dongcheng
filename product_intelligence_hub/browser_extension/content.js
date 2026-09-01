@@ -71,5 +71,5 @@ function captureAlibaba(){
   return items;
 }
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
-  if(message?.type==='PIH_CAPTURE') sendResponse({items:captureAlibaba()});
+  if(message?.type==='PIH_CAPTURE_V107') sendResponse({items:captureAlibaba()});
 });

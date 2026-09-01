@@ -1,15 +1,17 @@
 const endpoint = document.querySelector('#endpoint');
 const token = document.querySelector('#token');
 const status = document.querySelector('#status');
+const CAPTURE_MESSAGE = 'PIH_CAPTURE_V107';
 chrome.storage.local.get(['endpoint','token'], v => { endpoint.value=v.endpoint||''; token.value=v.token||''; });
 async function captureFromTab(tabId) {
   try {
-    return await chrome.tabs.sendMessage(tabId,{type:'PIH_CAPTURE'});
+    const current = await chrome.tabs.sendMessage(tabId,{type:CAPTURE_MESSAGE});
+    if (current?.items) return current;
   } catch (error) {
     if (!String(error?.message||error).includes('Receiving end does not exist')) throw error;
-    await chrome.scripting.executeScript({target:{tabId},files:['content.js']});
-    return await chrome.tabs.sendMessage(tabId,{type:'PIH_CAPTURE'});
   }
+  await chrome.scripting.executeScript({target:{tabId},files:['content.js']});
+  return await chrome.tabs.sendMessage(tabId,{type:CAPTURE_MESSAGE});
 }
 document.querySelector('#push').addEventListener('click', async () => {
   try {
