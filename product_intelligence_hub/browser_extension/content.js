@@ -1,6 +1,10 @@
 function absoluteUrl(url){ try{return new URL(url,location.href).href;}catch{return url||'';} }
 function number(text, pattern){const m=(text||'').match(pattern);return m?Number(m[1].replace(/,/g,'')):0;}
 function mainProductImage(card, productId){
+  const primaryImages=[...(card?.querySelectorAll('img.searchx-product-e-slider__img[src*="s.alicdn.com/@sc"][src*="/kf/"]')||[])];
+  const primary300=primaryImages.find(img=>/_300x300\.(?:jpg|jpeg|png|webp)/i.test(img.currentSrc||img.getAttribute('src')||''));
+  if(primary300) return absoluteUrl(primary300.currentSrc||primary300.getAttribute('src'));
+  if(primaryImages.length===1) return absoluteUrl(primaryImages[0].currentSrc||primaryImages[0].getAttribute('src'));
   const matchedImages=[];
   for(const anchor of card?.querySelectorAll('a[href*="/product-detail/"]')||[]){
     const anchorId=(absoluteUrl(anchor.getAttribute('href')).match(/_(\d+)\.html/)||[])[1];
@@ -43,12 +47,14 @@ function imageSizeScore(url){
 function productCard(link){
   let node=link;
   let fallback=null;
-  for(let i=0;i<8&&node?.parentElement;i++,node=node.parentElement){
+  for(let i=0;i<10&&node?.parentElement;i++,node=node.parentElement){
+    const primaryCount=node.querySelectorAll?.('img.searchx-product-e-slider__img').length||0;
+    if(primaryCount===1) return node;
+    if(!fallback&&primaryCount>0) fallback=node;
     const txt=node.innerText||'';
     const count=node.querySelectorAll?.('a[href*="/product-detail/"]').length||0;
     if(txt.length>80&&txt.length<2200&&count>=1&&count<=5&&/(最低起订量|Min\. Order|已售|sold)/i.test(txt)){
       fallback ||= node;
-      if(node.querySelector('img.searchx-product-e-slider__img')) return node;
     }
   }
   return fallback||link.closest('div')||link.parentElement;
@@ -71,5 +77,5 @@ function captureAlibaba(){
   return items;
 }
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
-  if(message?.type==='PIH_CAPTURE_V107') sendResponse({items:captureAlibaba()});
+  if(message?.type==='PIH_CAPTURE_V108') sendResponse({items:captureAlibaba()});
 });
