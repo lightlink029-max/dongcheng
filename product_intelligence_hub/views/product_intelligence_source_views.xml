@@ -23,16 +23,16 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_sync" type="object" string="Synchronize" class="btn-primary"/>
+                    <button name="action_sync" type="object" string="同步" class="btn-primary"/>
                     <field name="status" widget="statusbar" statusbar_visible="draft,connected,error"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_candidates" type="object" class="oe_stat_button" icon="fa-cubes">
-                            <field name="candidate_count" widget="statinfo" string="Candidates"/>
+                            <field name="candidate_count" widget="statinfo" string="候选产品"/>
                         </button>
                     </div>
-                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                    <widget name="web_ribbon" title="已归档" bg_color="text-bg-danger" invisible="active"/>
                     <field name="active" invisible="1"/>
                     <div class="oe_title">
                         <label for="name"/>
@@ -50,11 +50,11 @@
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
-                    <group string="Last synchronization">
+                    <group string="最近同步">
                         <field name="last_sync_message" nolabel="1" readonly="1"/>
                     </group>
                     <notebook>
-                        <page string="Notes">
+                        <page string="备注">
                             <field name="notes"/>
                         </page>
                     </notebook>
@@ -65,9 +65,8 @@
     </record>
 
     <record id="action_product_intelligence_source" model="ir.actions.act_window">
-        <field name="name">Data Sources</field>
+        <field name="name">数据来源</field>
         <field name="res_model">product.intelligence.source</field>
         <field name="view_mode">list,form</field>
     </record>
 </odoo>
-
