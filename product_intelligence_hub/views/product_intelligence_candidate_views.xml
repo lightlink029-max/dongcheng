@@ -51,7 +51,7 @@
                 <field name="transaction_count" optional="hide"/>
                 <field name="search_rank" optional="hide"/>
                 <field name="target_sale_price" optional="show"/>
-                <field name="estimated_margin_percent" string="利润率 %" optional="show"/>
+                <field name="estimated_margin_percent" optional="show"/>
                 <field name="total_score" widget="progressbar"/>
                 <field name="recommendation" widget="badge"/>
                 <field name="stage" widget="badge"/>

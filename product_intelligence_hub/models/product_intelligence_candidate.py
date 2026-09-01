@@ -71,7 +71,7 @@ class ProductIntelligenceCandidate(models.Model):
     logistics_cost = fields.Monetary(currency_field="currency_id")
     other_cost = fields.Monetary(currency_field="currency_id")
     estimated_margin_percent = fields.Float(
-        compute="_compute_estimated_margin", store=True, digits=(16, 2)
+        string="预计利润率 %", compute="_compute_estimated_margin", store=True, digits=(16, 2)
     )
     supplier_count = fields.Integer()
     minimum_order_qty = fields.Float()
@@ -100,12 +100,13 @@ class ProductIntelligenceCandidate(models.Model):
     )
     content_score = fields.Float(default=50.0, digits=(5, 2))
     total_score = fields.Float(
-        compute="_compute_total_score", store=True, digits=(5, 2), tracking=True
+        string="综合评分", compute="_compute_total_score", store=True, digits=(5, 2), tracking=True
     )
     recommendation = fields.Selection(
         [("reject", "淘汰"), ("review", "复核"), ("approve", "批准")],
         compute="_compute_recommendation",
         store=True,
+        string="建议",
     )
 
     description = fields.Html()
