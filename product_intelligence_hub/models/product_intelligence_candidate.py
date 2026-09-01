@@ -1,4 +1,5 @@
 import hashlib
+import html
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
@@ -11,7 +12,7 @@ class ProductIntelligenceCandidate(models.Model):
     _order = "total_score desc, write_date desc"
     _check_company_auto = True
 
-    name = fields.Char(required=True, tracking=True)
+    name = fields.Char(string="产品名称", required=True, tracking=True)
     reference = fields.Char(string="编号", copy=False, readonly=True, default=lambda self: _("新建"))
     active = fields.Boolean(default=True)
     stage = fields.Selection(
@@ -26,32 +27,34 @@ class ProductIntelligenceCandidate(models.Model):
         default="observe",
         required=True,
         tracking=True,
+        string="OODA 阶段",
         group_expand="_group_expand_stage",
     )
     source_id = fields.Many2one(
-        "product.intelligence.source", required=True, tracking=True, check_company=True
+        "product.intelligence.source", string="数据来源", required=True, tracking=True, check_company=True
     )
-    external_id = fields.Char(index=True)
-    external_url = fields.Char()
-    image_url = fields.Char()
-    supplier_name = fields.Char(index=True)
-    keyword_text = fields.Text()
-    inquiry_count = fields.Integer()
-    transaction_count = fields.Integer()
+    external_id = fields.Char(string="外部产品 ID", index=True)
+    external_url = fields.Char(string="产品链接")
+    image_url = fields.Char(string="主图链接")
+    image_preview = fields.Html(string="主图", compute="_compute_image_preview", sanitize=False)
+    supplier_name = fields.Char(string="供应商", index=True)
+    keyword_text = fields.Text(string="关键词")
+    inquiry_count = fields.Integer(string="询盘数")
+    transaction_count = fields.Integer(string="交易数")
     heat_score = fields.Float(string="热度", digits=(16, 2))
     sales_7d = fields.Integer(string="近7天销量")
     sales_30d = fields.Integer(string="近30天销量")
     sales_180d = fields.Integer(string="近半年销量")
     displayed_sales = fields.Integer(string="页面展示销量")
     sales_amount = fields.Monetary(string="销售金额", currency_field="currency_id")
-    price_text = fields.Char(string="页面价格")
+    price_text = fields.Char(string="价格区间")
     repeat_purchase_rate = fields.Float(string="复购率 %", digits=(16, 2))
     supplier_rating = fields.Float(string="供应商评分", digits=(4, 2))
     review_count = fields.Integer(string="评价数")
-    search_rank = fields.Integer()
+    search_rank = fields.Integer(string="搜索排名")
     source_payload = fields.Json(copy=False)
-    category = fields.Char(index=True)
-    target_country_id = fields.Many2one("res.country")
+    category = fields.Char(string="产品分类", index=True)
+    target_country_id = fields.Many2one("res.country", string="目标国家/地区")
     company_id = fields.Many2one(
         "res.company", required=True, default=lambda self: self.env.company, index=True
     )
@@ -59,12 +62,12 @@ class ProductIntelligenceCandidate(models.Model):
         "res.currency", required=True, default=lambda self: self.env.company.currency_id
     )
     owner_id = fields.Many2one(
-        "res.users", default=lambda self: self.env.user, tracking=True
+        "res.users", string="负责人", default=lambda self: self.env.user, tracking=True
     )
-    data_date = fields.Date(default=fields.Date.context_today)
+    data_date = fields.Date(string="数据日期", default=fields.Date.context_today)
 
-    supplier_price = fields.Monetary(currency_field="currency_id")
-    target_sale_price = fields.Monetary(currency_field="currency_id")
+    supplier_price = fields.Monetary(string="供应商价格", currency_field="currency_id")
+    target_sale_price = fields.Monetary(string="目标售价", currency_field="currency_id")
     logistics_cost = fields.Monetary(currency_field="currency_id")
     other_cost = fields.Monetary(currency_field="currency_id")
     estimated_margin_percent = fields.Float(
@@ -114,6 +117,15 @@ class ProductIntelligenceCandidate(models.Model):
         "UNIQUE(source_id, external_id)",
         "The external product identifier must be unique for each data source.",
     )
+
+    @api.depends("image_url")
+    def _compute_image_preview(self):
+        for record in self:
+            url = html.escape(record.image_url or "", quote=True)
+            record.image_preview = (
+                f'<img src="{url}" alt="产品主图" style="width:72px;height:72px;object-fit:contain;border-radius:6px"/>'
+                if url else ""
+            )
 
     @api.model
     def prepare_ingest_values(self, item, source):
@@ -293,3 +305,7 @@ class ProductIntelligenceCandidate(models.Model):
             "view_mode": "form",
             "res_id": self.product_tmpl_id.id,
         }
+
+    def action_bulk_delete(self):
+        self.unlink()
+        return {"type": "ir.actions.client", "tag": "reload"}
