@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_product_intelligence_bulk_delete" model="ir.actions.server">
+        <field name="name">删除所选产品</field>
+        <field name="model_id" ref="model_product_intelligence_candidate"/>
+        <field name="binding_model_id" ref="model_product_intelligence_candidate"/>
+        <field name="binding_view_types">list</field>
+        <field name="groups_id" eval="[(4, ref('product_intelligence_hub.group_product_intelligence_manager'))]"/>
+        <field name="state">code</field>
+        <field name="code">action = records.action_bulk_delete()</field>
+    </record>
+</odoo>

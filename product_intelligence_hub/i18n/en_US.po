@@ -398,3 +398,75 @@ msgstr "Push search results with the browser capture assistant"
 #. module: product_intelligence_hub
 msgid "在阿里巴巴国际站搜索页打开扩展，选择数据来源并推送当前页面。"
 msgstr "Open the extension on an Alibaba.com search page, select a data source, and push the current page."
+
+#. module: product_intelligence_hub
+msgid "产品名称"
+msgstr "Product Name"
+
+#. module: product_intelligence_hub
+msgid "外部产品 ID"
+msgstr "External Product ID"
+
+#. module: product_intelligence_hub
+msgid "产品链接"
+msgstr "Product URL"
+
+#. module: product_intelligence_hub
+msgid "主图链接"
+msgstr "Main Image URL"
+
+#. module: product_intelligence_hub
+msgid "主图"
+msgstr "Main Image"
+
+#. module: product_intelligence_hub
+msgid "关键词"
+msgstr "Keywords"
+
+#. module: product_intelligence_hub
+msgid "询盘数"
+msgstr "Inquiry Count"
+
+#. module: product_intelligence_hub
+msgid "交易数"
+msgstr "Transaction Count"
+
+#. module: product_intelligence_hub
+msgid "价格区间"
+msgstr "Price Range"
+
+#. module: product_intelligence_hub
+msgid "搜索排名"
+msgstr "Search Rank"
+
+#. module: product_intelligence_hub
+msgid "产品分类"
+msgstr "Product Category"
+
+#. module: product_intelligence_hub
+msgid "负责人"
+msgstr "Owner"
+
+#. module: product_intelligence_hub
+msgid "数据日期"
+msgstr "Data Date"
+
+#. module: product_intelligence_hub
+msgid "供应商价格"
+msgstr "Supplier Price"
+
+#. module: product_intelligence_hub
+msgid "目标售价"
+msgstr "Target Sale Price"
+
+#. module: product_intelligence_hub
+msgid "删除所选产品"
+msgstr "Delete Selected Products"
+
+#. module: product_intelligence_hub
+msgid "只有产品智能管理员可以批量删除候选产品。"
+msgstr "Only Product Intelligence Managers can bulk-delete candidates."
+
+#. module: product_intelligence_hub
+msgid "删除后无法恢复，确认删除所选候选产品吗？"
+msgstr "Deletion cannot be undone. Delete the selected candidates?"
