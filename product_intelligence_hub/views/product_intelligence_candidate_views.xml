@@ -36,6 +36,13 @@
                 <field name="category" optional="show"/>
                 <field name="target_country_id" optional="show"/>
                 <field name="supplier_price" optional="show"/>
+                <field name="price_text" optional="show"/>
+                <field name="heat_score" optional="show"/>
+                <field name="sales_7d" optional="hide"/>
+                <field name="sales_30d" optional="hide"/>
+                <field name="sales_180d" optional="hide"/>
+                <field name="displayed_sales" optional="show"/>
+                <field name="sales_amount" optional="hide"/>
                 <field name="inquiry_count" optional="show"/>
                 <field name="transaction_count" optional="hide"/>
                 <field name="search_rank" optional="hide"/>
@@ -141,6 +148,16 @@
                                     <field name="keyword_text"/>
                                     <field name="inquiry_count"/>
                                     <field name="transaction_count"/>
+                                    <field name="heat_score"/>
+                                    <field name="sales_7d"/>
+                                    <field name="sales_30d"/>
+                                    <field name="sales_180d"/>
+                                    <field name="displayed_sales"/>
+                                    <field name="sales_amount"/>
+                                    <field name="price_text"/>
+                                    <field name="repeat_purchase_rate"/>
+                                    <field name="supplier_rating"/>
+                                    <field name="review_count"/>
                                     <field name="search_rank"/>
                                     <field name="monthly_search_volume"/>
                                     <field name="trend_growth_percent"/>
@@ -213,6 +230,18 @@
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">创建第一个产品机会</p>
             <p>收集证据、评估机会，并按照 OODA 决策流程推进。</p>
+        </field>
+    </record>
+
+    <record id="action_product_intelligence_research" model="ir.actions.act_window">
+        <field name="name">选品情报</field>
+        <field name="res_model">product.intelligence.candidate</field>
+        <field name="view_mode">list,form,kanban,graph,pivot</field>
+        <field name="search_view_id" ref="view_product_intelligence_candidate_search"/>
+        <field name="context">{'search_default_my_candidates': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">使用浏览器采集助手推送查询结果</p>
+            <p>在阿里巴巴国际站搜索页打开扩展，选择数据来源并推送当前页面。</p>
         </field>
     </record>
 </odoo>

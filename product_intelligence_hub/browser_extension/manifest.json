@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "LightLink 选品情报助手",
+  "version": "1.0.0",
+  "description": "将阿里巴巴国际站当前搜索页的可见商品信息推送到 Odoo。",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": ["https://*.alibaba.com/*", "https://*.odoo.com/*"],
+  "action": {"default_popup": "popup.html", "default_title": "选品情报助手"},
+  "content_scripts": [{
+    "matches": ["https://*.alibaba.com/trade/search*"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }]
+}
