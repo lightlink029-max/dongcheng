@@ -10,7 +10,6 @@
         "security/product_intelligence_security.xml",
         "security/ir.model.access.csv",
         "data/product_intelligence_cron.xml",
-        "data/product_intelligence_actions.xml",
         "wizard/product_intelligence_token_wizard_views.xml",
         "views/product_intelligence_source_views.xml",
         "views/product_intelligence_candidate_views.xml",
