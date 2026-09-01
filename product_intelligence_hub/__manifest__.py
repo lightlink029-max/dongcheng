@@ -1,7 +1,7 @@
 {
-    "name": "Product Intelligence Hub",
-    "version": "19.0.1.1.0",
-    "summary": "Collect, score, review, and convert product opportunities",
+    "name": "产品智能中心",
+    "version": "19.0.1.2.0",
+    "summary": "采集、评分、审核并转化产品机会",
     "category": "Sales",
     "author": "LightLink",
     "license": "LGPL-3",
