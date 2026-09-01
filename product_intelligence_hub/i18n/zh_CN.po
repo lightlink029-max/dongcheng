@@ -1,6 +1,5 @@
 # Translation of Odoo Server.
-# This file contains the translation of the following modules:
-#   * product_intelligence_hub
+#. module: product_intelligence_hub
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
