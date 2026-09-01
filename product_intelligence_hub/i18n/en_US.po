@@ -13,6 +13,50 @@ msgid "产品智能中心"
 msgstr "Product Intelligence Hub"
 
 #. module: product_intelligence_hub
+msgid "启用数据推送"
+msgstr "Enable Data Push"
+
+#. module: product_intelligence_hub
+msgid "数据接收地址"
+msgstr "Data Ingestion Endpoint"
+
+#. module: product_intelligence_hub
+msgid "生成推送凭证"
+msgstr "Generate Push Credential"
+
+#. module: product_intelligence_hub
+msgid "撤销推送凭证"
+msgstr "Revoke Push Credential"
+
+#. module: product_intelligence_hub
+msgid "数据推送凭证"
+msgstr "Data Push Credential"
+
+#. module: product_intelligence_hub
+msgid "自动推送"
+msgstr "Automatic Push"
+
+#. module: product_intelligence_hub
+msgid "撤销后，现有推送客户端将立即失效。是否继续？"
+msgstr "Existing push clients will stop working immediately. Continue?"
+
+#. module: product_intelligence_hub
+msgid "令牌只显示一次。请复制并安全保存，不要通过聊天或邮件发送。"
+msgstr "The token is shown only once. Copy and store it securely; do not send it through chat or email."
+
+#. module: product_intelligence_hub
+msgid "关闭"
+msgstr "Close"
+
+#. module: product_intelligence_hub
+msgid "推送完成：新增 %(created)s，更新 %(updated)s，跳过 %(skipped)s。"
+msgstr "Push completed: %(created)s created, %(updated)s updated, %(skipped)s skipped."
+
+#. module: product_intelligence_hub
+msgid "产品智能推送凭证"
+msgstr "Product Intelligence Push Credential"
+
+#. module: product_intelligence_hub
 msgid "产品智能"
 msgstr "Product Intelligence"
 

@@ -1,3 +1,5 @@
+import hashlib
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
@@ -31,6 +33,13 @@ class ProductIntelligenceCandidate(models.Model):
     )
     external_id = fields.Char(index=True)
     external_url = fields.Char()
+    image_url = fields.Char()
+    supplier_name = fields.Char(index=True)
+    keyword_text = fields.Text()
+    inquiry_count = fields.Integer()
+    transaction_count = fields.Integer()
+    search_rank = fields.Integer()
+    source_payload = fields.Json(copy=False)
     category = fields.Char(index=True)
     target_country_id = fields.Many2one("res.country")
     company_id = fields.Many2one(
@@ -95,6 +104,49 @@ class ProductIntelligenceCandidate(models.Model):
         "UNIQUE(source_id, external_id)",
         "The external product identifier must be unique for each data source.",
     )
+
+    @api.model
+    def prepare_ingest_values(self, item, source):
+        """Normalize common Shunxi/marketplace field names into candidate values."""
+        def first(*keys, default=None):
+            for key in keys:
+                value = item.get(key)
+                if value not in (None, ""):
+                    return value
+            return default
+
+        def number(value, integer=False):
+            try:
+                cleaned = str(value or 0).replace(",", "").replace("%", "").strip()
+                return int(float(cleaned)) if integer else float(cleaned)
+            except (TypeError, ValueError):
+                return 0
+
+        name = first("name", "title", "product_title", "产品标题")
+        external_url = first("external_url", "url", "product_url", "产品链接")
+        external_id = first("external_id", "product_id", "item_id", "产品ID")
+        if not external_id and external_url:
+            external_id = hashlib.sha256(external_url.encode()).hexdigest()[:32]
+        if not name or not external_id:
+            return False
+        return {
+            "name": str(name)[:512],
+            "source_id": source.id,
+            "company_id": source.company_id.id,
+            "external_id": str(external_id)[:128],
+            "external_url": external_url,
+            "image_url": first("image_url", "image", "main_image", "主图"),
+            "category": first("category", "category_name", "类目"),
+            "supplier_name": first("supplier_name", "supplier", "company_name", "供应商"),
+            "keyword_text": first("keywords", "keyword_text", "关键词"),
+            "supplier_price": number(first("supplier_price", "price", "min_price", "最低价格")),
+            "minimum_order_qty": number(first("minimum_order_qty", "moq", "最小起订量")),
+            "inquiry_count": number(first("inquiry_count", "inquiries", "询盘数"), integer=True),
+            "transaction_count": number(first("transaction_count", "transactions", "交易数"), integer=True),
+            "search_rank": number(first("search_rank", "rank", "排名"), integer=True),
+            "source_payload": item,
+            "data_date": fields.Date.context_today(self),
+        }
 
     @api.model
     def _group_expand_stage(self, stages, domain):

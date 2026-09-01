@@ -24,6 +24,8 @@
             <form>
                 <header>
                     <button name="action_sync" type="object" string="同步" class="btn-primary"/>
+                    <button name="action_generate_webhook_token" type="object" string="生成推送凭证" groups="product_intelligence_hub.group_product_intelligence_manager"/>
+                    <button name="action_revoke_webhook_token" type="object" string="撤销推送凭证" invisible="not webhook_enabled" groups="product_intelligence_hub.group_product_intelligence_manager" confirm="撤销后，现有推送客户端将立即失效。是否继续？"/>
                     <field name="status" widget="statusbar" statusbar_visible="draft,connected,error"/>
                 </header>
                 <sheet>
@@ -52,6 +54,10 @@
                     </group>
                     <group string="最近同步">
                         <field name="last_sync_message" nolabel="1" readonly="1"/>
+                    </group>
+                    <group string="自动推送" groups="product_intelligence_hub.group_product_intelligence_manager">
+                        <field name="webhook_enabled" readonly="1"/>
+                        <field name="webhook_url" widget="CopyClipboardChar" readonly="1"/>
                     </group>
                     <notebook>
                         <page string="备注">
