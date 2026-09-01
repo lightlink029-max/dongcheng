@@ -1,11 +1,11 @@
 {
     "name": "Product Intelligence Hub",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.1",
     "summary": "Collect, score, review, and convert product opportunities",
     "category": "Sales",
     "author": "LightLink",
     "license": "LGPL-3",
-    "depends": ["mail", "product"],
+    "depends": ["base_setup", "mail", "product"],
     "data": [
         "security/product_intelligence_security.xml",
         "security/ir.model.access.csv",
@@ -18,4 +18,3 @@
     "application": True,
     "installable": True,
 }
-
