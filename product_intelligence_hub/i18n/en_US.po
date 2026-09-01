@@ -344,3 +344,44 @@ msgstr "Imported %s candidate(s)."
 msgid "产品智能评分权重之和必须为 100%。"
 msgstr "Product intelligence scoring weights must total 100%."
 
+#: model:ir.actions.act_window,name:product_intelligence_hub.action_product_intelligence_research
+#: model:ir.ui.menu,name:product_intelligence_hub.menu_product_intelligence_research
+msgid "选品情报"
+msgstr "Product Research Intelligence"
+
+#: model:ir.model.fields,field_description:product_intelligence_hub.field_product_intelligence_candidate__heat_score
+msgid "热度"
+msgstr "Popularity"
+
+msgid "近7天销量"
+msgstr "Sales - Last 7 Days"
+
+msgid "近30天销量"
+msgstr "Sales - Last 30 Days"
+
+msgid "近半年销量"
+msgstr "Sales - Last 6 Months"
+
+msgid "页面展示销量"
+msgstr "Displayed Sales"
+
+msgid "销售金额"
+msgstr "Sales Amount"
+
+msgid "页面价格"
+msgstr "Displayed Price"
+
+msgid "复购率 %"
+msgstr "Repeat Purchase Rate %"
+
+msgid "供应商评分"
+msgstr "Supplier Rating"
+
+msgid "评价数"
+msgstr "Review Count"
+
+msgid "使用浏览器采集助手推送查询结果"
+msgstr "Push search results with the browser capture assistant"
+
+msgid "在阿里巴巴国际站搜索页打开扩展，选择数据来源并推送当前页面。"
+msgstr "Open the extension on an Alibaba.com search page, select a data source, and push the current page."
