@@ -1,0 +1,224 @@
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError, ValidationError
+
+
+class ProductIntelligenceCandidate(models.Model):
+    _name = "product.intelligence.candidate"
+    _description = "Product Opportunity Candidate"
+    _inherit = ["mail.thread", "mail.activity.mixin"]
+    _order = "total_score desc, write_date desc"
+    _check_company_auto = True
+
+    name = fields.Char(required=True, tracking=True)
+    reference = fields.Char(copy=False, readonly=True, default=lambda self: _("New"))
+    active = fields.Boolean(default=True)
+    stage = fields.Selection(
+        [
+            ("observe", "Observe"),
+            ("orient", "Orient"),
+            ("review", "Decision Review"),
+            ("approved", "Approved"),
+            ("rejected", "Rejected"),
+            ("executed", "Executed"),
+        ],
+        default="observe",
+        required=True,
+        tracking=True,
+        group_expand="_group_expand_stage",
+    )
+    source_id = fields.Many2one(
+        "product.intelligence.source", required=True, tracking=True, check_company=True
+    )
+    external_id = fields.Char(index=True)
+    external_url = fields.Char()
+    category = fields.Char(index=True)
+    target_country_id = fields.Many2one("res.country")
+    company_id = fields.Many2one(
+        "res.company", required=True, default=lambda self: self.env.company, index=True
+    )
+    currency_id = fields.Many2one(
+        "res.currency", required=True, default=lambda self: self.env.company.currency_id
+    )
+    owner_id = fields.Many2one(
+        "res.users", default=lambda self: self.env.user, tracking=True
+    )
+    data_date = fields.Date(default=fields.Date.context_today)
+
+    supplier_price = fields.Monetary(currency_field="currency_id")
+    target_sale_price = fields.Monetary(currency_field="currency_id")
+    logistics_cost = fields.Monetary(currency_field="currency_id")
+    other_cost = fields.Monetary(currency_field="currency_id")
+    estimated_margin_percent = fields.Float(
+        compute="_compute_estimated_margin", store=True, digits=(16, 2)
+    )
+    supplier_count = fields.Integer()
+    minimum_order_qty = fields.Float()
+    lead_time_days = fields.Integer()
+    monthly_search_volume = fields.Integer()
+    trend_growth_percent = fields.Float(digits=(16, 2))
+    competitor_count = fields.Integer()
+
+    demand_score = fields.Float(default=50.0, digits=(5, 2))
+    growth_score = fields.Float(default=50.0, digits=(5, 2))
+    margin_score = fields.Float(default=50.0, digits=(5, 2))
+    competition_score = fields.Float(
+        default=50.0,
+        digits=(5, 2),
+        help="A higher score means a more attractive competitive landscape.",
+    )
+    logistics_score = fields.Float(
+        default=50.0,
+        digits=(5, 2),
+        help="A higher score means easier and lower-risk logistics.",
+    )
+    compliance_score = fields.Float(
+        default=50.0,
+        digits=(5, 2),
+        help="A higher score means lower compliance and intellectual-property risk.",
+    )
+    content_score = fields.Float(default=50.0, digits=(5, 2))
+    total_score = fields.Float(
+        compute="_compute_total_score", store=True, digits=(5, 2), tracking=True
+    )
+    recommendation = fields.Selection(
+        [("reject", "Reject"), ("review", "Review"), ("approve", "Approve")],
+        compute="_compute_recommendation",
+        store=True,
+    )
+
+    description = fields.Html()
+    decision_notes = fields.Html()
+    rejection_reason = fields.Text()
+    product_tmpl_id = fields.Many2one("product.template", readonly=True, copy=False)
+
+    _external_source_unique = models.Constraint(
+        "UNIQUE(source_id, external_id)",
+        "The external product identifier must be unique for each data source.",
+    )
+
+    @api.model
+    def _group_expand_stage(self, stages, domain):
+        return [key for key, _label in self._fields["stage"].selection]
+
+    @api.model_create_multi
+    def create(self, values_list):
+        sequence = self.env["ir.sequence"]
+        for values in values_list:
+            if values.get("reference", _("New")) == _("New"):
+                values["reference"] = sequence.next_by_code(
+                    "product.intelligence.candidate"
+                ) or _("New")
+        return super().create(values_list)
+
+    @api.depends("supplier_price", "target_sale_price", "logistics_cost", "other_cost")
+    def _compute_estimated_margin(self):
+        for record in self:
+            if record.target_sale_price:
+                cost = record.supplier_price + record.logistics_cost + record.other_cost
+                record.estimated_margin_percent = (
+                    (record.target_sale_price - cost) / record.target_sale_price * 100.0
+                )
+            else:
+                record.estimated_margin_percent = 0.0
+
+    @api.depends(
+        "demand_score",
+        "growth_score",
+        "margin_score",
+        "competition_score",
+        "logistics_score",
+        "compliance_score",
+        "content_score",
+        "company_id",
+    )
+    def _compute_total_score(self):
+        for record in self:
+            company = record.company_id
+            record.total_score = (
+                record.demand_score * company.pi_weight_demand
+                + record.growth_score * company.pi_weight_growth
+                + record.margin_score * company.pi_weight_margin
+                + record.competition_score * company.pi_weight_competition
+                + record.logistics_score * company.pi_weight_logistics
+                + record.compliance_score * company.pi_weight_compliance
+                + record.content_score * company.pi_weight_content
+            ) / 100.0
+
+    @api.depends("total_score", "company_id")
+    def _compute_recommendation(self):
+        for record in self:
+            if record.total_score >= record.company_id.pi_approval_threshold:
+                record.recommendation = "approve"
+            elif record.total_score >= record.company_id.pi_review_threshold:
+                record.recommendation = "review"
+            else:
+                record.recommendation = "reject"
+
+    @api.constrains(
+        "demand_score",
+        "growth_score",
+        "margin_score",
+        "competition_score",
+        "logistics_score",
+        "compliance_score",
+        "content_score",
+    )
+    def _check_score_range(self):
+        score_fields = [
+            "demand_score",
+            "growth_score",
+            "margin_score",
+            "competition_score",
+            "logistics_score",
+            "compliance_score",
+            "content_score",
+        ]
+        for record in self:
+            if any(not 0.0 <= record[field_name] <= 100.0 for field_name in score_fields):
+                raise ValidationError(_("Every component score must be between 0 and 100."))
+
+    def action_orient(self):
+        self.write({"stage": "orient"})
+
+    def action_submit_review(self):
+        self.write({"stage": "review"})
+
+    def action_approve(self):
+        self.write({"stage": "approved", "rejection_reason": False})
+
+    def action_reject(self):
+        self.write({"stage": "rejected"})
+
+    def action_create_product(self):
+        self.ensure_one()
+        if self.stage != "approved":
+            raise UserError(_("Approve the candidate before creating an Odoo product."))
+        if self.product_tmpl_id:
+            return self.action_open_product()
+        product = self.env["product.template"].create(
+            {
+                "name": self.name,
+                "default_code": self.reference,
+                "standard_price": self.supplier_price,
+                "list_price": self.target_sale_price,
+                "sale_ok": True,
+                "purchase_ok": True,
+                "company_id": self.company_id.id,
+                "description_sale": self.description,
+            }
+        )
+        self.write({"product_tmpl_id": product.id, "stage": "executed"})
+        return self.action_open_product()
+
+    def action_open_product(self):
+        self.ensure_one()
+        if not self.product_tmpl_id:
+            raise UserError(_("No Odoo product has been created yet."))
+        return {
+            "type": "ir.actions.act_window",
+            "name": self.product_tmpl_id.display_name,
+            "res_model": "product.template",
+            "view_mode": "form",
+            "res_id": self.product_tmpl_id.id,
+        }
+
