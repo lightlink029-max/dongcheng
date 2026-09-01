@@ -1,12 +1,18 @@
 function absoluteUrl(url){ try{return new URL(url,location.href).href;}catch{return url||'';} }
 function number(text, pattern){const m=(text||'').match(pattern);return m?Number(m[1].replace(/,/g,'')):0;}
 function mainProductImage(card, productId){
+  const matchedImages=[];
   for(const anchor of card?.querySelectorAll('a[href*="/product-detail/"]')||[]){
     const anchorId=(absoluteUrl(anchor.getAttribute('href')).match(/_(\d+)\.html/)||[])[1];
-    const matched=anchor.querySelector('img.searchx-product-e-slider__img[src*="s.alicdn.com/@sc"][src*="/kf/"]');
-    if(anchorId===productId&&matched?.getAttribute('src')) return absoluteUrl(matched.getAttribute('src'));
+    if(anchorId!==productId) continue;
+    for(const matched of anchor.querySelectorAll('img.searchx-product-e-slider__img[src*="s.alicdn.com/@sc"][src*="/kf/"]')){
+      const src=absoluteUrl(matched.getAttribute('src'));
+      if(src) matchedImages.push(src);
+    }
   }
-  const primary=card?.querySelector('img.searchx-product-e-slider__img[src*="s.alicdn.com/@sc"][src*="/kf/"]');
+  matchedImages.sort((a,b)=>imageSizeScore(b)-imageSizeScore(a));
+  if(matchedImages.length) return matchedImages[0];
+  const primary=card?.querySelector('img.searchx-product-e-slider__img[src*="s.alicdn.com/@sc"][src*="/kf/"][src*="_300x300"]');
   if(primary?.getAttribute('src')) return absoluteUrl(primary.getAttribute('src'));
   const candidates=[];
   for(const img of card?.querySelectorAll('img')||[]){
@@ -27,6 +33,12 @@ function mainProductImage(card, productId){
   }
   candidates.sort((a,b)=>b.score-a.score);
   return candidates[0]?.url||'';
+}
+function imageSizeScore(url){
+  if(/_300x300\./i.test(url)) return 100;
+  if(/_100x100\./i.test(url)) return -100;
+  const size=url.match(/_(\d+)x(\d+)\./);
+  return size?Math.min(Number(size[1]),Number(size[2])):0;
 }
 function productCard(link){
   let node=link;
