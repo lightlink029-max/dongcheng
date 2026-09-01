@@ -55,6 +55,18 @@ are updated by `(source, external_id)`; when no external ID is supplied, a stabl
 ID is derived from the product URL. Shunxi does not currently document a public
 API, so its vendor or an approved browser-side sender must call this endpoint.
 
+## Alibaba browser capture
+
+The companion Chrome/Edge extension in `browser_extension/` reads only product
+information visibly rendered on an Alibaba.com search result page and pushes it
+to the configured source endpoint. Alibaba search pages do not expose reliable
+7/30/180-day sales figures; those fields remain empty unless another authorized
+provider supplies them.
+
+Version 1.0.2 selects Alibaba's visible product image element before applying
+the generic CDN fallback, preventing badges and placeholder images from being
+stored as the product's main image.
+
 ## Installation
 
 1. Place `product_intelligence_hub` in the repository's custom addons root.
