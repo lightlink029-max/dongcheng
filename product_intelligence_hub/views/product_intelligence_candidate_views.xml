@@ -36,6 +36,9 @@
                 <field name="category" optional="show"/>
                 <field name="target_country_id" optional="show"/>
                 <field name="supplier_price" optional="show"/>
+                <field name="inquiry_count" optional="show"/>
+                <field name="transaction_count" optional="hide"/>
+                <field name="search_rank" optional="hide"/>
                 <field name="target_sale_price" optional="show"/>
                 <field name="estimated_margin_percent" string="利润率 %" optional="show"/>
                 <field name="total_score" widget="progressbar"/>
@@ -134,6 +137,11 @@
                                     <field name="estimated_margin_percent" readonly="1"/>
                                 </group>
                                 <group string="市场">
+                                    <field name="supplier_name"/>
+                                    <field name="keyword_text"/>
+                                    <field name="inquiry_count"/>
+                                    <field name="transaction_count"/>
+                                    <field name="search_rank"/>
                                     <field name="monthly_search_volume"/>
                                     <field name="trend_growth_percent"/>
                                     <field name="competitor_count"/>
