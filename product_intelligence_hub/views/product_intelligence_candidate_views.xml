@@ -30,6 +30,9 @@
         <field name="model">product.intelligence.candidate</field>
         <field name="arch" type="xml">
             <list decoration-success="recommendation == 'approve'" decoration-warning="recommendation == 'review'" decoration-danger="recommendation == 'reject'">
+                <header>
+                    <button name="action_bulk_delete" type="object" string="删除所选产品" display="always" groups="product_intelligence_hub.group_product_intelligence_manager" confirm="删除后无法恢复，确认删除所选候选产品吗？"/>
+                </header>
                 <field name="image_preview" widget="html"/>
                 <field name="reference"/>
                 <field name="name"/>
