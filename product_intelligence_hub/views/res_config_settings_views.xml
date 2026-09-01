@@ -24,6 +24,28 @@
                         <setting string="合规"><field name="pi_weight_compliance"/></setting>
                         <setting string="内容潜力"><field name="pi_weight_content"/></setting>
                     </block>
+                    <block title="阿里云 OSS 图片存储" help="启用后，新采集的产品主图会复制到自己的 OSS；上传失败不会中断采集。">
+                        <setting string="启用 OSS 图片存储">
+                            <field name="pi_oss_enabled"/>
+                        </setting>
+                        <setting string="OSS 连接" invisible="not pi_oss_enabled">
+                            <div class="content-group">
+                                <div class="row mt16"><label for="pi_oss_endpoint" class="col-lg-3 o_light_label"/><field name="pi_oss_endpoint" placeholder="oss-cn-hangzhou.aliyuncs.com"/></div>
+                                <div class="row mt16"><label for="pi_oss_bucket" class="col-lg-3 o_light_label"/><field name="pi_oss_bucket"/></div>
+                                <div class="row mt16"><label for="pi_oss_access_key_id" class="col-lg-3 o_light_label"/><field name="pi_oss_access_key_id"/></div>
+                                <div class="row mt16"><label for="pi_oss_access_key_secret" class="col-lg-3 o_light_label"/><field name="pi_oss_access_key_secret" password="True"/></div>
+                            </div>
+                        </setting>
+                        <setting string="对象路径和访问域名" invisible="not pi_oss_enabled">
+                            <div class="content-group">
+                                <div class="row mt16"><label for="pi_oss_prefix" class="col-lg-3 o_light_label"/><field name="pi_oss_prefix" placeholder="product-intelligence"/></div>
+                                <div class="row mt16"><label for="pi_oss_public_base_url" class="col-lg-3 o_light_label"/><field name="pi_oss_public_base_url" placeholder="https://img.example.com"/></div>
+                            </div>
+                        </setting>
+                        <setting string="删除联动" help="启用后，删除候选产品记录时同时删除由该记录上传的 OSS 对象。" invisible="not pi_oss_enabled">
+                            <field name="pi_oss_delete_on_unlink"/>
+                        </setting>
+                    </block>
                 </app>
             </xpath>
         </field>
