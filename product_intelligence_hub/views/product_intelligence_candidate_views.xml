@@ -15,7 +15,7 @@
                 <filter name="needs_review" string="Needs Review" domain="[('stage', '=', 'review')]"/>
                 <separator/>
                 <filter name="my_candidates" string="My Candidates" domain="[('owner_id', '=', uid)]"/>
-                <group expand="0" string="Group By">
+                <group name="group_by">
                     <filter name="group_stage" string="OODA Stage" context="{'group_by': 'stage'}"/>
                     <filter name="group_source" string="Source" context="{'group_by': 'source_id'}"/>
                     <filter name="group_country" string="Target Country" context="{'group_by': 'target_country_id'}"/>
@@ -208,4 +208,3 @@
         </field>
     </record>
 </odoo>
-
