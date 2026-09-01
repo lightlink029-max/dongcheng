@@ -462,3 +462,11 @@ msgstr "Target Sale Price"
 #. module: product_intelligence_hub
 msgid "删除所选产品"
 msgstr "Delete Selected Products"
+
+#. module: product_intelligence_hub
+msgid "只有产品智能管理员可以批量删除候选产品。"
+msgstr "Only Product Intelligence Managers can bulk-delete candidates."
+
+#. module: product_intelligence_hub
+msgid "删除后无法恢复，确认删除所选候选产品吗？"
+msgstr "Deletion cannot be undone. Delete the selected candidates?"
