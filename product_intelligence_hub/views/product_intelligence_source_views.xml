@@ -12,6 +12,7 @@
                 <field name="status" widget="badge"/>
                 <field name="last_sync_at"/>
                 <field name="candidate_count"/>
+                <button name="action_view_candidates" type="object" string="候选产品" class="btn-link" icon="fa-cubes"/>
                 <field name="company_id" groups="base.group_multi_company"/>
             </list>
         </field>

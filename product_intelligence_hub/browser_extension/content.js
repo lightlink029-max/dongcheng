@@ -1,6 +1,8 @@
 function absoluteUrl(url){ try{return new URL(url,location.href).href;}catch{return url||'';} }
 function number(text, pattern){const m=(text||'').match(pattern);return m?Number(m[1].replace(/,/g,'')):0;}
 function mainProductImage(card){
+  const primary=card?.querySelector('img.searchx-product-e-slider__img[src*="s.alicdn.com/@sc"][src*="/kf/"]');
+  if(primary?.getAttribute('src')) return absoluteUrl(primary.getAttribute('src'));
   const candidates=[];
   for(const img of card?.querySelectorAll('img')||[]){
     const srcset=(img.getAttribute('srcset')||'').split(',').map(x=>x.trim().split(/\s+/)[0]).filter(Boolean);
