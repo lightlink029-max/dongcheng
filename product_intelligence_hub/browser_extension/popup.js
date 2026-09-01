@@ -1,7 +1,7 @@
 const endpoint = document.querySelector('#endpoint');
 const token = document.querySelector('#token');
 const status = document.querySelector('#status');
-const CAPTURE_MESSAGE = 'PIH_CAPTURE_V107';
+const CAPTURE_MESSAGE = 'PIH_CAPTURE_V108';
 chrome.storage.local.get(['endpoint','token'], v => { endpoint.value=v.endpoint||''; token.value=v.token||''; });
 async function captureFromTab(tabId) {
   try {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LightLink 选品情报助手",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "将阿里巴巴国际站当前搜索页的可见商品信息推送到 Odoo。",
   "permissions": ["activeTab", "storage", "scripting"],
   "host_permissions": ["https://*.alibaba.com/*", "https://*.odoo.com/*"],
