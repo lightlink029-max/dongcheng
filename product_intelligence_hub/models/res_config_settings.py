@@ -24,6 +24,14 @@ class ResConfigSettings(models.TransientModel):
     pi_review_threshold = fields.Float(
         related="company_id.pi_review_threshold", readonly=False
     )
+    pi_oss_enabled = fields.Boolean(string="启用阿里云 OSS", config_parameter="product_intelligence_hub.oss_enabled")
+    pi_oss_endpoint = fields.Char(string="Endpoint", config_parameter="product_intelligence_hub.oss_endpoint")
+    pi_oss_bucket = fields.Char(string="Bucket", config_parameter="product_intelligence_hub.oss_bucket")
+    pi_oss_access_key_id = fields.Char(string="AccessKey ID", config_parameter="product_intelligence_hub.oss_access_key_id")
+    pi_oss_access_key_secret = fields.Char(string="AccessKey Secret", config_parameter="product_intelligence_hub.oss_access_key_secret")
+    pi_oss_prefix = fields.Char(string="存储目录", default="product-intelligence", config_parameter="product_intelligence_hub.oss_prefix")
+    pi_oss_public_base_url = fields.Char(string="公开访问域名", config_parameter="product_intelligence_hub.oss_public_base_url")
+    pi_oss_delete_on_unlink = fields.Boolean(string="删除记录时同步删除 OSS 图片", config_parameter="product_intelligence_hub.oss_delete_on_unlink")
 
     @api.constrains(
         "pi_weight_demand",
