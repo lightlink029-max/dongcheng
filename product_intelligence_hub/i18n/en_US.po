@@ -8,221 +8,295 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+#. module: product_intelligence_hub
 msgid "产品智能中心"
 msgstr "Product Intelligence Hub"
 
+#. module: product_intelligence_hub
 msgid "产品智能"
 msgstr "Product Intelligence"
 
+#. module: product_intelligence_hub
 msgid "产品机会"
 msgstr "Product Opportunities"
 
+#. module: product_intelligence_hub
 msgid "产品机会候选"
 msgstr "Product Opportunity Candidate"
 
+#. module: product_intelligence_hub
 msgid "产品机会分析"
 msgstr "Product Opportunity Analysis"
 
+#. module: product_intelligence_hub
 msgid "机会评分"
 msgstr "Opportunity Scores"
 
+#. module: product_intelligence_hub
 msgid "OODA 决策看板"
 msgstr "OODA Board"
 
+#. module: product_intelligence_hub
 msgid "OODA 阶段"
 msgstr "OODA Stage"
 
+#. module: product_intelligence_hub
 msgid "配置"
 msgstr "Configuration"
 
+#. module: product_intelligence_hub
 msgid "数据来源"
 msgstr "Data Sources"
 
+#. module: product_intelligence_hub
 msgid "设置"
 msgstr "Settings"
 
+#. module: product_intelligence_hub
 msgid "用户"
 msgstr "User"
 
+#. module: product_intelligence_hub
 msgid "管理员"
 msgstr "Manager"
 
+#. module: product_intelligence_hub
 msgid "观察"
 msgstr "Observe"
 
+#. module: product_intelligence_hub
 msgid "研判"
 msgstr "Orient"
 
+#. module: product_intelligence_hub
 msgid "决策审核"
 msgstr "Decision Review"
 
+#. module: product_intelligence_hub
 msgid "已批准"
 msgstr "Approved"
 
+#. module: product_intelligence_hub
 msgid "已淘汰"
 msgstr "Rejected"
 
+#. module: product_intelligence_hub
 msgid "已执行"
 msgstr "Executed"
 
+#. module: product_intelligence_hub
 msgid "淘汰"
 msgstr "Reject"
 
+#. module: product_intelligence_hub
 msgid "复核"
 msgstr "Review"
 
+#. module: product_intelligence_hub
 msgid "批准"
 msgstr "Approve"
 
+#. module: product_intelligence_hub
 msgid "高潜力"
 msgstr "High Potential"
 
+#. module: product_intelligence_hub
 msgid "待复核"
 msgstr "Needs Review"
 
+#. module: product_intelligence_hub
 msgid "我的候选产品"
 msgstr "My Candidates"
 
+#. module: product_intelligence_hub
 msgid "来源"
 msgstr "Source"
 
+#. module: product_intelligence_hub
 msgid "目标国家/地区"
 msgstr "Target Country"
 
+#. module: product_intelligence_hub
 msgid "分类"
 msgstr "Category"
 
+#. module: product_intelligence_hub
 msgid "利润率 %"
 msgstr "Margin %"
 
+#. module: product_intelligence_hub
 msgid "开始分析"
 msgstr "Start Analysis"
 
+#. module: product_intelligence_hub
 msgid "提交决策"
 msgstr "Submit for Decision"
 
+#. module: product_intelligence_hub
 msgid "创建 Odoo 产品"
 msgstr "Create Odoo Product"
 
+#. module: product_intelligence_hub
 msgid "Odoo 产品"
 msgstr "Odoo Product"
 
+#. module: product_intelligence_hub
 msgid "市场数据"
 msgstr "Market Data"
 
+#. module: product_intelligence_hub
 msgid "商业数据"
 msgstr "Commercial"
 
+#. module: product_intelligence_hub
 msgid "市场"
 msgstr "Market"
 
+#. module: product_intelligence_hub
 msgid "评分"
 msgstr "Scoring"
 
+#. module: product_intelligence_hub
 msgid "产品简报"
 msgstr "Product Brief"
 
+#. module: product_intelligence_hub
 msgid "决策"
 msgstr "Decision"
 
+#. module: product_intelligence_hub
 msgid "同步"
 msgstr "Synchronize"
 
+#. module: product_intelligence_hub
 msgid "候选产品"
 msgstr "Candidates"
 
+#. module: product_intelligence_hub
 msgid "最近同步"
 msgstr "Last synchronization"
 
+#. module: product_intelligence_hub
 msgid "备注"
 msgstr "Notes"
 
+#. module: product_intelligence_hub
 msgid "手工录入"
 msgstr "Manual"
 
+#. module: product_intelligence_hub
 msgid "供应商"
 msgstr "Supplier"
 
+#. module: product_intelligence_hub
 msgid "电商平台"
 msgstr "Marketplace"
 
+#. module: product_intelligence_hub
 msgid "搜索趋势"
 msgstr "Search Trends"
 
+#. module: product_intelligence_hub
 msgid "社交媒体"
 msgstr "Social Media"
 
+#. module: product_intelligence_hub
 msgid "自定义 API"
 msgstr "Custom API"
 
+#. module: product_intelligence_hub
 msgid "手动"
 msgstr "Manual"
 
+#. module: product_intelligence_hub
 msgid "每天"
 msgstr "Daily"
 
+#. module: product_intelligence_hub
 msgid "每周"
 msgstr "Weekly"
 
+#. module: product_intelligence_hub
 msgid "未测试"
 msgstr "Not Tested"
 
+#. module: product_intelligence_hub
 msgid "已连接"
 msgstr "Connected"
 
+#. module: product_intelligence_hub
 msgid "错误"
 msgstr "Error"
 
+#. module: product_intelligence_hub
 msgid "决策阈值"
 msgstr "Decision Thresholds"
 
+#. module: product_intelligence_hub
 msgid "批准阈值"
 msgstr "Approval threshold"
 
+#. module: product_intelligence_hub
 msgid "复核阈值"
 msgstr "Review threshold"
 
+#. module: product_intelligence_hub
 msgid "评分权重"
 msgstr "Scoring Weights"
 
+#. module: product_intelligence_hub
 msgid "需求"
 msgstr "Demand"
 
+#. module: product_intelligence_hub
 msgid "增长"
 msgstr "Growth"
 
+#. module: product_intelligence_hub
 msgid "利润"
 msgstr "Margin"
 
+#. module: product_intelligence_hub
 msgid "竞争"
 msgstr "Competition"
 
+#. module: product_intelligence_hub
 msgid "物流"
 msgstr "Logistics"
 
+#. module: product_intelligence_hub
 msgid "合规"
 msgstr "Compliance"
 
+#. module: product_intelligence_hub
 msgid "内容潜力"
 msgstr "Content potential"
 
+#. module: product_intelligence_hub
 msgid "新建"
 msgstr "New"
 
+#. module: product_intelligence_hub
 msgid "每项评分必须在 0 到 100 之间。"
 msgstr "Every component score must be between 0 and 100."
 
+#. module: product_intelligence_hub
 msgid "创建 Odoo 产品前，请先批准该候选产品。"
 msgstr "Approve the candidate before creating an Odoo product."
 
+#. module: product_intelligence_hub
 msgid "尚未创建 Odoo 产品。"
 msgstr "No Odoo product has been created yet."
 
+#. module: product_intelligence_hub
 msgid "数据来源“%s”尚未安装连接器。"
 msgstr "No connector is installed for data source '%s'."
 
+#. module: product_intelligence_hub
 msgid "已导入 %s 个候选产品。"
 msgstr "Imported %s candidate(s)."
 
+#. module: product_intelligence_hub
 msgid "产品智能评分权重之和必须为 100%。"
 msgstr "Product intelligence scoring weights must total 100%."
+
