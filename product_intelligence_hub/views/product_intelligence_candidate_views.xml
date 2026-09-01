@@ -30,13 +30,14 @@
         <field name="model">product.intelligence.candidate</field>
         <field name="arch" type="xml">
             <list decoration-success="recommendation == 'approve'" decoration-warning="recommendation == 'review'" decoration-danger="recommendation == 'reject'">
+                <field name="image_preview" widget="html"/>
                 <field name="reference"/>
                 <field name="name"/>
                 <field name="source_id"/>
                 <field name="category" optional="show"/>
                 <field name="target_country_id" optional="show"/>
-                <field name="supplier_price" optional="show"/>
-                <field name="price_text" optional="show"/>
+                <field name="price_text" string="价格区间" optional="show"/>
+                <field name="supplier_price" optional="hide"/>
                 <field name="heat_score" optional="show"/>
                 <field name="sales_7d" optional="hide"/>
                 <field name="sales_30d" optional="hide"/>
@@ -69,8 +70,10 @@
                 <field name="total_score"/>
                 <field name="recommendation"/>
                 <field name="owner_id"/>
+                <field name="image_preview"/>
                 <templates>
                     <t t-name="card">
+                        <div class="mb-2"><field name="image_preview" widget="html"/></div>
                         <div class="d-flex justify-content-between mb-2">
                             <strong class="text-truncate"><field name="name"/></strong>
                             <field name="recommendation" widget="badge"/>
@@ -112,6 +115,7 @@
                     </div>
                     <field name="product_tmpl_id" invisible="1"/>
                     <div class="oe_title">
+                        <field name="image_preview" widget="html" nolabel="1"/>
                         <label for="name"/>
                         <h1><field name="name"/></h1>
                         <div><field name="reference" readonly="1"/></div>
@@ -121,6 +125,7 @@
                             <field name="source_id"/>
                             <field name="external_id"/>
                             <field name="external_url" widget="url"/>
+                            <field name="image_url" widget="url"/>
                             <field name="category"/>
                             <field name="target_country_id"/>
                         </group>
