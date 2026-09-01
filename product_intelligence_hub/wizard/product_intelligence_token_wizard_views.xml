@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_intelligence_token_wizard_form" model="ir.ui.view">
+        <field name="name">product.intelligence.token.wizard.form</field>
+        <field name="model">product.intelligence.token.wizard</field>
+        <field name="arch" type="xml">
+            <form string="数据推送凭证">
+                <div class="alert alert-warning" role="alert">
+                    令牌只显示一次。请复制并安全保存，不要通过聊天或邮件发送。
+                </div>
+                <group>
+                    <field name="source_id"/>
+                    <field name="endpoint" widget="CopyClipboardChar"/>
+                    <field name="token" widget="CopyClipboardChar" password="True"/>
+                </group>
+                <footer><button string="关闭" special="cancel" class="btn-primary"/></footer>
+            </form>
+        </field>
+    </record>
+</odoo>
