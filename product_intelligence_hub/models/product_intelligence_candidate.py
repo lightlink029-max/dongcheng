@@ -307,5 +307,7 @@ class ProductIntelligenceCandidate(models.Model):
         }
 
     def action_bulk_delete(self):
+        if not self.env.user.has_group("product_intelligence_hub.group_product_intelligence_manager"):
+            raise UserError(_("只有产品智能管理员可以批量删除候选产品。"))
         self.unlink()
         return {"type": "ir.actions.client", "tag": "reload"}
