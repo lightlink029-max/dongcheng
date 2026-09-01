@@ -1,5 +1,5 @@
 from . import product_intelligence_candidate
+from . import image_storage_oss
 from . import product_intelligence_source
 from . import res_company
 from . import res_config_settings
-
