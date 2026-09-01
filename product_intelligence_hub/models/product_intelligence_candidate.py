@@ -38,6 +38,16 @@ class ProductIntelligenceCandidate(models.Model):
     keyword_text = fields.Text()
     inquiry_count = fields.Integer()
     transaction_count = fields.Integer()
+    heat_score = fields.Float(string="热度", digits=(16, 2))
+    sales_7d = fields.Integer(string="近7天销量")
+    sales_30d = fields.Integer(string="近30天销量")
+    sales_180d = fields.Integer(string="近半年销量")
+    displayed_sales = fields.Integer(string="页面展示销量")
+    sales_amount = fields.Monetary(string="销售金额", currency_field="currency_id")
+    price_text = fields.Char(string="页面价格")
+    repeat_purchase_rate = fields.Float(string="复购率 %", digits=(16, 2))
+    supplier_rating = fields.Float(string="供应商评分", digits=(4, 2))
+    review_count = fields.Integer(string="评价数")
     search_rank = fields.Integer()
     source_payload = fields.Json(copy=False)
     category = fields.Char(index=True)
@@ -143,6 +153,16 @@ class ProductIntelligenceCandidate(models.Model):
             "minimum_order_qty": number(first("minimum_order_qty", "moq", "最小起订量")),
             "inquiry_count": number(first("inquiry_count", "inquiries", "询盘数"), integer=True),
             "transaction_count": number(first("transaction_count", "transactions", "交易数"), integer=True),
+            "heat_score": number(first("heat_score", "heat", "热度")),
+            "sales_7d": number(first("sales_7d", "seven_day_sales", "近7天销量"), integer=True),
+            "sales_30d": number(first("sales_30d", "thirty_day_sales", "近30天销量"), integer=True),
+            "sales_180d": number(first("sales_180d", "half_year_sales", "近半年销量"), integer=True),
+            "displayed_sales": number(first("displayed_sales", "sold", "已售"), integer=True),
+            "sales_amount": number(first("sales_amount", "gmv", "销售金额")),
+            "price_text": first("price_text", "display_price", "页面价格"),
+            "repeat_purchase_rate": number(first("repeat_purchase_rate", "repurchase_rate", "复购率")),
+            "supplier_rating": number(first("supplier_rating", "rating", "供应商评分")),
+            "review_count": number(first("review_count", "reviews", "评价数"), integer=True),
             "search_rank": number(first("search_rank", "rank", "排名"), integer=True),
             "source_payload": item,
             "data_date": fields.Date.context_today(self),
