@@ -1,6 +1,11 @@
 function absoluteUrl(url){ try{return new URL(url,location.href).href;}catch{return url||'';} }
 function number(text, pattern){const m=(text||'').match(pattern);return m?Number(m[1].replace(/,/g,'')):0;}
-function mainProductImage(card){
+function mainProductImage(card, productId){
+  for(const anchor of card?.querySelectorAll('a[href*="/product-detail/"]')||[]){
+    const anchorId=(absoluteUrl(anchor.getAttribute('href')).match(/_(\d+)\.html/)||[])[1];
+    const matched=anchor.querySelector('img.searchx-product-e-slider__img[src*="s.alicdn.com/@sc"][src*="/kf/"]');
+    if(anchorId===productId&&matched?.getAttribute('src')) return absoluteUrl(matched.getAttribute('src'));
+  }
   const primary=card?.querySelector('img.searchx-product-e-slider__img[src*="s.alicdn.com/@sc"][src*="/kf/"]');
   if(primary?.getAttribute('src')) return absoluteUrl(primary.getAttribute('src'));
   const candidates=[];
@@ -49,7 +54,7 @@ function captureAlibaba(){
     const rating=text.match(/(\d(?:\.\d)?)\/5\.0\s*\((\d+)\)/);
     const sold=number(text,/(?:已售|sold)\s*([\d,]+)/i);
     const repeat=number(text,/复购率\s*([\d.]+)%/);
-    items.push({product_id:id,product_title:titleLink.textContent.trim(),product_url:url,main_image:mainProductImage(card),supplier:supplier?.textContent.trim()||'',keywords:keyword,price_text:price,min_price:number(price,/([\d,.]+)/),moq:number(text,/(?:最低起订量[:：]?|Min\. Order[:：]?)\s*([\d,]+)/i),displayed_sales:sold,transactions:sold,repeat_purchase_rate:repeat,supplier_rating:rating?Number(rating[1]):0,review_count:rating?Number(rating[2]):0,heat_score:Math.min(100,Math.round(Math.log10(sold+1)*25+repeat*0.5)),source_page:location.href,captured_at:new Date().toISOString()});
+    items.push({product_id:id,product_title:titleLink.textContent.trim(),product_url:url,main_image:mainProductImage(card,id),supplier:supplier?.textContent.trim()||'',keywords:keyword,price_text:price,min_price:number(price,/([\d,.]+)/),moq:number(text,/(?:最低起订量[:：]?|Min\. Order[:：]?)\s*([\d,]+)/i),displayed_sales:sold,transactions:sold,repeat_purchase_rate:repeat,supplier_rating:rating?Number(rating[1]):0,review_count:rating?Number(rating[2]):0,heat_score:Math.min(100,Math.round(Math.log10(sold+1)*25+repeat*0.5)),source_page:location.href,captured_at:new Date().toISOString()});
   }
   return items;
 }

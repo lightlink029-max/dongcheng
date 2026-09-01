@@ -124,7 +124,7 @@ class ProductIntelligenceCandidate(models.Model):
         for record in self:
             url = html.escape(record.image_url or "", quote=True)
             record.image_preview = (
-                f'<img src="{url}" alt="产品主图" style="width:72px;height:72px;object-fit:contain;border-radius:6px"/>'
+                f'<img src="{url}" alt="产品主图" style="width:300px;height:300px;max-width:100%;object-fit:contain;border-radius:6px"/>'
                 if url else ""
             )
 
