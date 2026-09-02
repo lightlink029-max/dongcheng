@@ -8,8 +8,7 @@
                      class="container my-5" id="product_intelligence_details">
                 <div class="border rounded-3 p-3 p-md-4 bg-light-subtle">
                     <div class="mb-4">
-                        <h2 class="h3 mb-2">产品规格与交付信息</h2>
-                        <p class="text-muted mb-0">以下信息来自供应链资料，询价前请与我们确认最终规格、包装和交期。</p>
+                        <h2 class="h3 mb-0">产品规格与交付信息</h2>
                     </div>
                     <div class="accordion" id="product_intelligence_details_accordion">
                         <div t-if="product.pi_core_industry_attributes" class="accordion-item">
