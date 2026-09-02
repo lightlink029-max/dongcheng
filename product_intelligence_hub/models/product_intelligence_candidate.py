@@ -408,6 +408,22 @@ class ProductIntelligenceCandidate(models.Model):
             )
         return "\n".join(part for part in (existing, managed_block) if part)
 
+    def _prepare_translation_source_text(self):
+        """Build plain product-detail text for Odoo's native translated field."""
+        self.ensure_one()
+        sections = [
+            (_("核心行业属性"), self.core_industry_attributes),
+            (_("重要属性"), self.important_attributes),
+            (_("包装信息"), self.packaging_information),
+            (_("发货及交货时间"), self.shipping_information),
+        ]
+        blocks = []
+        for title, content in sections:
+            lines = [line.strip() for line in (content or "").splitlines() if line.strip()]
+            if lines:
+                blocks.append("%s\n%s" % (title, "\n".join(lines)))
+        return "\n\n".join(blocks)
+
     @api.model
     def _parse_standard_attribute_lines(self, section, content):
         result = []
@@ -454,10 +470,9 @@ class ProductIntelligenceCandidate(models.Model):
             "sale_ok": True,
             "purchase_ok": True,
             "company_id": self.company_id.id,
-            "description_sale": self.description,
-            "description_ecommerce": self._prepare_ecommerce_description(
-                product.description_ecommerce if product else None
-            ),
+            # Reuse Odoo's native translated plain-text field.  website_sale
+            # already renders it on the product page in the visitor's language.
+            "description_sale": self._prepare_translation_source_text(),
             "pi_candidate_id": self.id,
             "pi_source_name": self.source_id.display_name,
             "pi_external_url": self.external_url,

@@ -1,3 +1,5 @@
+import re
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -76,16 +78,21 @@ class ProductTemplate(models.Model):
 
     @api.model
     def action_migrate_product_intelligence_ecommerce_descriptions(self):
-        """Build the optimized eCommerce details and remove old attributes."""
+        """Move generated details to native plain text and clean old HTML."""
         products = self.search([("pi_candidate_id", "!=", False)])
+        marker_pattern = re.compile(
+            r"<!-- product-intelligence-details:start -->.*?"
+            r"<!-- product-intelligence-details:end -->",
+            flags=re.DOTALL,
+        )
         for product in products:
-            description = product.pi_candidate_id._prepare_ecommerce_description(
-                product.description_ecommerce
-            )
-            if description != (product.description_ecommerce or ""):
-                product.with_context(lang="zh_CN", tracking_disable=True).write({
-                    "description_ecommerce": description,
-                })
+            ecommerce_description = marker_pattern.sub(
+                "", product.description_ecommerce or ""
+            ).strip()
+            product.with_context(lang="zh_CN", tracking_disable=True).write({
+                "description_sale": product.pi_candidate_id._prepare_translation_source_text(),
+                "description_ecommerce": ecommerce_description,
+            })
             product.pi_candidate_id._sync_standard_product_attributes(product)
         return True
 
