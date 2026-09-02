@@ -166,6 +166,21 @@
                             </group>
                             <button name="action_queue_detail_enrichment" type="object" string="加入补充详情队列" class="btn-primary"/>
                         </page>
+                        <page string="图片与视频">
+                            <div class="alert alert-info" role="alert">
+                                补充详情时自动获取商品详情页中的图片和视频。同步到 Odoo 产品后，将显示在电子商务媒体中。
+                            </div>
+                            <field name="media_ids" context="{'default_candidate_id': id}">
+                                <list editable="bottom" default_order="sequence, id">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="preview" widget="html" readonly="1"/>
+                                    <field name="media_type"/>
+                                    <field name="name"/>
+                                    <field name="source_url" widget="url"/>
+                                    <field name="product_image_id" readonly="1" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
                         <page string="市场数据">
                             <group>
                                 <group string="商业数据">
