@@ -12,10 +12,10 @@ class ProductTemplate(models.Model):
     pi_external_url = fields.Char(string="原始产品链接", copy=False, readonly=True)
     pi_supplier_name = fields.Char(string="来源供应商", copy=False, readonly=True)
     pi_source_category = fields.Char(string="来源产品分类", copy=False, readonly=True)
-    pi_core_industry_attributes = fields.Text(string="核心行业属性", copy=False, readonly=True)
-    pi_important_attributes = fields.Text(string="重要属性", copy=False, readonly=True)
-    pi_packaging_information = fields.Text(string="包装信息", copy=False, readonly=True)
-    pi_shipping_information = fields.Text(string="发货信息", copy=False, readonly=True)
+    pi_core_industry_attributes = fields.Text(string="核心行业属性", copy=False, translate=True)
+    pi_important_attributes = fields.Text(string="重要属性", copy=False, translate=True)
+    pi_packaging_information = fields.Text(string="包装信息", copy=False, translate=True)
+    pi_shipping_information = fields.Text(string="发货信息", copy=False, translate=True)
     pi_detail_updated_at = fields.Datetime(string="详情同步时间", copy=False, readonly=True)
 
     def action_open_product_intelligence_candidate(self):
@@ -30,3 +30,18 @@ class ProductTemplate(models.Model):
             "res_id": self.pi_candidate_id.id,
         }
 
+    def action_sync_product_intelligence_details(self):
+        self.ensure_one()
+        if not self.pi_candidate_id:
+            raise UserError(_("该产品没有关联的产品机会。"))
+        self.write(self.pi_candidate_id._prepare_product_values())
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("产品详情同步完成"),
+                "message": _("已从产品机会重新同步最新详情。"),
+                "type": "success",
+                "sticky": False,
+            },
+        }
