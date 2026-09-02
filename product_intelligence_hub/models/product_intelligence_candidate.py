@@ -80,6 +80,7 @@ class ProductIntelligenceCandidate(models.Model):
         [("pending", "未补充"), ("queued", "等待补充"), ("done", "详情已补充"), ("failed", "补充失败")],
         string="详情状态", default="pending", copy=False, index=True,
     )
+    core_industry_attributes = fields.Text(string="核心行业属性", copy=False)
     important_attributes = fields.Text(string="重要属性", copy=False)
     packaging_information = fields.Text(string="包装信息", copy=False)
     shipping_information = fields.Text(string="发货信息", copy=False)
