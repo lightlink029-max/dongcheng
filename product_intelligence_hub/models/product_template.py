@@ -76,7 +76,7 @@ class ProductTemplate(models.Model):
 
     @api.model
     def action_migrate_product_intelligence_ecommerce_descriptions(self):
-        """Move existing sourced details to standard no-variant attributes."""
+        """Build the optimized eCommerce details and remove old attributes."""
         products = self.search([("pi_candidate_id", "!=", False)])
         for product in products:
             description = product.pi_candidate_id._prepare_ecommerce_description(

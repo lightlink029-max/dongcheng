@@ -367,7 +367,46 @@ class ProductIntelligenceCandidate(models.Model):
             re.escape(start_marker) + ".*?" + re.escape(end_marker),
             flags=re.DOTALL,
         )
-        return marker_pattern.sub("", existing).strip()
+        existing = marker_pattern.sub("", existing).strip()
+        sections = [
+            ("核心行业属性", self.core_industry_attributes),
+            ("重要属性", self.important_attributes),
+            ("包装信息", self.packaging_information),
+            ("发货及交货时间", self.shipping_information),
+        ]
+        cards = []
+        for title, content in sections:
+            rows = []
+            for raw_line in (content or "").splitlines():
+                line = raw_line.strip().lstrip("-•").strip()
+                if not line:
+                    continue
+                parts = re.split(r"\s*[:：]\s*", line, maxsplit=1)
+                if len(parts) == 2 and parts[0] and parts[1]:
+                    rows.append(
+                        '<div class="d-flex flex-column flex-sm-row gap-1 gap-sm-3 py-2 border-bottom">'
+                        f'<strong class="text-body-emphasis" style="min-width: 9rem;">{html.escape(parts[0].strip())}</strong>'
+                        f'<span class="text-break">{html.escape(parts[1].strip())}</span></div>'
+                    )
+                else:
+                    rows.append(f'<div class="py-2 border-bottom text-break">{html.escape(line)}</div>')
+            if rows:
+                cards.append(
+                    '<div class="col-12 col-lg-6">'
+                    '<section class="card h-100 border-0 shadow-sm">'
+                    f'<div class="card-header bg-light"><h3 class="h5 mb-0">{html.escape(title)}</h3></div>'
+                    f'<div class="card-body py-1">{"".join(rows)}</div>'
+                    '</section></div>'
+                )
+        managed_block = ""
+        if cards:
+            managed_block = (
+                f'{start_marker}<section class="product-intelligence-details my-4">'
+                '<h2 class="h3 mb-3">产品规格与交付信息</h2>'
+                f'<div class="row g-3">{"".join(cards)}</div>'
+                f'</section>{end_marker}'
+            )
+        return "\n".join(part for part in (existing, managed_block) if part)
 
     @api.model
     def _parse_standard_attribute_lines(self, section, content):
@@ -399,44 +438,11 @@ class ProductIntelligenceCandidate(models.Model):
 
     def _sync_standard_product_attributes(self, product):
         self.ensure_one()
-        Attribute = self.env["product.attribute"].with_context(lang="zh_CN")
-        AttributeValue = self.env["product.attribute.value"].with_context(lang="zh_CN")
+        # Details are presented in the standard eCommerce description. Remove
+        # attributes created by the previous representation to keep the page tidy.
         managed_lines = product.attribute_line_ids.filtered("attribute_id.pi_managed")
         managed_lines.unlink()
-
-        grouped = {}
-        for attribute_name, value_name in self._standard_attribute_pairs():
-            technical_key = hashlib.sha256(attribute_name.encode("utf-8")).hexdigest()
-            grouped.setdefault((technical_key, attribute_name), [])
-            if value_name not in grouped[(technical_key, attribute_name)]:
-                grouped[(technical_key, attribute_name)].append(value_name)
-
-        for (technical_key, attribute_name), value_names in grouped.items():
-            attribute = Attribute.search([("pi_technical_key", "=", technical_key)], limit=1)
-            if not attribute:
-                attribute = Attribute.create({
-                    "name": attribute_name,
-                    "create_variant": "no_variant",
-                    "pi_managed": True,
-                    "pi_technical_key": technical_key,
-                })
-            values = self.env["product.attribute.value"]
-            for value_name in value_names:
-                value = AttributeValue.search([
-                    ("attribute_id", "=", attribute.id),
-                    ("name", "=", value_name),
-                ], limit=1)
-                if not value:
-                    value = AttributeValue.create({
-                        "attribute_id": attribute.id,
-                        "name": value_name,
-                    })
-                values |= value
-            self.env["product.template.attribute.line"].create({
-                "product_tmpl_id": product.id,
-                "attribute_id": attribute.id,
-                "value_ids": [(6, 0, values.ids)],
-            })
+        return True
 
     def _prepare_product_values(self, product=None):
         self.ensure_one()
