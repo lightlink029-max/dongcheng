@@ -4,7 +4,6 @@
         <field name="name">产品智能设置</field>
         <field name="res_model">res.config.settings</field>
         <field name="view_mode">form</field>
-        <field name="target">inline</field>
         <field name="context">{'module': 'product_intelligence_hub'}</field>
     </record>
 
