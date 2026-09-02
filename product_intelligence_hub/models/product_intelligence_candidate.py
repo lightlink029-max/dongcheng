@@ -1,6 +1,7 @@
 import hashlib
 import html
 import logging
+import base64
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
@@ -75,6 +76,15 @@ class ProductIntelligenceCandidate(models.Model):
         "res.users", string="负责人", default=lambda self: self.env.user, tracking=True
     )
     data_date = fields.Date(string="数据日期", default=fields.Date.context_today)
+    detail_state = fields.Selection(
+        [("pending", "未补充"), ("queued", "等待补充"), ("done", "详情已补充"), ("failed", "补充失败")],
+        string="详情状态", default="pending", copy=False, index=True,
+    )
+    important_attributes = fields.Text(string="重要属性", copy=False)
+    packaging_information = fields.Text(string="包装信息", copy=False)
+    shipping_information = fields.Text(string="发货信息", copy=False)
+    detail_error = fields.Char(string="详情错误", copy=False)
+    detail_updated_at = fields.Datetime(string="详情更新时间", copy=False)
 
     supplier_price = fields.Monetary(string="供应商价格", currency_field="currency_id")
     target_sale_price = fields.Monetary(string="目标售价", currency_field="currency_id")
@@ -343,6 +353,14 @@ class ProductIntelligenceCandidate(models.Model):
                 "description_sale": self.description,
             }
         )
+        source_image = self.image_url or self.original_image_url
+        if source_image:
+            try:
+                image_data, _content_type = self.env["product.image.storage.oss"].download_image(source_image)
+                product.write({"image_1920": base64.b64encode(image_data)})
+            except Exception as exc:
+                _logger.exception("Unable to download candidate image for product %s", product.id)
+                self.message_post(body=_("正式产品已创建，但主图下载失败：%s") % str(exc)[:512])
         self.write({"product_tmpl_id": product.id, "stage": "executed"})
         return self.action_open_product()
 
@@ -363,3 +381,17 @@ class ProductIntelligenceCandidate(models.Model):
             raise UserError(_("只有产品智能管理员可以批量删除候选产品。"))
         self.unlink()
         return {"type": "ir.actions.client", "tag": "reload"}
+
+    def action_queue_detail_enrichment(self):
+        candidates = self.filtered(lambda record: record.external_url)
+        candidates.write({"detail_state": "queued", "detail_error": False})
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("详情补充队列"),
+                "message": _("已将 %(count)s 个产品加入详情补充队列，请在 Alibaba 页面打开选品情报助手执行。") % {"count": len(candidates)},
+                "type": "success",
+                "sticky": False,
+            },
+        }
