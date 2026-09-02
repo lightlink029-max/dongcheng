@@ -76,34 +76,63 @@ function captureAlibaba(){
   }
   return items;
 }
-function detailSection(pattern){
-  const headings=[...document.querySelectorAll('h2,h3,h4,[class*="title"],[class*="heading"]')];
-  const heading=headings.find(el=>pattern.test((el.textContent||'').trim()));
-  if(!heading) return '';
-  let node=heading.parentElement;
-  for(let i=0;i<3&&node;i++,node=node.parentElement){
-    const text=(node.innerText||'').trim();
-    if(text.length>=30&&text.length<=5000) return text;
+function cleanDetailLines(text){
+  return (text||'').split('\n').map(line=>line.replace(/\s+/g,' ').trim()).filter(line=>line&&line.length<800);
+}
+function sectionLines(lines,startPattern,endPattern){
+  const start=lines.findIndex(line=>startPattern.test(line));
+  if(start<0) return [];
+  let end=lines.slice(start+1).findIndex(line=>endPattern.test(line));
+  end=end<0?Math.min(lines.length,start+120):start+1+end;
+  return lines.slice(start+1,end).filter(line=>
+    !/^(下载扩展程序|聊天|立即联系|联系我们|查看详情|Learn more)$/i.test(line)
+  );
+}
+function labelledDetails(lines,labelPattern){
+  const result=[];
+  for(let i=0;i<lines.length;i++){
+    if(!labelPattern.test(lines[i])) continue;
+    result.push(lines[i]);
+    if(lines[i+1]&&!labelPattern.test(lines[i+1])) result.push(lines[i+1]);
   }
-  return '';
+  return [...new Set(result)].join('\n').slice(0,10000);
+}
+function breadcrumbCategory(){
+  for(const script of document.querySelectorAll('script[type="application/ld+json"]')){
+    try{
+      const data=JSON.parse(script.textContent||'{}');
+      const objects=Array.isArray(data)?data:[data];
+      const breadcrumb=objects.find(item=>item?.['@type']==='BreadcrumbList');
+      const names=(breadcrumb?.itemListElement||[]).map(item=>item?.item?.name||item?.name).filter(Boolean);
+      if(names.length) return names.slice(-3).join(' > ');
+    }catch(_error){}
+  }
+  return [...document.querySelectorAll('[class*="breadcrumb"] a')]
+    .map(a=>(a.textContent||'').replace(/\s+/g,' ').trim())
+    .filter(text=>text&&text.length<100&&!/Alibaba Lens|比价|扩展程序/i.test(text))
+    .slice(-3).join(' > ');
 }
 function captureAlibabaDetail(){
   const text=(document.body?.innerText||'').slice(0,200000);
   if(/captcha|验证码|verify you are human|security verification/i.test(text)) return {error:'页面要求登录或安全验证，请人工处理后重试。'};
   const productId=(location.href.match(/_(\d+)\.html/)||[])[1]||'';
-  const breadcrumbs=[...document.querySelectorAll('nav a,[class*="breadcrumb"] a')].map(a=>(a.textContent||'').trim()).filter(Boolean);
-  const pairs=[];
-  for(const row of document.querySelectorAll('table tr,[class*="attribute"] [class*="item"],[class*="specification"] [class*="item"]')){
-    const cells=[...row.querySelectorAll('th,td,dt,dd,[class*="name"],[class*="value"]')].map(x=>(x.textContent||'').trim()).filter(Boolean);
-    if(cells.length>=2){const line=`${cells[0]}: ${cells.slice(1).join(' ')}`;if(line.length<500&&!pairs.includes(line))pairs.push(line);}
-    if(pairs.length>=80) break;
-  }
+  const lines=cleanDetailLines(text);
+  const attributes=sectionLines(
+    lines,/^(重要属性|Key attributes|产品属性|Product attributes|Specifications)$/i,
+    /^(包装和交付|包装与交付|Packaging and delivery|产品描述|Product Description|供应商介绍|Supplier introduction)$/i
+  );
+  const delivery=sectionLines(
+    lines,/^(包装和交付|包装与交付|Packaging and delivery)$/i,
+    /^(产品描述|Product Description|供应商介绍|Supplier introduction|评论|Reviews)$/i
+  );
+  const packagingLabels=/^(包装详情|包装细节|包装类型|销售单位|单件包装尺寸|单件毛重|Packaging Details|Package Type|Selling Units|Single package size|Single gross weight)/i;
+  const shippingLabels=/^(港口|供应能力|交货期|发货|运输|Port|Supply Ability|Lead time|Delivery|Shipping)/i;
   return {
     product_id:productId,
-    category:breadcrumbs.slice(-3).join(' > '),
-    important_attributes:pairs.join('\n'),
-    packaging_information:detailSection(/packaging|package|包装/i),
-    shipping_information:detailSection(/shipping|delivery|lead time|发货|物流|交货/i),
+    category:breadcrumbCategory(),
+    important_attributes:attributes.join('\n').slice(0,10000),
+    packaging_information:labelledDetails(delivery,packagingLabels),
+    shipping_information:labelledDetails(delivery,shippingLabels),
   };
 }
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
