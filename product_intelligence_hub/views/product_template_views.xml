@@ -27,6 +27,16 @@
                         <field name="description_ecommerce" string="电子商务说明"
                                placeholder="由核心属性、重要属性、包装和发货信息自动整理生成"/>
                     </group>
+                    <group string="产品视频" col="1">
+                        <field name="pi_video_ids" readonly="1">
+                            <list>
+                                <field name="sequence"/>
+                                <field name="name"/>
+                                <field name="filename"/>
+                                <field name="source_url" widget="url" optional="show"/>
+                            </list>
+                        </field>
+                    </group>
                 </page>
             </xpath>
         </field>
