@@ -341,19 +341,9 @@ class ProductIntelligenceCandidate(models.Model):
         if self.stage != "approved":
             raise UserError(_("创建 Odoo 产品前，请先批准该候选产品。"))
         if self.product_tmpl_id:
+            self.product_tmpl_id.write(self._prepare_product_values())
             return self.action_open_product()
-        product = self.env["product.template"].create(
-            {
-                "name": self.name,
-                "default_code": self.reference,
-                "standard_price": self.supplier_price,
-                "list_price": self.target_sale_price,
-                "sale_ok": True,
-                "purchase_ok": True,
-                "company_id": self.company_id.id,
-                "description_sale": self.description,
-            }
-        )
+        product = self.env["product.template"].create(self._prepare_product_values())
         source_image = self.image_url or self.original_image_url
         if source_image:
             try:
@@ -364,6 +354,47 @@ class ProductIntelligenceCandidate(models.Model):
                 self.message_post(body=_("正式产品已创建，但主图下载失败：%s") % str(exc)[:512])
         self.write({"product_tmpl_id": product.id, "stage": "executed"})
         return self.action_open_product()
+
+    def _prepare_product_values(self):
+        self.ensure_one()
+        return {
+            "name": self.name,
+            "default_code": self.reference,
+            "standard_price": self.supplier_price,
+            "list_price": self.target_sale_price,
+            "sale_ok": True,
+            "purchase_ok": True,
+            "company_id": self.company_id.id,
+            "description_sale": self.description,
+            "pi_candidate_id": self.id,
+            "pi_source_name": self.source_id.display_name,
+            "pi_external_url": self.external_url,
+            "pi_supplier_name": self.supplier_name,
+            "pi_source_category": self.category,
+            "pi_core_industry_attributes": self.core_industry_attributes,
+            "pi_important_attributes": self.important_attributes,
+            "pi_packaging_information": self.packaging_information,
+            "pi_shipping_information": self.shipping_information,
+            "pi_detail_updated_at": fields.Datetime.now(),
+        }
+
+    def action_sync_product_details(self):
+        candidates = self.filtered("product_tmpl_id")
+        if not candidates:
+            raise UserError(_("请先将产品机会创建为 Odoo 产品。"))
+        for candidate in candidates:
+            candidate.product_tmpl_id.write(candidate._prepare_product_values())
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("产品详情同步完成"),
+                "message": _("已将 %(count)s 个产品机会的最新详情同步到 Odoo 产品。")
+                % {"count": len(candidates)},
+                "type": "success",
+                "sticky": False,
+            },
+        }
 
     def action_open_product(self):
         self.ensure_one()
