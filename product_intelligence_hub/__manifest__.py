@@ -1,15 +1,16 @@
 {
     "name": "产品智能中心",
-    "version": "19.0.1.10.0",
+    "version": "19.0.1.11.0",
     "summary": "采集、评分、审核并转化产品机会",
     "category": "Sales",
     "author": "LightLink",
     "license": "LGPL-3",
-    "depends": ["base_setup", "mail", "product", "website_sale"],
+    "depends": ["base_setup", "mail", "product", "website_sale", "OdooTranslate"],
     "data": [
         "security/product_intelligence_security.xml",
         "security/ir.model.access.csv",
         "data/product_intelligence_cron.xml",
+        "data/odoo_translate_fields.xml",
         "wizard/product_intelligence_token_wizard_views.xml",
         "views/product_intelligence_source_views.xml",
         "views/product_intelligence_candidate_views.xml",
