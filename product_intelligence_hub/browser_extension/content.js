@@ -76,6 +76,37 @@ function captureAlibaba(){
   }
   return items;
 }
+function detailSection(pattern){
+  const headings=[...document.querySelectorAll('h2,h3,h4,[class*="title"],[class*="heading"]')];
+  const heading=headings.find(el=>pattern.test((el.textContent||'').trim()));
+  if(!heading) return '';
+  let node=heading.parentElement;
+  for(let i=0;i<3&&node;i++,node=node.parentElement){
+    const text=(node.innerText||'').trim();
+    if(text.length>=30&&text.length<=5000) return text;
+  }
+  return '';
+}
+function captureAlibabaDetail(){
+  const text=(document.body?.innerText||'').slice(0,200000);
+  if(/captcha|验证码|verify you are human|security verification/i.test(text)) return {error:'页面要求登录或安全验证，请人工处理后重试。'};
+  const productId=(location.href.match(/_(\d+)\.html/)||[])[1]||'';
+  const breadcrumbs=[...document.querySelectorAll('nav a,[class*="breadcrumb"] a')].map(a=>(a.textContent||'').trim()).filter(Boolean);
+  const pairs=[];
+  for(const row of document.querySelectorAll('table tr,[class*="attribute"] [class*="item"],[class*="specification"] [class*="item"]')){
+    const cells=[...row.querySelectorAll('th,td,dt,dd,[class*="name"],[class*="value"]')].map(x=>(x.textContent||'').trim()).filter(Boolean);
+    if(cells.length>=2){const line=`${cells[0]}: ${cells.slice(1).join(' ')}`;if(line.length<500&&!pairs.includes(line))pairs.push(line);}
+    if(pairs.length>=80) break;
+  }
+  return {
+    product_id:productId,
+    category:breadcrumbs.slice(-3).join(' > '),
+    important_attributes:pairs.join('\n'),
+    packaging_information:detailSection(/packaging|package|包装/i),
+    shipping_information:detailSection(/shipping|delivery|lead time|发货|物流|交货/i),
+  };
+}
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
   if(message?.type==='PIH_CAPTURE_V108') sendResponse({items:captureAlibaba()});
+  if(message?.type==='PIH_DETAIL_V110') sendResponse(captureAlibabaDetail());
 });
