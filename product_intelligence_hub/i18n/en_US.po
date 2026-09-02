@@ -572,6 +572,58 @@ msgid "发货信息"
 msgstr "Shipping Information"
 
 #. module: product_intelligence_hub
+msgid "选品来源与详情"
+msgstr "Sourcing Origin & Details"
+
+#. module: product_intelligence_hub
+msgid "来源概览"
+msgstr "Source Overview"
+
+#. module: product_intelligence_hub
+msgid "来源产品机会"
+msgstr "Source Product Opportunity"
+
+#. module: product_intelligence_hub
+msgid "原始产品链接"
+msgstr "Original Product URL"
+
+#. module: product_intelligence_hub
+msgid "来源供应商"
+msgstr "Source Supplier"
+
+#. module: product_intelligence_hub
+msgid "来源产品分类"
+msgstr "Source Product Category"
+
+#. module: product_intelligence_hub
+msgid "详情同步时间"
+msgstr "Details Synced At"
+
+#. module: product_intelligence_hub
+msgid "产品属性"
+msgstr "Product Attributes"
+
+#. module: product_intelligence_hub
+msgid "完整重要属性"
+msgstr "All Key Attributes"
+
+#. module: product_intelligence_hub
+msgid "包装与交货"
+msgstr "Packaging & Delivery"
+
+#. module: product_intelligence_hub
+msgid "发货及交货时间"
+msgstr "Shipping & Lead Time"
+
+#. module: product_intelligence_hub
+msgid "同步详情到 Odoo 产品"
+msgstr "Sync Details to Odoo Product"
+
+#. module: product_intelligence_hub
+msgid "产品详情同步完成"
+msgstr "Product Details Synced"
+
+#. module: product_intelligence_hub
 msgid "产品详情"
 msgstr "Product Details"
 
