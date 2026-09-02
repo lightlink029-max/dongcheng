@@ -172,6 +172,58 @@ function shippingRows(){
   }
   return [...new Set(result)].join('\n').slice(0,10000);
 }
+function originalAlibabaImageUrl(raw){
+  const url=absoluteUrl(raw||'');
+  if(!url) return '';
+  return url
+    .replace(/\.(jpg|jpeg|png|webp)_\d+x\d+\.\1(?=\?|$)/i,'.$1')
+    .replace(/[?&](?:webp|avif)=close/gi,'')
+    .replace(/[?&]$/,'');
+}
+function detailPhotos(){
+  const ranked=[];
+  for(const img of document.querySelectorAll('img')){
+    const rawUrls=[
+      img.currentSrc,img.getAttribute('src'),img.getAttribute('data-src'),img.getAttribute('data-lazy-src'),
+      ...(img.getAttribute('srcset')||'').split(',').map(part=>part.trim().split(/\s+/)[0]),
+    ].filter(Boolean);
+    for(const raw of rawUrls){
+      const url=originalAlibabaImageUrl(raw);
+      if(!/^https?:\/\//i.test(url)||!/(?:alicdn\.com|alibaba\.com)/i.test(url)) continue;
+      if(!/(?:\/|%2F)kf(?:\/|%2F)/i.test(url)) continue;
+      if(/(?:logo|icon|avatar|flag|loading|placeholder)/i.test(url)) continue;
+      const rect=img.getBoundingClientRect();
+      let score=Math.min(img.naturalWidth||rect.width||0,img.naturalHeight||rect.height||0);
+      if(img.closest('[class*="gallery"],[class*="detail"],[class*="main-image"],[data-testid*="image"]')) score+=1000;
+      if(img.closest('header,footer,[class*="recommend"],[class*="supplier"]')) score-=1000;
+      ranked.push({url,score,name:img.getAttribute('alt')||''});
+    }
+  }
+  ranked.sort((a,b)=>b.score-a.score);
+  const seen=new Set(), result=[];
+  for(const item of ranked){
+    const asset=(item.url.match(/\/kf\/([^/?]+)/i)||[])[1]||item.url;
+    if(seen.has(asset)) continue;
+    seen.add(asset); result.push({url:item.url,name:item.name});
+    if(result.length>=30) break;
+  }
+  return result;
+}
+function detailVideos(){
+  const urls=[];
+  for(const node of document.querySelectorAll('video,video source')){
+    urls.push(node.currentSrc,node.getAttribute('src'),node.getAttribute('data-src'));
+  }
+  for(const script of document.querySelectorAll('script')){
+    const text=script.textContent||'';
+    if(!/\.mp4/i.test(text)) continue;
+    for(const match of text.matchAll(/https?:\\?\/\\?\/[^"'\s<>]+?\.mp4(?:\?[^"'\s<>]*)?/gi)){
+      urls.push(match[0].replace(/\\\//g,'/').replace(/\\u002F/gi,'/'));
+    }
+  }
+  return [...new Set(urls.map(absoluteUrl).filter(url=>/^https?:\/\//i.test(url)))]
+    .slice(0,8).map(url=>({url,name:'产品视频'}));
+}
 function captureAlibabaDetail(){
   const text=(document.body?.innerText||'').slice(0,200000);
   if(/captcha|验证码|verify you are human|security verification/i.test(text)) return {error:'页面要求登录或安全验证，请人工处理后重试。'};
@@ -186,6 +238,8 @@ function captureAlibabaDetail(){
     important_attributes:formatPairs(importantPairs),
     packaging_information:formatPairs(packagingPairs),
     shipping_information:shippingRows(),
+    photos:detailPhotos(),
+    videos:detailVideos(),
   };
 }
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
