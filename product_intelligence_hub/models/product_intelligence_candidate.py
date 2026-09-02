@@ -87,6 +87,10 @@ class ProductIntelligenceCandidate(models.Model):
     shipping_information = fields.Text(string="发货信息", copy=False)
     detail_error = fields.Char(string="详情错误", copy=False)
     detail_updated_at = fields.Datetime(string="详情更新时间", copy=False)
+    media_ids = fields.One2many(
+        "product.intelligence.media", "candidate_id", string="产品图片与视频", copy=False,
+    )
+    media_count = fields.Integer(string="媒体数量", compute="_compute_media_count")
 
     supplier_price = fields.Monetary(string="供应商价格", currency_field="currency_id")
     target_sale_price = fields.Monetary(string="目标售价", currency_field="currency_id")
@@ -140,6 +144,11 @@ class ProductIntelligenceCandidate(models.Model):
         "UNIQUE(source_id, external_id)",
         "The external product identifier must be unique for each data source.",
     )
+
+    @api.depends("media_ids")
+    def _compute_media_count(self):
+        for record in self:
+            record.media_count = len(record.media_ids)
 
     @api.depends("image_url")
     def _compute_image_preview(self):
@@ -344,6 +353,7 @@ class ProductIntelligenceCandidate(models.Model):
         if self.product_tmpl_id:
             self.product_tmpl_id.write(self._prepare_product_values(self.product_tmpl_id))
             self._sync_standard_product_attributes(self.product_tmpl_id)
+            self._sync_product_media(self.product_tmpl_id)
             return self.action_open_product()
         product = self.env["product.template"].create(self._prepare_product_values())
         self._sync_standard_product_attributes(product)
@@ -355,6 +365,7 @@ class ProductIntelligenceCandidate(models.Model):
             except Exception as exc:
                 _logger.exception("Unable to download candidate image for product %s", product.id)
                 self.message_post(body=_("正式产品已创建，但主图下载失败：%s") % str(exc)[:512])
+        self._sync_product_media(product)
         self.write({"product_tmpl_id": product.id, "stage": "executed"})
         return self.action_open_product()
 
@@ -491,6 +502,7 @@ class ProductIntelligenceCandidate(models.Model):
                 candidate._prepare_product_values(candidate.product_tmpl_id)
             )
             candidate._sync_standard_product_attributes(candidate.product_tmpl_id)
+            candidate._sync_product_media(candidate.product_tmpl_id)
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
@@ -502,6 +514,43 @@ class ProductIntelligenceCandidate(models.Model):
                 "sticky": False,
             },
         }
+
+    def _sync_product_media(self, product):
+        """Copy captured detail media into the standard eCommerce media gallery."""
+        self.ensure_one()
+        image_model = self.env["product.image"]
+        storage = self.env["product.image.storage.oss"]
+        for media in self.media_ids.sorted("sequence"):
+            existing = image_model.search([
+                ("product_tmpl_id", "=", product.id),
+                ("pi_source_url", "=", media.source_url),
+            ], limit=1)
+            values = {
+                "name": media.name or ("产品视频" if media.media_type == "video" else "产品图片"),
+                "sequence": media.sequence,
+                "pi_source_url": media.source_url,
+                "pi_candidate_media_id": media.id,
+            }
+            try:
+                if media.media_type == "video":
+                    if "video_url" not in image_model._fields:
+                        continue
+                    values["video_url"] = media.source_url
+                elif not existing:
+                    image_data, _content_type = storage.download_image(media.source_url)
+                    values["image_1920"] = base64.b64encode(image_data)
+                if existing:
+                    existing.write(values)
+                    media.product_image_id = existing.id
+                else:
+                    values["product_tmpl_id"] = product.id
+                    created = image_model.create(values)
+                    media.product_image_id = created.id
+            except Exception as exc:
+                _logger.exception("Unable to synchronize candidate media %s", media.id)
+                self.message_post(body=_("媒体同步失败：%(url)s（%(error)s）") % {
+                    "url": media.source_url, "error": str(exc)[:300],
+                })
 
     def action_open_product(self):
         self.ensure_one()
