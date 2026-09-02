@@ -29,8 +29,8 @@
                         <field name="pi_packaging_information"/>
                         <field name="pi_shipping_information"/>
                     </group>
-                    <group string="网站翻译文案" col="2">
-                        <field name="description_sale" string="产品详情翻译源文案"
+                    <group string="网站产品详情" col="2">
+                        <field name="description_ecommerce" string="电子商务说明"
                                placeholder="由核心属性、重要属性、包装和发货信息自动整理生成"/>
                     </group>
                 </page>
