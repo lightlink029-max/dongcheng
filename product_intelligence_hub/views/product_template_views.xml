@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_template_form_product_intelligence" model="ir.ui.view">
+        <field name="name">product.template.form.product.intelligence</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_product_intelligence_candidate" type="object"
+                        class="oe_stat_button" icon="fa-lightbulb-o" invisible="not pi_candidate_id">
+                    <span class="o_stat_text">产品机会</span>
+                </button>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="选品来源与详情" name="product_intelligence_details" invisible="not pi_candidate_id">
+                    <group string="来源概览" col="4">
+                        <field name="pi_candidate_id"/>
+                        <field name="pi_source_name"/>
+                        <field name="pi_supplier_name"/>
+                        <field name="pi_source_category"/>
+                        <field name="pi_external_url" widget="url"/>
+                        <field name="pi_detail_updated_at"/>
+                    </group>
+                    <separator string="产品属性"/>
+                    <group col="2">
+                        <group string="核心行业属性">
+                            <field name="pi_core_industry_attributes" nolabel="1" placeholder="暂无核心行业属性"/>
+                        </group>
+                        <group string="完整重要属性">
+                            <field name="pi_important_attributes" nolabel="1" placeholder="暂无重要属性"/>
+                        </group>
+                    </group>
+                    <separator string="包装与交货"/>
+                    <group col="2">
+                        <group string="包装信息">
+                            <field name="pi_packaging_information" nolabel="1" placeholder="暂无包装信息"/>
+                        </group>
+                        <group string="发货及交货时间">
+                            <field name="pi_shipping_information" nolabel="1" placeholder="暂无发货信息"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

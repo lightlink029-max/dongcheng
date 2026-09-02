@@ -32,6 +32,7 @@
             <list decoration-success="recommendation == 'approve'" decoration-warning="recommendation == 'review'" decoration-danger="recommendation == 'reject'">
                 <header>
                     <button name="action_queue_detail_enrichment" type="object" string="补充详情" display="always" class="btn-primary"/>
+                    <button name="action_sync_product_details" type="object" string="同步详情到 Odoo 产品" display="always"/>
                     <button name="action_bulk_delete" type="object" string="删除所选产品" display="always" groups="product_intelligence_hub.group_product_intelligence_manager" confirm="删除后无法恢复，确认删除所选候选产品吗？"/>
                 </header>
                 <field name="image_preview" widget="html"/>
@@ -111,6 +112,7 @@
                     <button name="action_approve" type="object" string="批准" class="btn-primary" invisible="stage != 'review'" groups="product_intelligence_hub.group_product_intelligence_manager"/>
                     <button name="action_reject" type="object" string="淘汰" invisible="stage not in ('review', 'approved')" groups="product_intelligence_hub.group_product_intelligence_manager"/>
                     <button name="action_create_product" type="object" string="创建 Odoo 产品" class="btn-primary" invisible="stage != 'approved'"/>
+                    <button name="action_sync_product_details" type="object" string="同步详情到 Odoo 产品" class="btn-secondary" invisible="not product_tmpl_id"/>
                     <field name="stage" widget="statusbar" statusbar_visible="observe,orient,review,approved,executed"/>
                 </header>
                 <sheet>
