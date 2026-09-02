@@ -157,6 +157,7 @@
                                 <field name="detail_error" invisible="detail_state != 'failed'"/>
                             </group>
                             <group>
+                                <field name="core_industry_attributes"/>
                                 <field name="important_attributes"/>
                                 <field name="packaging_information"/>
                                 <field name="shipping_information"/>
