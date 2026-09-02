@@ -13,6 +13,9 @@ class ProductTemplate(models.Model):
     pi_supplier_name = fields.Char(string="来源供应商", copy=False, readonly=True)
     pi_source_category = fields.Char(string="来源产品分类", copy=False, readonly=True)
     pi_detail_updated_at = fields.Datetime(string="详情同步时间", copy=False, readonly=True)
+    pi_video_ids = fields.One2many(
+        "product.intelligence.product.video", "product_tmpl_id", string="产品视频", copy=False,
+    )
 
     @api.model
     def action_cleanup_odootranslate_native_field_configs(self):
@@ -65,6 +68,7 @@ class ProductTemplate(models.Model):
             raise UserError(_("该产品没有关联的产品机会。"))
         self.write(self.pi_candidate_id._prepare_product_values(self))
         self.pi_candidate_id._sync_standard_product_attributes(self)
+        self.pi_candidate_id._sync_product_media(self)
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",

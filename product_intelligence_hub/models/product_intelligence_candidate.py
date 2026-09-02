@@ -519,6 +519,7 @@ class ProductIntelligenceCandidate(models.Model):
         """Copy captured detail media into the standard eCommerce media gallery."""
         self.ensure_one()
         image_model = self.env["product.image"]
+        video_model = self.env["product.intelligence.product.video"]
         storage = self.env["product.image.storage.oss"]
         for media in self.media_ids.sorted("sequence"):
             existing = image_model.search([
@@ -533,9 +534,28 @@ class ProductIntelligenceCandidate(models.Model):
             }
             try:
                 if media.media_type == "video":
-                    if "video_url" not in image_model._fields:
-                        continue
-                    values["video_url"] = media.source_url
+                    video = video_model.search([
+                        ("product_tmpl_id", "=", product.id),
+                        ("source_url", "=", media.source_url),
+                    ], limit=1)
+                    video_values = {
+                        "name": media.name or _("产品视频"),
+                        "sequence": media.sequence,
+                        "source_url": media.source_url,
+                    }
+                    if not video:
+                        video_data, mimetype = storage.download_video(media.source_url)
+                        video_values.update({
+                            "product_tmpl_id": product.id,
+                            "video_data": base64.b64encode(video_data),
+                            "mimetype": mimetype,
+                            "filename": "product-%s-video-%s.mp4" % (product.id, media.id),
+                        })
+                        video = video_model.create(video_values)
+                    else:
+                        video.write(video_values)
+                    media.product_video_id = video.id
+                    continue
                 elif not existing:
                     image_data, _content_type = storage.download_image(media.source_url)
                     values["image_1920"] = base64.b64encode(image_data)

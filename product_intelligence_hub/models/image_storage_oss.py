@@ -107,6 +107,21 @@ class ProductImageStorageOSS(models.AbstractModel):
             raise UserError(_("远程地址返回的内容不是图片。"))
         return data, content_type
 
+    def download_video(self, source_url):
+        self._validate_remote_url(source_url)
+        request = Request(source_url, headers={
+            "User-Agent": "Mozilla/5.0 (compatible; Odoo Product Intelligence/1.0)",
+            "Referer": "https://www.alibaba.com/",
+        })
+        with build_opener(_SafeRedirectHandler()).open(request, timeout=60) as response:
+            data = response.read(100 * 1024 * 1024 + 1)
+            content_type = (response.headers.get_content_type() or "application/octet-stream").lower()
+        if len(data) > 100 * 1024 * 1024:
+            raise UserError(_("视频超过 100 MB，已拒绝上传。"))
+        if not (content_type.startswith("video/") or source_url.lower().split("?", 1)[0].endswith(".mp4")):
+            raise UserError(_("远程地址返回的内容不是视频。"))
+        return data, "video/mp4" if content_type == "application/octet-stream" else content_type
+
     def delete_object(self, key):
         config = self._require_config()
         date, authorization = self._authorization(config, "DELETE", key)

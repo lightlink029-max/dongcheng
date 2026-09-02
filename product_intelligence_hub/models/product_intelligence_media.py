@@ -23,6 +23,10 @@ class ProductIntelligenceMedia(models.Model):
     product_image_id = fields.Many2one(
         "product.image", string="电商媒体", readonly=True, copy=False, ondelete="set null",
     )
+    product_video_id = fields.Many2one(
+        "product.intelligence.product.video", string="产品视频", readonly=True,
+        copy=False, ondelete="set null",
+    )
 
     @api.depends("source_url", "media_type")
     def _compute_preview(self):
@@ -50,3 +54,19 @@ class ProductImage(models.Model):
         "product.intelligence.media", string="产品机会媒体", index=True,
         copy=False, ondelete="set null",
     )
+
+
+class ProductIntelligenceProductVideo(models.Model):
+    _name = "product.intelligence.product.video"
+    _description = "产品电子商务视频"
+    _order = "sequence, id"
+
+    product_tmpl_id = fields.Many2one(
+        "product.template", string="产品", required=True, ondelete="cascade", index=True,
+    )
+    sequence = fields.Integer(string="排序", default=10)
+    name = fields.Char(string="名称", required=True, default="产品视频")
+    source_url = fields.Char(string="来源链接", required=True, index=True)
+    video_data = fields.Binary(string="视频文件", attachment=True, required=True)
+    filename = fields.Char(string="文件名", required=True, default="product-video.mp4")
+    mimetype = fields.Char(string="媒体类型", default="video/mp4")
