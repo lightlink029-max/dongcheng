@@ -370,7 +370,6 @@ class ProductIntelligenceCandidate(models.Model):
         )
         existing = marker_pattern.sub("", existing).strip()
         sections = [
-            (_("核心行业属性"), self.core_industry_attributes),
             (_("重要属性"), self.important_attributes),
             (_("包装信息"), self.packaging_information),
             (_("发货及交货时间"), self.shipping_information),
@@ -414,7 +413,6 @@ class ProductIntelligenceCandidate(models.Model):
         """Build plain product-detail text for Odoo's native translated field."""
         self.ensure_one()
         sections = [
-            (_("核心行业属性"), self.core_industry_attributes),
             (_("重要属性"), self.important_attributes),
             (_("包装信息"), self.packaging_information),
             (_("发货及交货时间"), self.shipping_information),
