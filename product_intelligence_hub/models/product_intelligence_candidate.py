@@ -402,7 +402,6 @@ class ProductIntelligenceCandidate(models.Model):
         if cards:
             managed_block = (
                 f'{start_marker}<section class="product-intelligence-details my-4">'
-                '<h2 class="h3 mb-3">产品规格与交付信息</h2>'
                 f'<div class="row g-3">{"".join(cards)}</div>'
                 f'</section>{end_marker}'
             )
