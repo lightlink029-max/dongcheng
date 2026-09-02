@@ -2,7 +2,8 @@
 <odoo>
     <template id="website_product_intelligence_details"
               inherit_id="website_sale.product"
-              name="网站商品选品详情">
+              name="网站商品选品详情"
+              active="False">
         <xpath expr="//div[@id='product_full_description']" position="after">
             <section t-if="product.pi_candidate_id and (product.pi_core_industry_attributes or product.pi_important_attributes or product.pi_packaging_information or product.pi_shipping_information)"
                      class="container my-5" id="product_intelligence_details">
