@@ -85,6 +85,7 @@ class ProductIntelligenceIngestController(http.Controller):
             else:
                 candidate.write({
                     "category": str(payload.get("category") or candidate.category or "")[:512],
+                    "core_industry_attributes": str(payload.get("core_industry_attributes") or "")[:10000],
                     "important_attributes": str(payload.get("important_attributes") or "")[:10000],
                     "packaging_information": str(payload.get("packaging_information") or "")[:10000],
                     "shipping_information": str(payload.get("shipping_information") or "")[:10000],
