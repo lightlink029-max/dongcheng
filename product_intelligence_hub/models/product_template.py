@@ -18,6 +18,41 @@ class ProductTemplate(models.Model):
     pi_shipping_information = fields.Text(string="发货信息", copy=False, translate=True)
     pi_detail_updated_at = fields.Datetime(string="详情同步时间", copy=False, readonly=True)
 
+    def odootranslate_get_stored_field_translation_source(self, field_name, lang):
+        """Allow OdooTranslate to use a non-English native source value.
+
+        OdooTranslate 19 currently marks a native field as incomplete when its
+        ``en_US`` slot does not exist, even when the requested source language
+        contains valid text.  Imported product intelligence fields can begin
+        with Chinese as their only stored language, so provide that stored
+        value as the source block until the English translation is created.
+        """
+        result = super().odootranslate_get_stored_field_translation_source(field_name, lang)
+        supported_fields = {
+            "pi_core_industry_attributes",
+            "pi_important_attributes",
+            "pi_packaging_information",
+            "pi_shipping_information",
+        }
+        if field_name not in supported_fields or result.get("mapping_complete"):
+            return result
+
+        field = self._fields.get(field_name)
+        if not field or field.translate is not True:
+            return result
+        stored_translations = field._get_stored_translations(self) or {}
+        source_value = stored_translations.get(lang)
+        if not isinstance(source_value, str) or not source_value.strip():
+            return result
+
+        result.update({
+            "is_stored": True,
+            "value": source_value,
+            "blocks": [{"source": source_value, "value": source_value}],
+            "mapping_complete": True,
+        })
+        return result
+
     def action_open_product_intelligence_candidate(self):
         self.ensure_one()
         if not self.pi_candidate_id:
