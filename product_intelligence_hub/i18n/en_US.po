@@ -624,6 +624,26 @@ msgid "产品详情同步完成"
 msgstr "Product Details Synced"
 
 #. module: product_intelligence_hub
+msgid "从产品机会重新同步"
+msgstr "Resync from Product Opportunity"
+
+#. module: product_intelligence_hub
+msgid "产品规格与交付信息"
+msgstr "Product Specifications & Delivery"
+
+#. module: product_intelligence_hub
+msgid "以下信息来自供应链资料，询价前请与我们确认最终规格、包装和交期。"
+msgstr "This information comes from supply-chain materials. Please confirm final specifications, packaging, and lead time with us before ordering."
+
+#. module: product_intelligence_hub
+msgid "详细产品属性"
+msgstr "Detailed Product Attributes"
+
+#. module: product_intelligence_hub
+msgid "下方属性可直接修改；保存产品后，网站商品页会显示当前内容。点击“从产品机会重新同步”将覆盖这里的修改。"
+msgstr "The attributes below are editable. After saving, the website product page shows the current content. Resyncing from the product opportunity overwrites these edits."
+
+#. module: product_intelligence_hub
 msgid "产品详情"
 msgstr "Product Details"
 
