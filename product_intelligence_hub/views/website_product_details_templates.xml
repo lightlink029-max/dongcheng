@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <template id="product_intelligence_product_videos" inherit_id="website_sale.product">
-        <xpath expr="//div[@id='product_details']" position="after">
-            <section t-if="product.pi_video_ids" class="container my-4" id="product_intelligence_videos">
+        <xpath expr="//div[@id='product_detail_main']" position="after">
+            <section t-if="product.pi_video_ids" class="o_wsale_content_contained container my-5 position-relative w-100" id="product_intelligence_videos">
                 <h2 class="h4 mb-3">产品视频</h2>
                 <div class="row g-3">
                     <div t-foreach="product.pi_video_ids" t-as="video" class="col-12 col-lg-6">
-                        <div class="card border-0 shadow-sm h-100">
-                            <video controls="controls" preload="metadata" class="w-100 rounded"
+                        <div class="card border-0 shadow-sm h-100 overflow-hidden">
+                            <video controls="controls" preload="metadata" playsinline="playsinline" class="w-100 d-block"
                                    t-att-src="'/web/content/product.intelligence.product.video/%s/video_data/%s' % (video.id, video.filename)"/>
                             <div class="card-body py-2"><span t-field="video.name"/></div>
                         </div>
