@@ -79,15 +79,7 @@ class ProductImageStorageOSS(models.AbstractModel):
 
     def store_url(self, source_url, external_id=""):
         config = self._require_config()
-        self._validate_remote_url(source_url)
-        request = Request(source_url, headers={"User-Agent": "Odoo Product Intelligence/1.0"})
-        with build_opener(_SafeRedirectHandler()).open(request, timeout=20) as response:
-            data = response.read(12 * 1024 * 1024 + 1)
-            content_type = (response.headers.get_content_type() or "application/octet-stream").lower()
-        if len(data) > 12 * 1024 * 1024:
-            raise UserError(_("图片超过 12 MB，已拒绝上传。"))
-        if not content_type.startswith("image/"):
-            raise UserError(_("远程地址返回的内容不是图片。"))
+        data, content_type = self.download_image(source_url)
         extension = mimetypes.guess_extension(content_type) or ".jpg"
         digest = hashlib.sha256(data).hexdigest()
         filename = f"{external_id}-{digest[:16]}{extension}" if external_id else f"{digest}{extension}"
@@ -103,6 +95,18 @@ class ProductImageStorageOSS(models.AbstractModel):
             pass
         return key, self._object_url(config, key)
 
+    def download_image(self, source_url):
+        self._validate_remote_url(source_url)
+        request = Request(source_url, headers={"User-Agent": "Odoo Product Intelligence/1.0"})
+        with build_opener(_SafeRedirectHandler()).open(request, timeout=20) as response:
+            data = response.read(12 * 1024 * 1024 + 1)
+            content_type = (response.headers.get_content_type() or "application/octet-stream").lower()
+        if len(data) > 12 * 1024 * 1024:
+            raise UserError(_("图片超过 12 MB，已拒绝上传。"))
+        if not content_type.startswith("image/"):
+            raise UserError(_("远程地址返回的内容不是图片。"))
+        return data, content_type
+
     def delete_object(self, key):
         config = self._require_config()
         date, authorization = self._authorization(config, "DELETE", key)
@@ -113,4 +117,3 @@ class ProductImageStorageOSS(models.AbstractModel):
         )
         with build_opener().open(request, timeout=20):
             pass
-

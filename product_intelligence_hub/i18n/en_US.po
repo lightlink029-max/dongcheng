@@ -530,3 +530,51 @@ msgstr "Image Storage Error"
 #. module: product_intelligence_hub
 msgid "保存图片到 OSS"
 msgstr "Store Image in OSS"
+
+#. module: product_intelligence_hub
+msgid "补充详情"
+msgstr "Enrich Details"
+
+#. module: product_intelligence_hub
+msgid "详情状态"
+msgstr "Detail Status"
+
+#. module: product_intelligence_hub
+msgid "未补充"
+msgstr "Not Enriched"
+
+#. module: product_intelligence_hub
+msgid "等待补充"
+msgstr "Queued"
+
+#. module: product_intelligence_hub
+msgid "详情已补充"
+msgstr "Details Enriched"
+
+#. module: product_intelligence_hub
+msgid "补充失败"
+msgstr "Enrichment Failed"
+
+#. module: product_intelligence_hub
+msgid "重要属性"
+msgstr "Key Attributes"
+
+#. module: product_intelligence_hub
+msgid "包装信息"
+msgstr "Packaging Information"
+
+#. module: product_intelligence_hub
+msgid "发货信息"
+msgstr "Shipping Information"
+
+#. module: product_intelligence_hub
+msgid "产品详情"
+msgstr "Product Details"
+
+#. module: product_intelligence_hub
+msgid "加入补充详情队列"
+msgstr "Add to Detail Enrichment Queue"
+
+#. module: product_intelligence_hub
+msgid "详情补充队列"
+msgstr "Detail Enrichment Queue"
