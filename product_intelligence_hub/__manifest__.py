@@ -1,6 +1,6 @@
 {
     "name": "产品智能中心",
-    "version": "19.0.1.8.1",
+    "version": "19.0.1.9.0",
     "summary": "采集、评分、审核并转化产品机会",
     "category": "Sales",
     "author": "LightLink",
@@ -13,6 +13,7 @@
         "wizard/product_intelligence_token_wizard_views.xml",
         "views/product_intelligence_source_views.xml",
         "views/product_intelligence_candidate_views.xml",
+        "views/product_template_views.xml",
         "views/res_config_settings_views.xml",
         "views/product_intelligence_menus.xml",
     ],
