@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="action_product_intelligence_settings" model="ir.actions.act_window">
+        <field name="name">产品智能设置</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'module': 'product_intelligence_hub'}</field>
+    </record>
+
     <record id="res_config_settings_view_form_product_intelligence" model="ir.ui.view">
         <field name="name">res.config.settings.view.form.product.intelligence</field>
         <field name="model">res.config.settings</field>

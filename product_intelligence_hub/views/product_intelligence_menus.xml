@@ -3,7 +3,6 @@
     <menuitem id="menu_product_intelligence_root" name="产品智能" sequence="45" groups="product_intelligence_hub.group_product_intelligence_user"/>
     <menuitem id="menu_product_intelligence_candidates" name="OODA 决策看板" parent="menu_product_intelligence_root" action="action_product_intelligence_candidate" sequence="10"/>
     <menuitem id="menu_product_intelligence_research" name="选品情报" parent="menu_product_intelligence_root" action="action_product_intelligence_research" sequence="5"/>
-    <menuitem id="menu_product_intelligence_configuration" name="配置" parent="menu_product_intelligence_root" sequence="90" groups="product_intelligence_hub.group_product_intelligence_manager"/>
-    <menuitem id="menu_product_intelligence_sources" name="数据来源" parent="menu_product_intelligence_configuration" action="action_product_intelligence_source" sequence="10"/>
-    <menuitem id="menu_product_intelligence_settings" name="设置" parent="menu_product_intelligence_configuration" action="base_setup.action_general_configuration" sequence="20"/>
+    <menuitem id="menu_product_intelligence_sources" name="数据来源" parent="menu_product_intelligence_root" action="action_product_intelligence_source" sequence="80" groups="product_intelligence_hub.group_product_intelligence_manager"/>
+    <menuitem id="menu_product_intelligence_settings" name="设置" parent="menu_product_intelligence_root" action="action_product_intelligence_settings" sequence="90" groups="product_intelligence_hub.group_product_intelligence_manager"/>
 </odoo>
