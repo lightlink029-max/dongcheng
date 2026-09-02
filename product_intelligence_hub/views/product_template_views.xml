@@ -11,6 +11,23 @@
                     <span class="o_stat_text">产品机会</span>
                 </button>
             </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="选品来源与详情" name="product_intelligence_details" invisible="not pi_candidate_id">
+                    <button name="action_sync_product_intelligence_details" type="object"
+                            string="从产品机会重新同步" class="btn-secondary mb-3"/>
+                    <group string="来源概览" col="4">
+                        <field name="pi_candidate_id"/>
+                        <field name="pi_source_name"/>
+                        <field name="pi_supplier_name"/>
+                        <field name="pi_source_category"/>
+                        <field name="pi_external_url" widget="url"/>
+                        <field name="pi_detail_updated_at"/>
+                    </group>
+                    <div class="alert alert-info mt-3" role="alert">
+                        核心属性、重要属性、包装和发货信息已整理到“电子商务说明”中。
+                    </div>
+                </page>
+            </xpath>
         </field>
     </record>
 </odoo>
