@@ -210,7 +210,10 @@ function detailVideos(){
   for(const node of mainImage.querySelectorAll('video,video source')){
     urls.push(node.currentSrc,node.getAttribute('src'),node.getAttribute('data-src'));
   }
-  return [...new Set(urls.map(absoluteUrl).filter(url=>/^https?:\/\//i.test(url)))]
+  return [...new Set(urls
+    .filter(raw=>raw&& !/^(?:null|undefined|about:blank)$/i.test(String(raw).trim()))
+    .map(absoluteUrl)
+    .filter(url=>/^https?:\/\//i.test(url)&& !/\/(?:null|undefined)(?:[?#]|$)/i.test(url)))]
     .slice(0,8).map(url=>({url,name:'产品视频'}));
 }
 function captureAlibabaDetail(){
