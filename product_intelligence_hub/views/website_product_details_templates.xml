@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <template id="product_intelligence_product_attribute_layout" inherit_id="website_sale.product">
+        <xpath expr="//div[@id='product_detail_main']" position="after">
+            <style>
+                @media (min-width: 768px) {
+                    .product-intelligence-details .row > div:first-child .card-body,
+                    .product-intelligence-details .pi-important-attributes-grid {
+                        display: grid;
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                        column-gap: 1.5rem;
+                        align-content: start;
+                    }
+                }
+            </style>
+        </xpath>
+    </template>
+
     <template id="product_intelligence_product_videos" inherit_id="website_sale.product">
         <xpath expr="//div[@id='product_detail_main']" position="after">
             <section t-if="product.pi_video_ids" class="o_wsale_content_contained container my-5 position-relative w-100" id="product_intelligence_videos">
