@@ -39,6 +39,41 @@ class ProductTemplate(models.Model):
         configs.unlink()
         return True
 
+    @api.model
+    def action_seed_odootranslate_english_source_slots(self):
+        """Seed a missing en_US slot from zh_CN for OdooTranslate mapping.
+
+        OdooTranslate's native source inspector requires the canonical en_US
+        slot to exist before it can map a Chinese source value.  Only missing
+        English slots are initialized; existing translations are preserved.
+        """
+        field_names = [
+            "pi_core_industry_attributes",
+            "pi_important_attributes",
+            "pi_packaging_information",
+            "pi_shipping_information",
+        ]
+        products = self.search([])
+        for product in products:
+            english_values = {}
+            for field_name in field_names:
+                field = product._fields[field_name]
+                stored = field._get_stored_translations(product) or {}
+                chinese_value = stored.get("zh_CN")
+                if (
+                    isinstance(chinese_value, str)
+                    and chinese_value.strip()
+                    and not stored.get("en_US")
+                ):
+                    english_values[field_name] = chinese_value
+            if english_values:
+                product.with_context(
+                    lang="en_US",
+                    skip_ai_translation=True,
+                    tracking_disable=True,
+                ).write(english_values)
+        return True
+
     def odootranslate_get_stored_field_translation_source(self, field_name, lang):
         """Allow OdooTranslate to use a non-English native source value.
 
