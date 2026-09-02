@@ -3,7 +3,10 @@ const token = document.querySelector('#token');
 const status = document.querySelector('#status');
 const CAPTURE_MESSAGE = 'PIH_CAPTURE_V108';
 const DETAIL_MESSAGE = 'PIH_DETAIL_V110';
-chrome.storage.local.get(['endpoint','token'], v => { endpoint.value=v.endpoint||''; token.value=v.token||''; });
+chrome.storage.local.get(['endpoint','token','detailProgress'], v => {
+  endpoint.value=v.endpoint||''; token.value=v.token||'';
+  if(v.detailProgress?.message) status.textContent=v.detailProgress.message;
+});
 async function captureFromTab(tabId) {
   try {
     const current = await chrome.tabs.sendMessage(tabId,{type:CAPTURE_MESSAGE});
@@ -57,29 +60,8 @@ document.querySelector('#enrich').addEventListener('click',async()=>{
     const ep=endpoint.value.trim(),tk=token.value.trim();
     if(!ep||!tk) throw new Error('请先填写接收地址和 Token');
     await chrome.storage.local.set({endpoint:ep,token:tk});
-    const headers={'Content-Type':'application/json','Authorization':`Bearer ${tk}`};
-    const queueResponse=await fetch(apiUrl(ep,'detail-queue'),{headers});
-    const queue=await queueResponse.json();
-    if(!queueResponse.ok||!queue.ok) throw new Error(queue.error||`HTTP ${queueResponse.status}`);
-    if(!queue.items?.length) throw new Error('Odoo 中没有等待补充详情的产品');
-    let done=0,failed=0;
-    for(const item of queue.items){
-      status.textContent=`正在补充 ${done+failed+1}/${queue.items.length}：${item.product_title}`;
-      const tab=await chrome.tabs.create({url:item.product_url,active:true});
-      try{
-        await waitTab(tab.id);await new Promise(resolve=>setTimeout(resolve,1500));
-        const detail=await detailFromTab(tab.id);detail.product_id=item.product_id;
-        const result=await fetch(apiUrl(ep,'detail-result'),{method:'POST',headers,body:JSON.stringify(detail)});
-        const resultData=await result.json().catch(()=>({}));
-        if(!result.ok||!resultData.ok||detail.error) throw new Error(detail.error||resultData.error||`HTTP ${result.status}`);
-        done++;
-      }catch(error){
-        failed++;
-        await fetch(apiUrl(ep,'detail-result'),{method:'POST',headers,body:JSON.stringify({product_id:item.product_id,error:error.message})}).catch(()=>{});
-        if(/验证码|登录|安全验证/.test(error.message)) throw error;
-      }finally{await chrome.tabs.remove(tab.id).catch(()=>{});}
-      await new Promise(resolve=>setTimeout(resolve,1200));
-    }
-    status.textContent=`详情补充完成：成功 ${done}，失败 ${failed}`;
+    const started=await chrome.runtime.sendMessage({type:'PIH_START_DETAIL',endpoint:ep,token:tk});
+    if(!started?.ok) throw new Error(started?.error||'无法启动后台任务');
+    status.textContent='详情补充任务已在后台启动，切换标签页或关闭弹窗不会中断。';
   }catch(error){status.textContent=`详情补充停止：${error.message}`;}
 });
