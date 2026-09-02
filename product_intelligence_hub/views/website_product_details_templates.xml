@@ -3,13 +3,27 @@
     <template id="product_intelligence_product_videos" inherit_id="website_sale.product">
         <xpath expr="//div[@id='product_detail_main']" position="after">
             <section t-if="product.pi_video_ids" class="o_wsale_content_contained container my-5 position-relative w-100" id="product_intelligence_videos">
-                <h2 class="h4 mb-3">产品视频</h2>
+                <t t-set="pi_lang" t-value="(request.env.lang or 'en_US').split('_')[0]"/>
+                <t t-set="pi_video_titles" t-value="{
+                    'zh': '产品视频', 'en': 'Product Videos', 'fr': 'Vidéos du produit',
+                    'ar': 'فيديوهات المنتج', 'es': 'Videos del producto',
+                    'de': 'Produktvideos', 'pt': 'Vídeos do produto',
+                    'ru': 'Видео товара', 'ja': '製品動画', 'ko': '제품 동영상'
+                }"/>
+                <t t-set="pi_video_labels" t-value="{
+                    'zh': '视频', 'en': 'Video', 'fr': 'Vidéo', 'ar': 'فيديو',
+                    'es': 'Video', 'de': 'Video', 'pt': 'Vídeo', 'ru': 'Видео',
+                    'ja': '動画', 'ko': '동영상'
+                }"/>
+                <h2 class="h4 mb-3" t-out="pi_video_titles.get(pi_lang, 'Product Videos')"/>
                 <div class="row g-3">
                     <div t-foreach="product.pi_video_ids" t-as="video" class="col-12 col-lg-6">
                         <div class="card border-0 shadow-sm h-100 overflow-hidden">
                             <video controls="controls" preload="metadata" playsinline="playsinline" class="w-100 d-block"
                                    t-att-src="'/web/content/product.intelligence.product.video/%s/video_data/%s' % (video.id, video.filename)"/>
-                            <div class="card-body py-2"><span t-field="video.name"/></div>
+                            <div class="card-body py-2">
+                                <span t-out="'%s %s' % (pi_video_labels.get(pi_lang, 'Video'), video_index + 1)"/>
+                            </div>
                         </div>
                     </div>
                 </div>
