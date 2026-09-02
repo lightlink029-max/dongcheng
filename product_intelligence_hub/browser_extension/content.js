@@ -112,27 +112,80 @@ function breadcrumbCategory(){
     .filter(text=>text&&text.length<100&&!/Alibaba Lens|比价|扩展程序/i.test(text))
     .slice(-3).join(' > ');
 }
+function normalizedText(node){
+  return (node?.getAttribute?.('title')||node?.textContent||'').replace(/\s+/g,' ').trim();
+}
+function uniquePairs(pairs){
+  const seen=new Set();
+  return pairs.filter(([name,value])=>{
+    const key=`${name}\u0000${value}`;
+    if(!name||!value||seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
+function formatPairs(pairs){
+  return uniquePairs(pairs).map(([name,value])=>`${name}：${value}`).join('\n').slice(0,10000);
+}
+function attributeRows(root){
+  if(!root) return [];
+  return [...root.querySelectorAll('[data-testid="module-attribute-row"]')].map(row=>[
+    normalizedText(row.querySelector('[data-testid="module-attribute-name"]')),
+    normalizedText(row.querySelector('[data-testid="module-attribute-value"]')),
+  ]);
+}
+function coreIndustryRows(){
+  const root=document.querySelector('[data-testid="three-column-key-attributes"]');
+  if(!root) return [];
+  const pairs=[];
+  for(const row of root.querySelectorAll('[data-testid="three-column-key-attributes-row"]')){
+    for(const cell of row.children){
+      const values=[...cell.querySelectorAll(':scope > p')].map(normalizedText).filter(Boolean);
+      if(values.length>=2) pairs.push([values[0],values[1]]);
+    }
+  }
+  return pairs;
+}
+function attributeGroup(titlePattern){
+  return [...document.querySelectorAll('[data-testid="module-attribute-group"]')]
+    .find(group=>titlePattern.test(normalizedText(group.querySelector('[data-testid="module-attribute-group-title"]'))));
+}
+function importantRows(){
+  const root=document.querySelector('[data-testid="module-attribute"]');
+  if(!root) return [];
+  const pairs=[];
+  for(const group of root.querySelectorAll('[data-testid="module-attribute-group"]')){
+    const title=normalizedText(group.querySelector('[data-testid="module-attribute-group-title"]'));
+    if(/包装和发货信息|Packaging and shipping information|Packaging and delivery/i.test(title)) continue;
+    pairs.push(...attributeRows(group));
+  }
+  return pairs;
+}
+function shippingRows(){
+  const result=[];
+  for(const heading of document.querySelectorAll('h2,h3,h4')){
+    if(!/^(交货时间|Lead time|Delivery time)$/i.test(normalizedText(heading))) continue;
+    const container=heading.parentElement;
+    for(const row of container?.querySelectorAll('table tr')||[]){
+      const cells=[...row.querySelectorAll('th,td')].map(normalizedText).filter(Boolean);
+      if(cells.length) result.push(cells.join(' | '));
+    }
+  }
+  return [...new Set(result)].join('\n').slice(0,10000);
+}
 function captureAlibabaDetail(){
   const text=(document.body?.innerText||'').slice(0,200000);
   if(/captcha|验证码|verify you are human|security verification/i.test(text)) return {error:'页面要求登录或安全验证，请人工处理后重试。'};
   const productId=(location.href.match(/_(\d+)\.html/)||[])[1]||'';
-  const lines=cleanDetailLines(text);
-  const attributes=sectionLines(
-    lines,/^(重要属性|Key attributes|产品属性|Product attributes|Specifications)$/i,
-    /^(包装和交付|包装与交付|Packaging and delivery|产品描述|Product Description|供应商介绍|Supplier introduction)$/i
-  );
-  const delivery=sectionLines(
-    lines,/^(包装和交付|包装与交付|Packaging and delivery)$/i,
-    /^(产品描述|Product Description|供应商介绍|Supplier introduction|评论|Reviews)$/i
-  );
-  const packagingLabels=/^(包装详情|包装细节|包装类型|销售单位|单件包装尺寸|单件毛重|Packaging Details|Package Type|Selling Units|Single package size|Single gross weight)/i;
-  const shippingLabels=/^(港口|供应能力|交货期|发货|运输|Port|Supply Ability|Lead time|Delivery|Shipping)/i;
+  const corePairs=coreIndustryRows();
+  const importantPairs=importantRows();
+  const packagingPairs=attributeRows(attributeGroup(/^(包装和发货信息|Packaging and shipping information|Packaging and delivery)$/i));
   return {
     product_id:productId,
     category:breadcrumbCategory(),
-    important_attributes:attributes.join('\n').slice(0,10000),
-    packaging_information:labelledDetails(delivery,packagingLabels),
-    shipping_information:labelledDetails(delivery,shippingLabels),
+    core_industry_attributes:formatPairs(corePairs),
+    important_attributes:formatPairs(importantPairs),
+    packaging_information:formatPairs(packagingPairs),
+    shipping_information:shippingRows(),
   };
 }
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
