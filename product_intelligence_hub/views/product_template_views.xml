@@ -23,12 +23,6 @@
                         <field name="pi_external_url" widget="url"/>
                         <field name="pi_detail_updated_at"/>
                     </group>
-                    <group string="产品采集详情" col="2">
-                        <field name="pi_core_industry_attributes"/>
-                        <field name="pi_important_attributes"/>
-                        <field name="pi_packaging_information"/>
-                        <field name="pi_shipping_information"/>
-                    </group>
                     <group string="网站产品详情" col="2">
                         <field name="description_ecommerce" string="电子商务说明"
                                placeholder="由核心属性、重要属性、包装和发货信息自动整理生成"/>
