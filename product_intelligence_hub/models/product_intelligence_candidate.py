@@ -359,6 +359,7 @@ class ProductIntelligenceCandidate(models.Model):
         return self.action_open_product()
 
     def _prepare_ecommerce_description(self, existing_description=None):
+        """Remove the obsolete generated sourcing block, preserving manual copy."""
         self.ensure_one()
         start_marker = "<!-- product-intelligence-details:start -->"
         end_marker = "<!-- product-intelligence-details:end -->"
@@ -368,44 +369,7 @@ class ProductIntelligenceCandidate(models.Model):
             flags=re.DOTALL,
         )
         existing = marker_pattern.sub("", existing).strip()
-        sections = [
-            ("核心行业属性", self.core_industry_attributes),
-            ("重要属性", self.important_attributes),
-            ("包装信息", self.packaging_information),
-            ("发货及交货时间", self.shipping_information),
-        ]
-        cards = []
-        for title, content in sections:
-            rows = []
-            for raw_line in (content or "").splitlines():
-                line = raw_line.strip().lstrip("-•").strip()
-                if not line:
-                    continue
-                parts = re.split(r"\s*[:：]\s*", line, maxsplit=1)
-                if len(parts) == 2 and parts[0] and parts[1]:
-                    rows.append(
-                        '<div class="d-flex flex-column flex-sm-row gap-1 gap-sm-3 py-2 border-bottom">'
-                        f'<strong class="text-body-emphasis" style="min-width: 9rem;">{html.escape(parts[0].strip())}</strong>'
-                        f'<span class="text-break">{html.escape(parts[1].strip())}</span></div>'
-                    )
-                else:
-                    rows.append(f'<div class="py-2 border-bottom text-break">{html.escape(line)}</div>')
-            if rows:
-                cards.append(
-                    '<div class="col-12 col-lg-6">'
-                    '<section class="card h-100 border-0 shadow-sm">'
-                    f'<div class="card-header bg-light"><h3 class="h5 mb-0">{html.escape(title)}</h3></div>'
-                    f'<div class="card-body py-1">{"".join(rows)}</div>'
-                    '</section></div>'
-                )
-        managed_block = ""
-        if cards:
-            managed_block = (
-                f'{start_marker}<section class="product-intelligence-details my-4">'
-                f'<div class="row g-3">{"".join(cards)}</div>'
-                f'</section>{end_marker}'
-            )
-        return "\n".join(part for part in (existing, managed_block) if part)
+        return existing
 
     def _prepare_translation_source_text(self):
         """Build plain product-detail text for Odoo's native translated field."""
