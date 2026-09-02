@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="0">
-    <!-- Register our custom website fields with OdooTranslate on every module upgrade. -->
-    <function model="dynamic.translatable.field.config" name="enable_translation"
-              eval="['product.template', 'pi_core_industry_attributes']"/>
-    <function model="dynamic.translatable.field.config" name="enable_translation"
-              eval="['product.template', 'pi_important_attributes']"/>
-    <function model="dynamic.translatable.field.config" name="enable_translation"
-              eval="['product.template', 'pi_packaging_information']"/>
-    <function model="dynamic.translatable.field.config" name="enable_translation"
-              eval="['product.template', 'pi_shipping_information']"/>
+    <!-- Native translate=True fields must not also use the non-native path. -->
+    <function model="product.template"
+              name="action_cleanup_odootranslate_native_field_configs"/>
 </odoo>
