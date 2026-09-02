@@ -13,6 +13,11 @@
             </xpath>
             <xpath expr="//notebook" position="inside">
                 <page string="选品来源与详情" name="product_intelligence_details" invisible="not pi_candidate_id">
+                    <div class="alert alert-info" role="alert">
+                        下方属性可直接修改；保存产品后，网站商品页会显示当前内容。点击“从产品机会重新同步”将覆盖这里的修改。
+                    </div>
+                    <button name="action_sync_product_intelligence_details" type="object"
+                            string="从产品机会重新同步" class="btn-secondary"/>
                     <group string="来源概览" col="4">
                         <field name="pi_candidate_id"/>
                         <field name="pi_source_name"/>
@@ -24,10 +29,10 @@
                     <separator string="产品属性"/>
                     <group col="2">
                         <group string="核心行业属性">
-                            <field name="pi_core_industry_attributes" nolabel="1" placeholder="暂无核心行业属性"/>
+                            <field name="pi_core_industry_attributes" nolabel="1" placeholder="每行填写一个“属性：值”"/>
                         </group>
                         <group string="完整重要属性">
-                            <field name="pi_important_attributes" nolabel="1" placeholder="暂无重要属性"/>
+                            <field name="pi_important_attributes" nolabel="1" placeholder="每行填写一个“属性：值”"/>
                         </group>
                     </group>
                     <separator string="包装与交货"/>
