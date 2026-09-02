@@ -5,4 +5,6 @@
               name="action_cleanup_odootranslate_native_field_configs"/>
     <function model="product.template"
               name="action_seed_odootranslate_english_source_slots"/>
+    <function model="product.template"
+              name="action_migrate_product_intelligence_ecommerce_descriptions"/>
 </odoo>
