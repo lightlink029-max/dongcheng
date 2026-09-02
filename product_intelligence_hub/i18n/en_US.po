@@ -560,6 +560,10 @@ msgid "重要属性"
 msgstr "Key Attributes"
 
 #. module: product_intelligence_hub
+msgid "核心行业属性"
+msgstr "Core Industry Attributes"
+
+#. module: product_intelligence_hub
 msgid "包装信息"
 msgstr "Packaging Information"
 
