@@ -83,6 +83,27 @@ class ProductIntelligenceIngestController(http.Controller):
             if payload.get("error"):
                 candidate.write({"detail_state": "failed", "detail_error": str(payload["error"])[:512]})
             else:
+                media_commands = []
+                seen_urls = set()
+                for media_type, entries, limit in (
+                    ("image", payload.get("photos") or [], 30),
+                    ("video", payload.get("videos") or [], 8),
+                ):
+                    if not isinstance(entries, list):
+                        continue
+                    for sequence, entry in enumerate(entries[:limit], start=1):
+                        url = entry.get("url") if isinstance(entry, dict) else entry
+                        name = entry.get("name") if isinstance(entry, dict) else False
+                        url = str(url or "").strip()[:2048]
+                        if not url.startswith(("http://", "https://")) or url in seen_urls:
+                            continue
+                        seen_urls.add(url)
+                        media_commands.append((0, 0, {
+                            "media_type": media_type,
+                            "source_url": url,
+                            "name": str(name or "")[:256],
+                            "sequence": sequence if media_type == "image" else 100 + sequence,
+                        }))
                 candidate.write({
                     "category": str(payload.get("category") or candidate.category or "")[:512],
                     "core_industry_attributes": str(payload.get("core_industry_attributes") or "")[:10000],
@@ -91,6 +112,7 @@ class ProductIntelligenceIngestController(http.Controller):
                     "shipping_information": str(payload.get("shipping_information") or "")[:10000],
                     "detail_state": "done", "detail_error": False,
                     "detail_updated_at": fields.Datetime.now(),
+                    **({"media_ids": [(5, 0, 0), *media_commands]} if media_commands else {}),
                 })
             return request.make_json_response({"ok": True})
         except Exception:
