@@ -1,4 +1,4 @@
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 
@@ -17,6 +17,27 @@ class ProductTemplate(models.Model):
     pi_packaging_information = fields.Text(string="包装信息", copy=False, translate=True)
     pi_shipping_information = fields.Text(string="发货信息", copy=False, translate=True)
     pi_detail_updated_at = fields.Datetime(string="详情同步时间", copy=False, readonly=True)
+
+    @api.model
+    def action_cleanup_odootranslate_native_field_configs(self):
+        """Remove dynamic configs accidentally created for native fields."""
+        field_names = [
+            "pi_core_industry_attributes",
+            "pi_important_attributes",
+            "pi_packaging_information",
+            "pi_shipping_information",
+        ]
+        configs = self.env["dynamic.translatable.field.config"].with_context(
+            active_test=False
+        ).search([
+            ("model_name", "=", "product.template"),
+            ("field_name", "in", field_names),
+        ])
+        for config in configs:
+            if config.is_translatable or config.state == "applied":
+                config.action_remove_translation()
+        configs.unlink()
+        return True
 
     def odootranslate_get_stored_field_translation_source(self, field_name, lang):
         """Allow OdooTranslate to use a non-English native source value.
