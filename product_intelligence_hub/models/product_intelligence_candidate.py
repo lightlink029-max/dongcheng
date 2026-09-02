@@ -2,6 +2,7 @@ import hashlib
 import html
 import logging
 import base64
+import re
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
@@ -341,7 +342,7 @@ class ProductIntelligenceCandidate(models.Model):
         if self.stage != "approved":
             raise UserError(_("创建 Odoo 产品前，请先批准该候选产品。"))
         if self.product_tmpl_id:
-            self.product_tmpl_id.write(self._prepare_product_values())
+            self.product_tmpl_id.write(self._prepare_product_values(self.product_tmpl_id))
             return self.action_open_product()
         product = self.env["product.template"].create(self._prepare_product_values())
         source_image = self.image_url or self.original_image_url
@@ -355,7 +356,39 @@ class ProductIntelligenceCandidate(models.Model):
         self.write({"product_tmpl_id": product.id, "stage": "executed"})
         return self.action_open_product()
 
-    def _prepare_product_values(self):
+    def _prepare_ecommerce_description(self, existing_description=None):
+        self.ensure_one()
+        start_marker = "<!-- product-intelligence-details:start -->"
+        end_marker = "<!-- product-intelligence-details:end -->"
+        sections = [
+            ("核心行业属性", self.core_industry_attributes),
+            ("详细产品属性", self.important_attributes),
+            ("包装信息", self.packaging_information),
+            ("发货及交货时间", self.shipping_information),
+        ]
+        rendered_sections = []
+        for title, value in sections:
+            if not value:
+                continue
+            rendered_value = html.escape(value).replace("\n", "<br/>")
+            rendered_sections.append(
+                f'<section class="mb-4"><h3>{html.escape(title)}</h3>'
+                f'<p>{rendered_value}</p></section>'
+            )
+        managed_block = (
+            f'{start_marker}<div class="product-intelligence-details">'
+            f'{"".join(rendered_sections)}</div>{end_marker}'
+            if rendered_sections else ""
+        )
+        existing = existing_description or ""
+        marker_pattern = re.compile(
+            re.escape(start_marker) + ".*?" + re.escape(end_marker),
+            flags=re.DOTALL,
+        )
+        existing = marker_pattern.sub("", existing).strip()
+        return "\n".join(part for part in (existing, managed_block) if part)
+
+    def _prepare_product_values(self, product=None):
         self.ensure_one()
         return {
             "name": self.name,
@@ -366,6 +399,9 @@ class ProductIntelligenceCandidate(models.Model):
             "purchase_ok": True,
             "company_id": self.company_id.id,
             "description_sale": self.description,
+            "description_ecommerce": self._prepare_ecommerce_description(
+                product.description_ecommerce if product else None
+            ),
             "pi_candidate_id": self.id,
             "pi_source_name": self.source_id.display_name,
             "pi_external_url": self.external_url,
@@ -383,7 +419,9 @@ class ProductIntelligenceCandidate(models.Model):
         if not candidates:
             raise UserError(_("请先将产品机会创建为 Odoo 产品。"))
         for candidate in candidates:
-            candidate.product_tmpl_id.write(candidate._prepare_product_values())
+            candidate.product_tmpl_id.write(
+                candidate._prepare_product_values(candidate.product_tmpl_id)
+            )
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",

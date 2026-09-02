@@ -74,6 +74,20 @@ class ProductTemplate(models.Model):
                 ).write(english_values)
         return True
 
+    @api.model
+    def action_migrate_product_intelligence_ecommerce_descriptions(self):
+        """Merge existing sourced details into Odoo's eCommerce Description."""
+        products = self.search([("pi_candidate_id", "!=", False)])
+        for product in products:
+            description = product.pi_candidate_id._prepare_ecommerce_description(
+                product.description_ecommerce
+            )
+            if description != (product.description_ecommerce or ""):
+                product.with_context(lang="zh_CN", tracking_disable=True).write({
+                    "description_ecommerce": description,
+                })
+        return True
+
     def odootranslate_get_stored_field_translation_source(self, field_name, lang):
         """Allow OdooTranslate to use a non-English native source value.
 
@@ -125,7 +139,7 @@ class ProductTemplate(models.Model):
         self.ensure_one()
         if not self.pi_candidate_id:
             raise UserError(_("该产品没有关联的产品机会。"))
-        self.write(self.pi_candidate_id._prepare_product_values())
+        self.write(self.pi_candidate_id._prepare_product_values(self))
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
