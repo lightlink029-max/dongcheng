@@ -76,7 +76,7 @@ class ProductTemplate(models.Model):
 
     @api.model
     def action_migrate_product_intelligence_ecommerce_descriptions(self):
-        """Merge existing sourced details into Odoo's eCommerce Description."""
+        """Move existing sourced details to standard no-variant attributes."""
         products = self.search([("pi_candidate_id", "!=", False)])
         for product in products:
             description = product.pi_candidate_id._prepare_ecommerce_description(
@@ -86,6 +86,7 @@ class ProductTemplate(models.Model):
                 product.with_context(lang="zh_CN", tracking_disable=True).write({
                     "description_ecommerce": description,
                 })
+            product.pi_candidate_id._sync_standard_product_attributes(product)
         return True
 
     def odootranslate_get_stored_field_translation_source(self, field_name, lang):
@@ -140,6 +141,7 @@ class ProductTemplate(models.Model):
         if not self.pi_candidate_id:
             raise UserError(_("该产品没有关联的产品机会。"))
         self.write(self.pi_candidate_id._prepare_product_values(self))
+        self.pi_candidate_id._sync_standard_product_attributes(self)
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
@@ -150,3 +152,10 @@ class ProductTemplate(models.Model):
                 "sticky": False,
             },
         }
+
+
+class ProductAttribute(models.Model):
+    _inherit = "product.attribute"
+
+    pi_managed = fields.Boolean(string="选品情报管理", default=False, index=True)
+    pi_technical_key = fields.Char(string="选品属性标识", copy=False, index=True)

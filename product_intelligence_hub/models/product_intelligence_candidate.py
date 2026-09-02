@@ -343,8 +343,10 @@ class ProductIntelligenceCandidate(models.Model):
             raise UserError(_("创建 Odoo 产品前，请先批准该候选产品。"))
         if self.product_tmpl_id:
             self.product_tmpl_id.write(self._prepare_product_values(self.product_tmpl_id))
+            self._sync_standard_product_attributes(self.product_tmpl_id)
             return self.action_open_product()
         product = self.env["product.template"].create(self._prepare_product_values())
+        self._sync_standard_product_attributes(product)
         source_image = self.image_url or self.original_image_url
         if source_image:
             try:
@@ -360,33 +362,81 @@ class ProductIntelligenceCandidate(models.Model):
         self.ensure_one()
         start_marker = "<!-- product-intelligence-details:start -->"
         end_marker = "<!-- product-intelligence-details:end -->"
-        sections = [
-            ("核心行业属性", self.core_industry_attributes),
-            ("详细产品属性", self.important_attributes),
-            ("包装信息", self.packaging_information),
-            ("发货及交货时间", self.shipping_information),
-        ]
-        rendered_sections = []
-        for title, value in sections:
-            if not value:
-                continue
-            rendered_value = html.escape(value).replace("\n", "<br/>")
-            rendered_sections.append(
-                f'<section class="mb-4"><h3>{html.escape(title)}</h3>'
-                f'<p>{rendered_value}</p></section>'
-            )
-        managed_block = (
-            f'{start_marker}<div class="product-intelligence-details">'
-            f'{"".join(rendered_sections)}</div>{end_marker}'
-            if rendered_sections else ""
-        )
         existing = existing_description or ""
         marker_pattern = re.compile(
             re.escape(start_marker) + ".*?" + re.escape(end_marker),
             flags=re.DOTALL,
         )
-        existing = marker_pattern.sub("", existing).strip()
-        return "\n".join(part for part in (existing, managed_block) if part)
+        return marker_pattern.sub("", existing).strip()
+
+    @api.model
+    def _parse_standard_attribute_lines(self, section, content):
+        result = []
+        for raw_line in (content or "").splitlines():
+            line = raw_line.strip().lstrip("-•").strip()
+            if not line:
+                continue
+            parts = re.split(r"\s*[:：]\s*", line, maxsplit=1)
+            if len(parts) == 2 and parts[0] and parts[1]:
+                result.append((f"{section} · {parts[0].strip()}", parts[1].strip()))
+            else:
+                result.append((section, line))
+        return result
+
+    def _standard_attribute_pairs(self):
+        self.ensure_one()
+        pairs = [
+            ("来源概览 · 数据来源", self.source_id.display_name),
+            ("来源概览 · 供应商", self.supplier_name),
+            ("来源概览 · 产品分类", self.category),
+            ("来源概览 · 产品链接", self.external_url),
+        ]
+        pairs += self._parse_standard_attribute_lines("核心属性", self.core_industry_attributes)
+        pairs += self._parse_standard_attribute_lines("重要属性", self.important_attributes)
+        pairs += self._parse_standard_attribute_lines("包装信息", self.packaging_information)
+        pairs += self._parse_standard_attribute_lines("发货信息", self.shipping_information)
+        return [(name, value) for name, value in pairs if name and value]
+
+    def _sync_standard_product_attributes(self, product):
+        self.ensure_one()
+        Attribute = self.env["product.attribute"].with_context(lang="zh_CN")
+        AttributeValue = self.env["product.attribute.value"].with_context(lang="zh_CN")
+        managed_lines = product.attribute_line_ids.filtered("attribute_id.pi_managed")
+        managed_lines.unlink()
+
+        grouped = {}
+        for attribute_name, value_name in self._standard_attribute_pairs():
+            technical_key = hashlib.sha256(attribute_name.encode("utf-8")).hexdigest()
+            grouped.setdefault((technical_key, attribute_name), [])
+            if value_name not in grouped[(technical_key, attribute_name)]:
+                grouped[(technical_key, attribute_name)].append(value_name)
+
+        for (technical_key, attribute_name), value_names in grouped.items():
+            attribute = Attribute.search([("pi_technical_key", "=", technical_key)], limit=1)
+            if not attribute:
+                attribute = Attribute.create({
+                    "name": attribute_name,
+                    "create_variant": "no_variant",
+                    "pi_managed": True,
+                    "pi_technical_key": technical_key,
+                })
+            values = self.env["product.attribute.value"]
+            for value_name in value_names:
+                value = AttributeValue.search([
+                    ("attribute_id", "=", attribute.id),
+                    ("name", "=", value_name),
+                ], limit=1)
+                if not value:
+                    value = AttributeValue.create({
+                        "attribute_id": attribute.id,
+                        "name": value_name,
+                    })
+                values |= value
+            self.env["product.template.attribute.line"].create({
+                "product_tmpl_id": product.id,
+                "attribute_id": attribute.id,
+                "value_ids": [(6, 0, values.ids)],
+            })
 
     def _prepare_product_values(self, product=None):
         self.ensure_one()
@@ -422,6 +472,7 @@ class ProductIntelligenceCandidate(models.Model):
             candidate.product_tmpl_id.write(
                 candidate._prepare_product_values(candidate.product_tmpl_id)
             )
+            candidate._sync_standard_product_attributes(candidate.product_tmpl_id)
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
