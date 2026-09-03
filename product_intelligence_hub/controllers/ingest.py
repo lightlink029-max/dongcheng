@@ -197,7 +197,7 @@ class ProductIntelligenceIngestController(http.Controller):
     @http.route(
         "/product-intelligence/v1/sourcing-image/<int:source_id>/<int:candidate_id>",
         type="http", auth="public", methods=["GET", "OPTIONS"], csrf=False,
-        save_session=False, cors="*",
+        save_session=False,
     )
     def sourcing_image(self, source_id, candidate_id, **kwargs):
         cors_headers = [
