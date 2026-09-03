@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_intelligence_sourcing_role_wizard_form" model="ir.ui.view">
+        <field name="name">product.intelligence.sourcing.role.wizard.form</field>
+        <field name="model">product.intelligence.sourcing.role.wizard</field>
+        <field name="arch" type="xml">
+            <form string="批量设置货源">
+                <group>
+                    <field name="offer_ids" widget="many2many_tags" readonly="1"/>
+                    <field name="main_offer_id" options="{'no_create': True, 'no_open': True}"/>
+                </group>
+                <div class="alert alert-info" role="alert">
+                    选择一条主货源，其余已选货源将自动设为备选货源。
+                </div>
+                <footer>
+                    <button name="action_apply" type="object" string="确认设置" class="btn-primary"/>
+                    <button string="取消" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_product_intelligence_sourcing_role_wizard" model="ir.actions.act_window">
+        <field name="name">批量设置货源</field>
+        <field name="res_model">product.intelligence.sourcing.role.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
