@@ -267,6 +267,9 @@ function capture1688(){
     const price=(text.match(/[¥￥]\s*[\d,.]+(?:\s*[-~至]\s*[\d,.]+)?/)||[])[0]||'';
     const supplierLink=[...card.querySelectorAll('a')].find(a=>/\.1688\.com\/?(?:\?|$)|winport\.1688\.com/i.test(a.href)&&!a.href.includes('/offer/'));
     const supplierName=(supplierLink?.getAttribute('title')||supplierLink?.textContent||'').replace(/\s+/g,' ').trim();
+    const badgeText=`${text} ${[...card.querySelectorAll('[title],[alt]')]
+      .map(node=>node.getAttribute('title')||node.getAttribute('alt')||'').join(' ')}`;
+    const merchantFeatures=[...new Set(badgeText.match(/实力商家|超级工厂|源头旗舰/g)||[])].join('、');
     const phone=(text.match(/(?:1[3-9]\d{9}|0\d{2,3}[- ]?\d{7,8})/)||[])[0]||'';
     const moqMatch=text.match(/(?:起批|起订|≥)\s*([\d,.]+)\s*(?:件|个|套|台|双|箱|只|米|千克|公斤|pcs?)/i);
     const sales=(text.match(/(?:成交|已售|销量|复购率)[^¥￥]{0,30}/i)||[])[0]||'';
@@ -276,6 +279,7 @@ function capture1688(){
       product_id:id,product_title:title,product_url:url,
       main_image:absoluteUrl(image?.currentSrc||image?.getAttribute('data-lazy-src')||image?.getAttribute('src')||''),
       supplier_name:supplierName,supplier_url:supplierLink?.href||'',
+      merchant_features:merchantFeatures,
       contact_phone:phone,contact_details:phone?'页面公开联系电话':'页面未公开显示联系电话',
       supplier_location:location,price_text:price,min_price:number(price,/([\d,.]+)/),
       moq:moqMatch?Number(moqMatch[1].replace(/,/g,'')):1,sales_text:sales,
