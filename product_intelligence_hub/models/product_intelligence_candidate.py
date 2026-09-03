@@ -485,9 +485,9 @@ class ProductIntelligenceCandidate(models.Model):
             "purchase_ok": True,
             "company_id": self.company_id.id,
             "description_sale": self.description,
-            "description_ecommerce": self._prepare_ecommerce_description(
-                product.description_ecommerce if product else None
-            ),
+            # The sourced detail area is fully managed so every product keeps
+            # the same three-section website layout without legacy duplicates.
+            "description_ecommerce": self._prepare_ecommerce_description(),
             "pi_candidate_id": self.id,
             "pi_source_name": self.source_id.display_name,
             "pi_external_url": self.external_url,
