@@ -296,13 +296,15 @@ function capture1688(){
     const merchantFeatures=[...new Set([
       ...activeMerchantFeatures,
       ...(badgeText.match(/实力商家|超级工厂|源头旗舰|实力供应商|深度验厂|诚信通/g)||[]),
-    ])].join('、');
+    ])].join('、')||'未标注';
     const merchantJoinTime=(badgeText.match(/(?:诚信通\s*\d+\s*年|\d+\s*年诚信通|经营\s*\d+\s*年|入驻\s*\d+\s*年|成立\s*\d+\s*年)/)||[])[0]||'';
     const phone=(text.match(/(?:1[3-9]\d{9}|0\d{2,3}[- ]?\d{7,8})/)||[])[0]||'';
     const moqMatch=text.match(/(?:起批|起订|≥)\s*([\d,.]+)\s*(?:件|个|套|台|双|箱|只|米|千克|公斤|pcs?)/i);
     const sales=(text.match(/(?:成交|已售|销量|复购率)[^¥￥]{0,30}/i)||[])[0]||'';
-    const location=(text.match(/(?:广东|浙江|江苏|福建|山东|河北|河南|上海|北京|天津|安徽|湖北|湖南|江西|四川|重庆|广西|辽宁)[^\s,，]{0,12}/)||[])[0]||'';
-    if(!title) continue;
+    const location=(text.match(/广东|浙江|江苏|福建|山东|河北|河南|上海|北京|天津|安徽|湖北|湖南|江西|四川|重庆|广西|辽宁|吉林|黑龙江|山西|陕西|云南|贵州|甘肃|青海|海南|内蒙古|宁夏|新疆|西藏|香港|澳门|台湾/)||[])[0]||'';
+    // Advertising redirect shells sometimes expose an offer id without the
+    // visible product/supplier/price fields. Never push those incomplete rows.
+    if(!title||!supplierName||!price) continue;
     items.push({
       product_id:id,product_title:title,product_url:url,
       main_image:absoluteUrl(image?.currentSrc||image?.getAttribute('data-lazy-src')||image?.getAttribute('src')||''),
