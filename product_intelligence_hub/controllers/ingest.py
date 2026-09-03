@@ -1,5 +1,8 @@
 import json
 import logging
+from io import BytesIO
+
+from PIL import Image
 
 from odoo import fields, http
 from odoo.http import request
@@ -190,3 +193,38 @@ class ProductIntelligenceIngestController(http.Controller):
         except Exception:
             _logger.exception("1688 sourcing update failed for source %s", source_id)
             return request.make_json_response({"ok": False, "error": "internal_error"}, status=500)
+
+    @http.route(
+        "/product-intelligence/v1/sourcing-image/<int:source_id>/<int:candidate_id>",
+        type="http", auth="public", methods=["GET"], csrf=False, save_session=False,
+    )
+    def sourcing_image(self, source_id, candidate_id, **kwargs):
+        source = self._authorized_source(source_id)
+        if not source:
+            return request.make_json_response({"ok": False, "error": "unauthorized"}, status=401)
+        candidate = request.env["product.intelligence.candidate"].sudo().browse(candidate_id).exists()
+        if not candidate or candidate.company_id != source.company_id:
+            return request.make_json_response({"ok": False, "error": "candidate_not_found"}, status=404)
+        image_url = candidate.sourcing_image_url or candidate.image_url or candidate.original_image_url
+        if not image_url:
+            return request.make_json_response({"ok": False, "error": "image_not_found"}, status=404)
+        try:
+            data, _content_type = request.env["product.image.storage.oss"].sudo().download_image(image_url)
+            with Image.open(BytesIO(data)) as image:
+                image.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+                if image.mode in ("RGBA", "LA"):
+                    background = Image.new("RGB", image.size, "white")
+                    background.paste(image, mask=image.getchannel("A"))
+                    image = background
+                elif image.mode != "RGB":
+                    image = image.convert("RGB")
+                output = BytesIO()
+                image.save(output, format="JPEG", quality=90, optimize=True)
+            return request.make_response(output.getvalue(), headers=[
+                ("Content-Type", "image/jpeg"),
+                ("Content-Disposition", 'inline; filename="pih-reference.jpg"'),
+                ("Cache-Control", "private, max-age=300"),
+            ])
+        except Exception:
+            _logger.exception("Unable to prepare sourcing image for candidate %s", candidate_id)
+            return request.make_json_response({"ok": False, "error": "image_prepare_failed"}, status=422)
