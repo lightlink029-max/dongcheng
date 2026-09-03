@@ -3,7 +3,7 @@ const token = document.querySelector('#token');
 const status = document.querySelector('#status');
 const CAPTURE_MESSAGE = 'PIH_CAPTURE_V108';
 const DETAIL_MESSAGE = 'PIH_DETAIL_V110';
-const SOURCING_MESSAGE = 'PIH_1688_CAPTURE_V107';
+const SOURCING_MESSAGE = 'PIH_1688_CAPTURE_V108';
 chrome.storage.local.get(['endpoint','token','detailProgress'], v => {
   endpoint.value=v.endpoint||''; token.value=v.token||'';
   if(v.detailProgress?.message) status.textContent=v.detailProgress.message;
