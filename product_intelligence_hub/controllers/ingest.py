@@ -159,12 +159,15 @@ class ProductIntelligenceIngestController(http.Controller):
                     skipped += 1
                     continue
                 image_url = str(item.get("main_image") or "")[:2048]
+                product_url = str(item.get("product_url") or "")[:2048]
+                if external_id.isdigit():
+                    product_url = "https://detail.1688.com/offer/%s.html" % external_id
                 values = {
                     "candidate_id": candidate.id,
                     "platform": "1688",
                     "external_id": external_id,
                     "name": name,
-                    "product_url": str(item.get("product_url") or "")[:2048],
+                    "product_url": product_url,
                     "image_url": image_url,
                     "supplier_name": str(item.get("supplier_name") or "")[:512],
                     "merchant_features": str(item.get("merchant_features") or "")[:256],
