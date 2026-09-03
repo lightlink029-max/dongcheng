@@ -68,10 +68,10 @@ async function runDetailQueue(endpoint, token) {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === 'PIH_1688_MAIN_WORLD_UPLOAD') {
+  if (message?.type === 'PIH_SOURCING_MAIN_WORLD_UPLOAD' || message?.type === 'PIH_1688_MAIN_WORLD_UPLOAD') {
     const tabId = _sender.tab?.id;
     if (!tabId) {
-      sendResponse({ok: false, error: '无法识别当前1688标签页'});
+      sendResponse({ok: false, error: '无法识别当前货源搜索标签页'});
       return;
     }
     chrome.scripting.executeScript({
@@ -83,7 +83,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           input = document.querySelector('input[type="file"][accept*="image"],input[type="file"]');
           if (!input) await new Promise(resolve => setTimeout(resolve, 150));
         }
-        if (!input) return {ok: false, error: '未找到1688图片上传控件'};
+        if (!input) return {ok: false, error: '未找到图片上传控件'};
         const binary = atob(base64);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
