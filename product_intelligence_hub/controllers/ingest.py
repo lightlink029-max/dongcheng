@@ -142,6 +142,7 @@ class ProductIntelligenceIngestController(http.Controller):
             if not candidate or candidate.company_id != source.company_id:
                 return request.make_json_response({"ok": False, "error": "candidate_not_found"}, status=404)
             Offer = request.env["product.intelligence.sourcing.offer"].sudo()
+            Insight = request.env["product.intelligence.source.insight"].sudo()
             ai_snapshot = Offer._prepare_ai_opportunity_snapshot(candidate)
             created = updated = skipped = 0
             for item in items:
@@ -210,6 +211,26 @@ class ProductIntelligenceIngestController(http.Controller):
                 else:
                     Offer.create(values)
                     created += 1
+                insight_content = str(item.get("ai_business_opportunity") or "").strip()[:4000]
+                if insight_content:
+                    insight_values = {
+                        "candidate_id": candidate.id,
+                        "source_platform": "1688",
+                        "external_ref": external_id,
+                        "source_product_name": name,
+                        "source_url": values["product_url"],
+                        "insight_content": insight_content,
+                        "captured_at": fields.Datetime.now(),
+                    }
+                    insight = Insight.search([
+                        ("candidate_id", "=", candidate.id),
+                        ("source_platform", "=", "1688"),
+                        ("external_ref", "=", external_id),
+                    ], limit=1)
+                    if insight:
+                        insight.write(insight_values)
+                    else:
+                        Insight.create(insight_values)
             if created or updated:
                 candidate.message_post(body=(
                     "1688货源采集完成：新增 %s，更新 %s，跳过 %s。" % (created, updated, skipped)
