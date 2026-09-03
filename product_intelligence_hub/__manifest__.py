@@ -1,6 +1,6 @@
 {
     "name": "产品智能中心",
-    "version": "19.0.1.43.2",
+    "version": "19.0.1.44.1",
     "summary": "采集、评分、审核并转化产品机会",
     "category": "Sales",
     "author": "LightLink",
