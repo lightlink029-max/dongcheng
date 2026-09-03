@@ -172,6 +172,9 @@ class ProductIntelligenceIngestController(http.Controller):
                     "purchase_price": float(item.get("min_price") or 0),
                     "minimum_order_qty": float(item.get("moq") or 1),
                     "sales_text": str(item.get("sales_text") or "")[:256],
+                    "ai_business_opportunity": str(
+                        item.get("ai_business_opportunity") or ""
+                    )[:4000],
                     "ai_opportunity_snapshot": ai_snapshot,
                     "delivery_days": int(float(item.get("delivery_days") or 0)),
                     "captured_at": fields.Datetime.now(),
