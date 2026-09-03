@@ -286,6 +286,39 @@ class ProductIntelligenceIngestController(http.Controller):
             return request.make_json_response({"ok": False, "error": "internal_error"}, status=500)
 
     @http.route(
+        "/product-intelligence/v1/sourcing-image-info/<int:source_id>/<int:candidate_id>",
+        type="http", auth="public", methods=["GET", "OPTIONS"], csrf=False,
+        save_session=False,
+    )
+    def sourcing_image_info(self, source_id, candidate_id, **kwargs):
+        cors_headers = [
+            ("Access-Control-Allow-Origin", "*"),
+            ("Access-Control-Allow-Methods", "GET, OPTIONS"),
+            ("Access-Control-Allow-Headers", "Authorization, X-PIH-Token, Content-Type"),
+            ("Access-Control-Max-Age", "600"),
+        ]
+        if request.httprequest.method == "OPTIONS":
+            return request.make_response("", headers=cors_headers, status=204)
+        source = self._authorized_source(source_id)
+        if not source:
+            return request.make_json_response(
+                {"ok": False, "error": "unauthorized"}, status=401, headers=cors_headers,
+            )
+        candidate = request.env["product.intelligence.candidate"].sudo().browse(candidate_id).exists()
+        if not candidate or candidate.source_id != source:
+            return request.make_json_response(
+                {"ok": False, "error": "candidate_not_found"}, status=404, headers=cors_headers,
+            )
+        image_url = candidate.sourcing_image_url or candidate.image_url or candidate.original_image_url
+        if not image_url:
+            return request.make_json_response(
+                {"ok": False, "error": "image_not_found"}, status=404, headers=cors_headers,
+            )
+        return request.make_json_response(
+            {"ok": True, "image_url": image_url}, headers=cors_headers,
+        )
+
+    @http.route(
         "/product-intelligence/v1/sourcing-image/<int:source_id>/<int:candidate_id>",
         type="http", auth="public", methods=["GET", "OPTIONS"], csrf=False,
         save_session=False,
