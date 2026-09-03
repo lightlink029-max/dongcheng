@@ -22,6 +22,7 @@ class ProductIntelligenceSourcingOffer(models.Model):
     image_url = fields.Char(string="货源主图")
     supplier_name = fields.Char(string="供应商", index=True)
     merchant_features = fields.Char(string="商家特色", index=True)
+    merchant_join_time = fields.Char(string="商家入驻时间")
     supplier_url = fields.Char(string="供应商主页")
     contact_name = fields.Char(string="联系人")
     contact_phone = fields.Char(string="联系电话")
