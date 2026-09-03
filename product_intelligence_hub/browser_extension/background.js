@@ -68,6 +68,37 @@ async function runDetailQueue(endpoint, token) {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === 'PIH_1688_MAIN_WORLD_UPLOAD') {
+    const tabId = _sender.tab?.id;
+    if (!tabId) {
+      sendResponse({ok: false, error: '无法识别当前1688标签页'});
+      return;
+    }
+    chrome.scripting.executeScript({
+      target: {tabId}, world: 'MAIN',
+      args: [message.data, message.mimeType || 'image/jpeg'],
+      func: async (base64, mimeType) => {
+        let input = null;
+        for (let i = 0; i < 20 && !input; i++) {
+          input = document.querySelector('input[type="file"][accept*="image"],input[type="file"]');
+          if (!input) await new Promise(resolve => setTimeout(resolve, 150));
+        }
+        if (!input) return {ok: false, error: '未找到1688图片上传控件'};
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const file = new File([bytes], 'pih-reference.jpg', {type: mimeType});
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        input.files = transfer.files;
+        input.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
+        input.dispatchEvent(new Event('change', {bubbles: true, composed: true}));
+        return {ok: true};
+      },
+    }).then(results => sendResponse(results?.[0]?.result || {ok: false, error: '1688页面未返回上传结果'}))
+      .catch(error => sendResponse({ok: false, error: error.message}));
+    return true;
+  }
   if (message?.type !== 'PIH_START_DETAIL') return;
   chrome.storage.local.get('detailProgress').then(({detailProgress}) => {
     if (detailProgress?.running) {
