@@ -235,6 +235,7 @@ function captureAlibabaDetail(){
   };
 }
 function closest1688Card(link){
+  if(link?.matches?.('a.search-offer-item,a.search-offer-wrapper')) return link;
   let node=link;
   let fallback=link.parentElement;
   for(let i=0;i<10&&node?.parentElement;i++,node=node.parentElement){
@@ -248,9 +249,16 @@ function closest1688Card(link){
 function capture1688(){
   const params=new URL(location.href).searchParams;
   const candidateId=Number(params.get('pih_candidate_id')||0);
+  const memberTags=params.get('filtMemberTags')||'';
+  const activeMerchantFeatures=[];
+  if(/(?:^|,)(?:5179713|5125953)(?:,|$)/.test(memberTags)) activeMerchantFeatures.push('实力商家');
+  if(/(?:^|,)3938689(?:,|$)/.test(memberTags)) activeMerchantFeatures.push('超级工厂');
+  if(/(?:^|,)5343297(?:,|$)/.test(memberTags)) activeMerchantFeatures.push('源头旗舰');
   if(candidateId) chrome.storage.local.set({last1688CandidateId:candidateId});
   const items=[],seen=new Set();
-  const links=[...document.querySelectorAll('a[href*="detail.1688.com"],a[href*="/offer/"],a[href*="offerId="]')];
+  const links=[...document.querySelectorAll(
+    'a.search-offer-item[href*="offerId="],a.search-offer-wrapper[href*="offerId="],a[href*="detail.1688.com"],a[href*="/offer/"]'
+  )];
   for(const link of links){
     const url=absoluteUrl(link.getAttribute('href')||link.getAttribute('data-href')||'');
     const id=(url.match(/\/offer\/(\d+)(?:\.html)?/i)||url.match(/[?&](?:offerId|id)=(\d+)/i)||[])[1];
@@ -258,18 +266,23 @@ function capture1688(){
     const card=closest1688Card(link),text=(card?.innerText||'').replace(/\s+/g,' ').trim();
     if(!text) continue;
     seen.add(id);
-    const titleNode=card.querySelector('[class*="title"],[class*="name"],h1,h2,h3');
-    let title=(link.getAttribute('title')||link.getAttribute('aria-label')||link.textContent||titleNode?.getAttribute('title')||titleNode?.textContent||'').replace(/\s+/g,' ').trim();
+    const titleNode=card.querySelector('.title-text,[class~="title-text"],[class*="offer-title"]');
+    let title=(titleNode?.getAttribute('title')||titleNode?.textContent||link.getAttribute('title')||link.getAttribute('aria-label')||'').replace(/\s+/g,' ').trim();
     if(!title){
       title=(card.innerText||'').split('\n').map(value=>value.trim()).find(value=>value.length>=4&&!/[¥￥]\s*[\d,.]+/.test(value))||`1688商品 ${id}`;
     }
     const image=card.querySelector('img');
-    const price=(text.match(/[¥￥]\s*[\d,.]+(?:\s*[-~至]\s*[\d,.]+)?/)||[])[0]||'';
+    const priceNode=card.querySelector('.price-item,[class~="price-item"],[class*="offer-price"]');
+    const price=((priceNode?.textContent||'').replace(/\s+/g,'').match(/[¥￥]?[\d,.]+(?:[-~至][\d,.]+)?/)||
+      text.match(/[¥￥]\s*[\d,.]+(?:\s*[-~至]\s*[\d,.]+)?/)||[])[0]||'';
     const supplierLink=[...card.querySelectorAll('a')].find(a=>/\.1688\.com\/?(?:\?|$)|winport\.1688\.com/i.test(a.href)&&!a.href.includes('/offer/'));
     const supplierName=(supplierLink?.getAttribute('title')||supplierLink?.textContent||'').replace(/\s+/g,' ').trim();
-    const badgeText=`${text} ${[...card.querySelectorAll('[title],[alt]')]
-      .map(node=>node.getAttribute('title')||node.getAttribute('alt')||'').join(' ')}`;
-    const merchantFeatures=[...new Set(badgeText.match(/实力商家|超级工厂|源头旗舰/g)||[])].join('、');
+    const badgeText=`${text} ${[...card.querySelectorAll('.badge-text,.desc-text,[title],[alt]')]
+      .map(node=>node.getAttribute('title')||node.getAttribute('alt')||node.textContent||'').join(' ')}`;
+    const merchantFeatures=[...new Set([
+      ...activeMerchantFeatures,
+      ...(badgeText.match(/实力商家|超级工厂|源头旗舰|实力供应商|深度验厂|诚信通/g)||[]),
+    ])].join('、');
     const phone=(text.match(/(?:1[3-9]\d{9}|0\d{2,3}[- ]?\d{7,8})/)||[])[0]||'';
     const moqMatch=text.match(/(?:起批|起订|≥)\s*([\d,.]+)\s*(?:件|个|套|台|双|箱|只|米|千克|公斤|pcs?)/i);
     const sales=(text.match(/(?:成交|已售|销量|复购率)[^¥￥]{0,30}/i)||[])[0]||'';
@@ -281,7 +294,8 @@ function capture1688(){
       supplier_name:supplierName,supplier_url:supplierLink?.href||'',
       merchant_features:merchantFeatures,
       contact_phone:phone,contact_details:phone?'页面公开联系电话':'页面未公开显示联系电话',
-      supplier_location:location,price_text:price,min_price:number(price,/([\d,.]+)/),
+      supplier_location:location,price_text:price?(price.startsWith('¥')||price.startsWith('￥')?price:`¥${price}`):'',
+      min_price:number(price,/([\d,.]+)/),
       moq:moqMatch?Number(moqMatch[1].replace(/,/g,'')):1,sales_text:sales,
       captured_at:new Date().toISOString(),
     });
