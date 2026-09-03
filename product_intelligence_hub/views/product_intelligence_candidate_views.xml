@@ -194,6 +194,7 @@
                                     <field name="sourcing_keyword" placeholder="例如：PVC 防滑条纹门垫"/>
                                     <field name="sourcing_image_url" widget="url"/>
                                     <button name="action_open_1688_search" type="object" string="打开1688关键词搜索" class="btn-primary"/>
+                                    <button name="action_open_1688_image_search" type="object" string="打开1688图片搜索" class="btn-secondary"/>
                                 </group>
                                 <group string="利润参数">
                                     <field name="target_sale_price"/>
