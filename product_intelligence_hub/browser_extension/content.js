@@ -462,6 +462,37 @@ async function uploadSourcingReferenceImage(){
   const match=saved.endpoint.match(/^(.*\/product-intelligence\/v1\/)ingest\/(\d+)\/?$/);
   if(!match) return;
   const imageUrl=`${match[1]}sourcing-image/${match[2]}/${candidateId}`;
+  if(location.hostname.endsWith('yiwugo.com')){
+    try{
+      const infoUrl=`${match[1]}sourcing-image-info/${match[2]}/${candidateId}`;
+      const response=await fetch(infoUrl,{credentials:'omit',headers:{'Authorization':`Bearer ${saved.token}`}});
+      if(!response.ok) throw new Error(`HTTP ${response.status}`);
+      const info=await response.json();
+      if(!info?.image_url) throw new Error('Missing image URL');
+      let urlInput=null;
+      for(let i=0;i<40&&!urlInput;i++){
+        urlInput=[...document.querySelectorAll('input[type="text"],input:not([type])')]
+          .find(node=>/(粘贴图片链接|图片链接)/.test(node.placeholder||''));
+        if(!urlInput) await new Promise(resolve=>setTimeout(resolve,250));
+      }
+      if(!urlInput) throw new Error('未找到义乌购图片链接输入框');
+      const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
+      setter?.call(urlInput,info.image_url);
+      urlInput.dispatchEvent(new Event('input',{bubbles:true,composed:true}));
+      urlInput.dispatchEvent(new Event('change',{bubbles:true,composed:true}));
+      await new Promise(resolve=>setTimeout(resolve,300));
+      const searchButton=[...document.querySelectorAll('button,[role="button"],a,div,span')]
+        .filter(node=>(node.textContent||'').replace(/\s+/g,'').trim()==='搜索图片')
+        .filter(node=>node.getClientRects().length>0)
+        .sort((left,right)=>left.children.length-right.children.length)[0];
+      if(!searchButton) throw new Error('未找到义乌购搜索图片按钮');
+      searchButton.click();
+      sessionStorage.setItem(searchGuard,'1');
+    }catch(error){
+      console.warn('LightLink: YiwuGo reference image search failed',error);
+    }
+    return;
+  }
   let input=null;
   for(let i=0;i<40&&!input;i++){
     input=document.querySelector('input[type="file"][accept*="image"],input[type="file"]');
@@ -486,10 +517,10 @@ async function uploadSourcingReferenceImage(){
     const result=await chrome.runtime.sendMessage({
       type:'PIH_SOURCING_MAIN_WORLD_UPLOAD',data:btoa(binary),mimeType:'image/jpeg',
     });
-    if(!result?.ok) throw new Error(result?.error||'1688主页面上传失败');
+    if(!result?.ok) throw new Error(result?.error||'货源页面上传失败');
     if(result.searched) sessionStorage.setItem(searchGuard,'1');
   }catch(error){
-    console.warn('LightLink: 1688 reference image upload failed',error);
+    console.warn('LightLink: sourcing reference image upload failed',error);
   }
 }
 uploadSourcingReferenceImage();
