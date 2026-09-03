@@ -205,12 +205,19 @@
                             </group>
                             <field name="sourcing_offer_ids" context="{'default_candidate_id': id}">
                                 <list editable="bottom" default_order="is_preferred desc, estimated_margin_percent desc">
+                                    <header>
+                                        <button name="action_bulk_delete" type="object" string="删除所选货源" display="always" class="btn-secondary" groups="product_intelligence_hub.group_product_intelligence_manager" confirm="删除后无法恢复，确认删除所选1688货源吗？"/>
+                                    </header>
                                     <field name="is_preferred" readonly="1"/>
                                     <field name="name"/>
                                     <field name="supplier_name"/>
+                                    <field name="merchant_features" optional="show"/>
                                     <field name="supplier_location" optional="show"/>
                                     <field name="price_text" optional="show"/>
                                     <field name="purchase_price"/>
+                                    <field name="opportunity_price" optional="show"/>
+                                    <field name="price_difference" optional="show"/>
+                                    <field name="is_cheaper_than_opportunity" readonly="1" optional="show"/>
                                     <field name="minimum_order_qty"/>
                                     <field name="sales_text" optional="show"/>
                                     <field name="contact_phone" optional="show"/>
