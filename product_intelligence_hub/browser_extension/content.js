@@ -300,8 +300,13 @@ function rememberCandidateContext(){
 }
 async function upload1688ReferenceImage(){
   const params=new URL(location.href).searchParams;
-  const imageUrl=params.get('pih_image_url');
-  if(!imageUrl||!location.hostname.endsWith('1688.com')) return;
+  if(!location.hostname.endsWith('1688.com')) return;
+  const saved=await chrome.storage.local.get(['last1688CandidateId','endpoint','token']);
+  const candidateId=Number(params.get('pih_candidate_id')||saved.last1688CandidateId||0);
+  if(!candidateId||!saved.endpoint||!saved.token) return;
+  const match=saved.endpoint.match(/^(.*\/product-intelligence\/v1\/)ingest\/(\d+)\/?$/);
+  if(!match) return;
+  const imageUrl=`${match[1]}sourcing-image/${match[2]}/${candidateId}`;
   let input=null;
   for(let i=0;i<40&&!input;i++){
     input=document.querySelector('input[type="file"][accept*="image"],input[type="file"]');
@@ -314,11 +319,11 @@ async function upload1688ReferenceImage(){
   }
   if(!input) return;
   try{
-    const response=await fetch(imageUrl,{credentials:'omit'});
+    const response=await fetch(imageUrl,{credentials:'omit',headers:{'Authorization':`Bearer ${saved.token}`}});
     if(!response.ok) throw new Error(`HTTP ${response.status}`);
     const blob=await response.blob();
-    const extension=(blob.type.split('/')[1]||'jpg').replace('jpeg','jpg');
-    const file=new File([blob],`pih-reference.${extension}`,{type:blob.type||'image/jpeg'});
+    if(blob.type!=='image/jpeg') throw new Error(`Unexpected content type: ${blob.type||'unknown'}`);
+    const file=new File([blob],'pih-reference.jpg',{type:'image/jpeg'});
     const transfer=new DataTransfer(); transfer.items.add(file);
     input.files=transfer.files;
     input.dispatchEvent(new Event('input',{bubbles:true}));
