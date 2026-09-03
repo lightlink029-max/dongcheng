@@ -280,6 +280,36 @@ function capture1688(){
   }
   return {candidate_id:candidateId,items};
 }
+async function upload1688ReferenceImage(){
+  const params=new URL(location.href).searchParams;
+  const imageUrl=params.get('pih_image_url');
+  if(!imageUrl||!location.hostname.endsWith('1688.com')) return;
+  let input=null;
+  for(let i=0;i<40&&!input;i++){
+    input=document.querySelector('input[type="file"][accept*="image"],input[type="file"]');
+    if(!input){
+      const camera=[...document.querySelectorAll('button,a,[role="button"],span,i')]
+        .find(node=>/(以图搜|图片搜索|搜图|camera)/i.test(node.getAttribute('aria-label')||node.getAttribute('title')||node.textContent||node.className||''));
+      camera?.click();
+      await new Promise(resolve=>setTimeout(resolve,250));
+    }
+  }
+  if(!input) return;
+  try{
+    const response=await fetch(imageUrl,{credentials:'omit'});
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob=await response.blob();
+    const extension=(blob.type.split('/')[1]||'jpg').replace('jpeg','jpg');
+    const file=new File([blob],`pih-reference.${extension}`,{type:blob.type||'image/jpeg'});
+    const transfer=new DataTransfer(); transfer.items.add(file);
+    input.files=transfer.files;
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+  }catch(error){
+    console.warn('LightLink: 1688 reference image upload failed',error);
+  }
+}
+upload1688ReferenceImage();
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
   if(message?.type==='PIH_CAPTURE_V108') sendResponse({items:captureAlibaba()});
   if(message?.type==='PIH_DETAIL_V110') sendResponse(captureAlibabaDetail());
