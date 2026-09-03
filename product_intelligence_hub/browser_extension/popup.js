@@ -3,7 +3,7 @@ const token = document.querySelector('#token');
 const status = document.querySelector('#status');
 const CAPTURE_MESSAGE = 'PIH_CAPTURE_V108';
 const DETAIL_MESSAGE = 'PIH_DETAIL_V110';
-const SOURCING_MESSAGE = 'PIH_1688_CAPTURE_V108';
+const SOURCING_MESSAGE = 'PIH_1688_CAPTURE_V109';
 chrome.storage.local.get(['endpoint','token','detailProgress'], v => {
   endpoint.value=v.endpoint||''; token.value=v.token||'';
   if(v.detailProgress?.message) status.textContent=v.detailProgress.message;
@@ -49,7 +49,11 @@ document.querySelector('#push').addEventListener('click', async () => {
     if(!result?.items?.length) throw new Error('当前页面没有识别到商品，请向下滚动加载商品后重试');
     status.textContent=`识别到 ${result.items.length} 件，正在推送…`;
     const pushUrl=is1688?apiUrl(ep,'sourcing-result'):ep;
-    const payload=is1688?{candidate_id:result.candidate_id,items:result.items}:{items:result.items};
+    const payload=is1688?{
+      candidate_id:result.candidate_id,
+      items:result.items,
+      source_insights:result.source_insights||[],
+    }:{items:result.items};
     const response=await fetch(pushUrl,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${tk}`},body:JSON.stringify(payload)});
     const data=await response.json().catch(()=>({}));
     if(!response.ok || !data.ok) throw new Error(data.error||`HTTP ${response.status}`);
