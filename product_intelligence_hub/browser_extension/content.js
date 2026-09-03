@@ -387,29 +387,77 @@ function capture1688(){
     }]:[],
   };
 }
+function captureYiwugo(){
+  const params=new URL(location.href).searchParams;
+  const candidateId=Number(params.get('pih_candidate_id')||0);
+  if(candidateId) chrome.storage.local.set({lastYiwugoCandidateId:candidateId});
+  const items=[],seen=new Set();
+  const links=[...document.querySelectorAll('a[href*="/product/detail/"]')];
+  for(const link of links){
+    const url=absoluteUrl(link.getAttribute('href')||'');
+    const id=(url.match(/\/product\/detail\/(\d+)\.html/i)||[])[1]||'';
+    if(!id||seen.has(id)) continue;
+    let card=link;
+    for(let i=0;i<8&&card?.parentElement;i++,card=card.parentElement){
+      const count=card.querySelectorAll('a[href*="/product/detail/"]').length;
+      const cardText=(card.innerText||'').trim();
+      if(count===1&&cardText.length>20&&cardText.length<1500) break;
+    }
+    const rawText=card?.innerText||link.innerText||'';
+    const lines=rawText.split('\n').map(value=>value.replace(/\s+/g,' ').trim()).filter(Boolean);
+    const text=lines.join(' ');
+    let title=(link.getAttribute('title')||link.getAttribute('aria-label')||lines[0]||'').trim();
+    if(title.length>300) title=lines.find(value=>value.length>=4&&!/价格联系商家|\d+\s*[.]\s*\d+\s*元/.test(value))||`义乌购商品 ${id}`;
+    const priceMatch=text.match(/(\d+(?:\s*[.]\s*\d+)?)(?:\s*[~至-]\s*(\d+(?:\s*[.]\s*\d+)?))?\s*元/);
+    const minPrice=priceMatch?Number(priceMatch[1].replace(/\s+/g,'')):0;
+    const priceText=priceMatch?`¥${priceMatch[1].replace(/\s+/g,'')}${priceMatch[2]?` ~ ${priceMatch[2].replace(/\s+/g,'')}`:''}`:'价格联系商家';
+    const supplierLink=[...card.querySelectorAll('a[href*="/hu/"]')].find(node=>(node.textContent||'').trim());
+    const supplierName=(supplierLink?.textContent||'').replace(/\s+/g,' ').trim();
+    const joinTime=(text.match(/\d+\s*年/)||[])[0]||'';
+    const sales=(text.match(/成交\s*\d+(?:\.\d+)?(?:万)?\s*(?:双|件|个|套|台|箱|只|对|笔)?/)||[])[0]||'';
+    const moq=(text.match(/(\d+(?:\.\d+)?)\s*(?:双|件|个|套|台|箱|只|对)起购/)||[])[1]||'1';
+    const image=card.querySelector('img');
+    const locationLine=lines.find(value=>/义乌国际商贸城|浙江省|广东省|福建省|江苏省|山东省/.test(value))||'';
+    if(!title||!supplierName||!url) continue;
+    seen.add(id);
+    items.push({
+      source_platform:'yiwugo',product_id:id,product_title:title,product_url:url,
+      main_image:absoluteUrl(image?.currentSrc||image?.getAttribute('data-src')||image?.getAttribute('src')||''),
+      supplier_name:supplierName,supplier_url:absoluteUrl(supplierLink?.getAttribute('href')||''),
+      merchant_features:'普通商家',merchant_join_time:joinTime,
+      supplier_location:locationLine,price_text:priceText,min_price:minPrice,
+      moq:Number(moq)||1,sales_text:sales,contact_details:'页面未公开显示联系电话',
+      captured_at:new Date().toISOString(),
+    });
+    if(items.length>=100) break;
+  }
+  return {candidate_id:candidateId,items,source_insights:[]};
+}
 function rememberCandidateContext(){
   const params=new URL(location.href).searchParams;
   const from1688=Number(params.get('pih_candidate_id')||0);
   if(from1688){
-    chrome.storage.local.set({last1688CandidateId:from1688});
+    if(location.hostname.endsWith('yiwugo.com')) chrome.storage.local.set({lastYiwugoCandidateId:from1688});
+    else chrome.storage.local.set({last1688CandidateId:from1688});
     return;
   }
   if(!location.hostname.endsWith('odoo.com')) return;
   const recordId=Number((location.pathname.match(/\/odoo\/action-\d+\/(\d+)/)||[])[1]||0);
-  if(recordId&&/1688货源(?:研判)?/.test(document.body?.innerText||'')){
+  if(recordId&&/(?:1688)?货源研判/.test(document.body?.innerText||'')){
     chrome.storage.local.set({last1688CandidateId:recordId});
+    chrome.storage.local.set({lastYiwugoCandidateId:recordId});
   }
 }
-async function upload1688ReferenceImage(){
+async function uploadSourcingReferenceImage(){
   const params=new URL(location.href).searchParams;
-  if(!location.hostname.endsWith('1688.com')) return;
+  if(!location.hostname.endsWith('1688.com')&&!location.hostname.endsWith('yiwugo.com')) return;
   // Only the dedicated Odoo image-search action may upload and submit an image.
   // A remembered candidate ID must never turn an ordinary keyword page into an image search.
   if(params.get('pih_search_mode')!=='image') return;
-  const saved=await chrome.storage.local.get(['last1688CandidateId','endpoint','token']);
+  const saved=await chrome.storage.local.get(['endpoint','token']);
   const candidateId=Number(params.get('pih_candidate_id')||0);
   if(!candidateId||!saved.endpoint||!saved.token) return;
-  const searchGuard=`pih1688ImageSearched:${candidateId}`;
+  const searchGuard=`pihSourcingImageSearched:${location.hostname}:${candidateId}`;
   if(sessionStorage.getItem(searchGuard)==='1') return;
   const match=saved.endpoint.match(/^(.*\/product-intelligence\/v1\/)ingest\/(\d+)\/?$/);
   if(!match) return;
@@ -436,7 +484,7 @@ async function upload1688ReferenceImage(){
       binary+=String.fromCharCode(...bytes.subarray(offset,offset+32768));
     }
     const result=await chrome.runtime.sendMessage({
-      type:'PIH_1688_MAIN_WORLD_UPLOAD',data:btoa(binary),mimeType:'image/jpeg',
+      type:'PIH_SOURCING_MAIN_WORLD_UPLOAD',data:btoa(binary),mimeType:'image/jpeg',
     });
     if(!result?.ok) throw new Error(result?.error||'1688主页面上传失败');
     if(result.searched) sessionStorage.setItem(searchGuard,'1');
@@ -444,10 +492,11 @@ async function upload1688ReferenceImage(){
     console.warn('LightLink: 1688 reference image upload failed',error);
   }
 }
-upload1688ReferenceImage();
+uploadSourcingReferenceImage();
 rememberCandidateContext();
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
   if(message?.type==='PIH_CAPTURE_V108') sendResponse({items:captureAlibaba()});
   if(message?.type==='PIH_DETAIL_V110') sendResponse(captureAlibabaDetail());
   if(message?.type==='PIH_1688_CAPTURE_V109') sendResponse(capture1688());
+  if(message?.type==='PIH_YIWUGO_CAPTURE_V100') sendResponse(captureYiwugo());
 });
