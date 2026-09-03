@@ -34,7 +34,7 @@
                 </header>
                 <field name="is_preferred" readonly="1"/>
                 <field name="candidate_id" optional="show"/>
-                <field name="image_preview" widget="html" string="主图" optional="show"/>
+                <field name="image_512" widget="image" string="主图" options="{'size': [80, 80]}" optional="show"/>
                 <field name="image_url" widget="url" optional="hide"/>
                 <field name="name"/>
                 <field name="supplier_name"/>
