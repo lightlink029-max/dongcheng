@@ -10,6 +10,8 @@
                 <field name="supplier_name"/>
                 <field name="merchant_features"/>
                 <field name="merchant_join_time"/>
+                <filter name="main_source" string="主推荐货源" domain="[('is_preferred', '=', True)]"/>
+                <filter name="backup_source" string="备选货源" domain="[('is_backup', '=', True)]"/>
                 <filter name="cheaper_than_opportunity" string="1688价格更低" domain="[('is_cheaper_than_opportunity', '=', True)]"/>
                 <separator/>
                 <filter name="powerful_merchant" string="实力商家" domain="[('merchant_features', 'ilike', '实力商家')]"/>
@@ -28,11 +30,12 @@
         <field name="name">product.intelligence.sourcing.offer.list</field>
         <field name="model">product.intelligence.sourcing.offer</field>
         <field name="arch" type="xml">
-            <list decoration-success="is_preferred" decoration-info="is_cheaper_than_opportunity" default_order="is_preferred desc, is_cheaper_than_opportunity desc, price_difference desc">
+            <list decoration-success="is_preferred" decoration-warning="is_backup" decoration-info="is_cheaper_than_opportunity" default_order="is_preferred desc, is_backup desc, is_cheaper_than_opportunity desc, price_difference desc">
                 <header>
                     <button name="action_bulk_delete" type="object" string="删除所选货源" display="always" class="btn-secondary" groups="product_intelligence_hub.group_product_intelligence_manager" confirm="删除后无法恢复，确认删除所选1688货源吗？"/>
                 </header>
                 <field name="is_preferred" readonly="1"/>
+                <field name="is_backup" readonly="1"/>
                 <field name="candidate_id" optional="show"/>
                 <field name="image_512" widget="image" string="主图" options="{'size': [80, 80]}" optional="show"/>
                 <field name="image_url" widget="url" optional="hide"/>
@@ -48,14 +51,16 @@
                 <field name="is_cheaper_than_opportunity" readonly="1" optional="show"/>
                 <field name="minimum_order_qty"/>
                 <field name="sales_text" optional="show"/>
-                <field name="ai_business_opportunity" optional="show"/>
                 <field name="delivery_days" optional="show"/>
                 <field name="estimated_total_cost"/>
                 <field name="estimated_profit"/>
                 <field name="estimated_margin_percent" widget="percentage"/>
                 <field name="contact_phone" optional="show"/>
                 <field name="product_url" widget="url" optional="show"/>
-                <button name="action_set_preferred" type="object" string="设为推荐" icon="fa-star"/>
+                <button name="action_set_preferred" type="object" string="设为主推荐" icon="fa-star" invisible="is_preferred"/>
+                <button name="action_toggle_backup" type="object" string="设为备选" icon="fa-bookmark-o" invisible="is_preferred or is_backup"/>
+                <button name="action_toggle_backup" type="object" string="取消备选" icon="fa-bookmark" invisible="not is_backup"/>
+                <button name="action_clear_sourcing_role" type="object" string="取消主推荐" icon="fa-star-o" invisible="not is_preferred"/>
             </list>
         </field>
     </record>
@@ -66,7 +71,10 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_set_preferred" type="object" string="设为推荐货源" class="btn-primary" invisible="is_preferred"/>
+                    <button name="action_set_preferred" type="object" string="设为主推荐货源" class="btn-primary" invisible="is_preferred"/>
+                    <button name="action_toggle_backup" type="object" string="设为备选货源" invisible="is_preferred or is_backup"/>
+                    <button name="action_toggle_backup" type="object" string="取消备选" invisible="not is_backup"/>
+                    <button name="action_clear_sourcing_role" type="object" string="取消主推荐" invisible="not is_preferred"/>
                     <button name="action_open_source" type="object" string="打开1688商品"/>
                 </header>
                 <sheet>
@@ -107,6 +115,7 @@
                             <field name="estimated_profit"/>
                             <field name="estimated_margin_percent" widget="percentage"/>
                             <field name="is_preferred"/>
+                            <field name="is_backup"/>
                         </group>
                     </group>
                     <group string="价格比较">
@@ -114,9 +123,6 @@
                         <field name="purchase_price"/>
                         <field name="price_difference"/>
                         <field name="is_cheaper_than_opportunity"/>
-                    </group>
-                    <group string="AI商机识别">
-                        <field name="ai_business_opportunity" nolabel="1" readonly="1" placeholder="当前1688结果未显示AI商机识别内容"/>
                     </group>
                 </sheet>
             </form>
