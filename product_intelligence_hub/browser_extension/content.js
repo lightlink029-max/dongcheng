@@ -260,6 +260,26 @@ function extract1688OfferId(link,card,url){
   const html=card?.innerHTML||link?.outerHTML||'';
   return (html.match(/(?:offerId|offer_id|offer-id)(?:%3D|[=:\"']+)(\d{8,})/i)||[])[1]||'';
 }
+function extract1688AiOpportunity(){
+  const labels=['需求识别','下游售价','图搜趋势'];
+  const nodes=[...document.querySelectorAll('div,section,article,aside')];
+  let container=nodes
+    .filter(node=>/AI商机识别/.test(node.innerText||''))
+    .filter(node=>labels.some(label=>(node.innerText||'').includes(label)))
+    .sort((left,right)=>(left.innerText||'').length-(right.innerText||'').length)[0];
+  const scopeText=container?.innerText||document.body?.innerText||'';
+  const lines=scopeText.split('\n').map(value=>value.replace(/\s+/g,' ').trim()).filter(Boolean);
+  const parts=[];
+  for(const label of labels){
+    const index=lines.findIndex(value=>value.includes(label));
+    if(index<0) continue;
+    const line=lines[index];
+    let value=line.slice(line.indexOf(label)+label.length).replace(/^[：:\s-]+/,'').trim();
+    if(!value&&lines[index+1]&&!/^(?:需求识别|下游售价|图搜趋势|AI商机识别)/.test(lines[index+1])) value=lines[index+1];
+    if(value) parts.push(`${label}：${value}`);
+  }
+  return parts.join('\n');
+}
 function capture1688(){
   const params=new URL(location.href).searchParams;
   const candidateId=Number(params.get('pih_candidate_id')||0);
@@ -348,7 +368,17 @@ function capture1688(){
     });
     if(items.length>=100) break;
   }
-  return {candidate_id:candidateId,items};
+  const pageInsight=extract1688AiOpportunity();
+  const insightRef=params.get('imageId')||params.get('imageIdList')||params.get('keywords')||`search-${candidateId}`;
+  return {
+    candidate_id:candidateId,
+    items,
+    source_insights:pageInsight?[{
+      source_platform:'1688',external_ref:`search:${insightRef}`,
+      source_product_name:'1688搜索商机',source_url:location.href,
+      insight_content:pageInsight,
+    }]:[],
+  };
 }
 function rememberCandidateContext(){
   const params=new URL(location.href).searchParams;
@@ -412,5 +442,5 @@ rememberCandidateContext();
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
   if(message?.type==='PIH_CAPTURE_V108') sendResponse({items:captureAlibaba()});
   if(message?.type==='PIH_DETAIL_V110') sendResponse(captureAlibabaDetail());
-  if(message?.type==='PIH_1688_CAPTURE_V107') sendResponse(capture1688());
+  if(message?.type==='PIH_1688_CAPTURE_V108') sendResponse(capture1688());
 });
