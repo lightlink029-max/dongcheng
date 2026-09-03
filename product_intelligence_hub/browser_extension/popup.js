@@ -33,6 +33,11 @@ document.querySelector('#push').addEventListener('click', async () => {
         await chrome.scripting.executeScript({target:{tabId:tab.id},files:['content.js']});
         return await chrome.tabs.sendMessage(tab.id,{type:SOURCING_MESSAGE});
       });
+      if(!result?.candidate_id){
+        const saved=await chrome.storage.local.get(['last1688CandidateId']);
+        result ||= {items:[]};
+        result.candidate_id=Number(saved.last1688CandidateId||0);
+      }
       if(!result?.candidate_id) throw new Error('请从 Odoo 产品机会的“打开1688关键词搜索”进入当前页面');
     }else{
       if(!/^https:\/\/([a-z0-9-]+\.)*alibaba\.com\/trade\/search/i.test(tab.url||'')) throw new Error('请打开 Alibaba 搜索结果页或从 Odoo 进入1688搜索页');
