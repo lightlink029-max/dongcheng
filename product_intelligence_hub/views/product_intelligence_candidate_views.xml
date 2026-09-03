@@ -215,8 +215,9 @@
                             </field>
                             <separator string="货源报价"/>
                             <field name="sourcing_offer_ids" context="{'default_candidate_id': id}">
-                                <list editable="bottom" decoration-success="is_preferred" decoration-warning="is_backup" default_order="is_preferred desc, is_backup desc, estimated_margin_percent desc">
+                                <list open_form_view="1" decoration-success="is_preferred" decoration-warning="is_backup" default_order="is_preferred desc, is_backup desc, estimated_margin_percent desc">
                                     <header>
+                                        <button name="action_open_bulk_role_wizard" type="object" string="批量设置货源" display="always" class="btn-primary"/>
                                         <button name="action_bulk_delete" type="object" string="删除所选货源" display="always" class="btn-secondary" groups="product_intelligence_hub.group_product_intelligence_manager" confirm="删除后无法恢复，确认删除所选1688货源吗？"/>
                                     </header>
                                     <field name="is_preferred" readonly="1"/>
