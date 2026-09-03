@@ -1,6 +1,6 @@
 {
     "name": "产品智能中心",
-    "version": "19.0.1.42.0",
+    "version": "19.0.1.43.1",
     "summary": "采集、评分、审核并转化产品机会",
     "category": "Sales",
     "author": "LightLink",
@@ -12,6 +12,7 @@
         "data/product_intelligence_cron.xml",
         "data/odoo_translate_fields.xml",
         "wizard/product_intelligence_token_wizard_views.xml",
+        "wizard/product_intelligence_sourcing_role_wizard_views.xml",
         "views/product_intelligence_source_views.xml",
         "views/product_intelligence_sourcing_views.xml",
         "views/product_intelligence_candidate_views.xml",
