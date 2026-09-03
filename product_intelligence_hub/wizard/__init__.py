@@ -1,1 +1,2 @@
 from . import product_intelligence_token_wizard
+from . import product_intelligence_sourcing_role_wizard
