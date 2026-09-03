@@ -381,12 +381,12 @@ class ProductIntelligenceCandidate(models.Model):
         )
         existing = marker_pattern.sub("", existing).strip()
         sections = [
-            (_("重要属性"), self.important_attributes),
-            (_("包装信息"), self.packaging_information),
-            (_("发货及交货时间"), self.shipping_information),
+            ("important", _("重要属性"), self.important_attributes),
+            ("packaging", _("包装信息"), self.packaging_information),
+            ("shipping", _("发货及交货时间"), self.shipping_information),
         ]
         cards = []
-        for title, content in sections:
+        for section_key, title, content in sections:
             rows = []
             for raw_line in (content or "").splitlines():
                 line = raw_line.strip().lstrip("-•").strip()
@@ -404,11 +404,14 @@ class ProductIntelligenceCandidate(models.Model):
                         f'<p class="mb-0 py-2 border-bottom text-break">{html.escape(line)}</p>'
                     )
             if rows:
+                body_class = "card-body py-1"
+                if section_key == "important":
+                    body_class += " pi-important-attributes-grid"
                 cards.append(
                     '<div class="col-12 col-lg-6">'
                     '<section class="card h-100 border-0 shadow-sm">'
                     f'<div class="card-header bg-light"><h3 class="h5 mb-0">{html.escape(title)}</h3></div>'
-                    f'<div class="card-body py-1">{"".join(rows)}</div>'
+                    f'<div class="{body_class}">{"".join(rows)}</div>'
                     '</section></div>'
                 )
         managed_block = ""
