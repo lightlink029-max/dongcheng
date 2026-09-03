@@ -301,17 +301,20 @@ function capture1688(){
     const supplierName=(supplierNode?.getAttribute('title')||supplierNode?.textContent||supplierLink?.getAttribute('title')||supplierLink?.textContent||'').replace(/\s+/g,' ').trim();
     const badgeText=`${text} ${[...card.querySelectorAll('.badge-text,.desc-text,[class*="badgeText"],[class*="descText"],[title],[alt]')]
       .map(node=>node.getAttribute('title')||node.getAttribute('alt')||node.textContent||'').join(' ')}`;
-    const detectedFeatures=badgeText.match(/实力商家|超级工厂|源头旗舰|实力供应商|深度验厂|诚信通/g)||[];
-    if(/真实工厂认证/.test(badgeText)) detectedFeatures.push('超级工厂');
-    if(/实力认证/.test(badgeText)) detectedFeatures.push('实力商家');
-    const merchantFeatures=[...new Set([
-      ...activeMerchantFeatures,
-      ...detectedFeatures,
-    ])].join('、')||'未标注';
+    const merchantIconSources=[...card.querySelectorAll('img')]
+      .map(node=>absoluteUrl(node.currentSrc||node.getAttribute('src')||node.getAttribute('data-src')||''));
+    const detectedFeatures=[];
+    if(merchantIconSources.some(src=>src.includes('O1CN018b1zLS1wEurq13P6s_!!6000000006277'))) detectedFeatures.push('实力商家');
+    if(merchantIconSources.some(src=>src.includes('O1CN01LlGIs925kozzBmKoL_!!6000000007565'))) detectedFeatures.push('超级工厂');
+    if(merchantIconSources.some(src=>src.includes('O1CN01Yld5me1p6x0mZ6FZ6_!!6000000005312'))) detectedFeatures.push('源头旗舰店');
+    const merchantFeatures=[...new Set(detectedFeatures)].join('、')||'普通商家';
     const merchantJoinTime=(badgeText.match(/(?:诚信通\s*\d+\s*年|\d+\s*年诚信通|经营\s*\d+\s*年|入驻\s*\d+\s*年|成立\s*\d+\s*年)/)||[])[0]||'';
     const phone=(text.match(/(?:1[3-9]\d{9}|0\d{2,3}[- ]?\d{7,8})/)||[])[0]||'';
     const moqMatch=text.match(/(?:起批|起订|≥)\s*([\d,.]+)\s*(?:件|个|套|台|双|箱|只|米|千克|公斤|pcs?)/i);
-    const sales=(text.match(/(?:成交|已售|销量|复购率)[^¥￥]{0,30}/i)||[])[0]||'';
+    const salesNode=[...card.querySelectorAll('[class*="descText"]')]
+      .find(node=>/^\s*\d+(?:\.\d+)?(?:万)?\+?\s*(?:件|笔|人付款|已售)\s*$/i.test(node.textContent||''));
+    const sales=(salesNode?.textContent||
+      (text.match(/(?:成交|已售|销量|复购率)[^¥￥]{0,30}/i)||[])[0]||'').replace(/\s+/g,'').trim();
     const location=(text.match(/广东|浙江|江苏|福建|山东|河北|河南|上海|北京|天津|安徽|湖北|湖南|江西|四川|重庆|广西|辽宁|吉林|黑龙江|山西|陕西|云南|贵州|甘肃|青海|海南|内蒙古|宁夏|新疆|西藏|香港|澳门|台湾/)||[])[0]||'';
     // Advertising redirect shells sometimes expose an offer id without the
     // visible product/supplier/price fields. Never push those incomplete rows.
@@ -349,8 +352,11 @@ function rememberCandidateContext(){
 async function upload1688ReferenceImage(){
   const params=new URL(location.href).searchParams;
   if(!location.hostname.endsWith('1688.com')) return;
+  // Only the dedicated Odoo image-search action may upload and submit an image.
+  // A remembered candidate ID must never turn an ordinary keyword page into an image search.
+  if(params.get('pih_search_mode')!=='image') return;
   const saved=await chrome.storage.local.get(['last1688CandidateId','endpoint','token']);
-  const candidateId=Number(params.get('pih_candidate_id')||saved.last1688CandidateId||0);
+  const candidateId=Number(params.get('pih_candidate_id')||0);
   if(!candidateId||!saved.endpoint||!saved.token) return;
   const searchGuard=`pih1688ImageSearched:${candidateId}`;
   if(sessionStorage.getItem(searchGuard)==='1') return;
@@ -392,5 +398,5 @@ rememberCandidateContext();
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
   if(message?.type==='PIH_CAPTURE_V108') sendResponse({items:captureAlibaba()});
   if(message?.type==='PIH_DETAIL_V110') sendResponse(captureAlibabaDetail());
-  if(message?.type==='PIH_1688_CAPTURE_V106') sendResponse(capture1688());
+  if(message?.type==='PIH_1688_CAPTURE_V107') sendResponse(capture1688());
 });
