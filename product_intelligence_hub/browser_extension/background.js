@@ -93,7 +93,19 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         input.files = transfer.files;
         input.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
         input.dispatchEvent(new Event('change', {bubbles: true, composed: true}));
-        return {ok: true};
+        for (let i = 0; i < 40; i++) {
+          const searchButton = [...document.querySelectorAll('button,[role="button"],a')]
+            .find(node => (node.textContent || '').replace(/\s+/g, '').trim() === '搜索图片');
+          const enabled = searchButton && !searchButton.disabled
+            && searchButton.getAttribute('aria-disabled') !== 'true'
+            && searchButton.getClientRects().length > 0;
+          if (enabled) {
+            searchButton.click();
+            return {ok: true, searched: true};
+          }
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+        return {ok: true, searched: false};
       },
     }).then(results => sendResponse(results?.[0]?.result || {ok: false, error: '1688页面未返回上传结果'}))
       .catch(error => sendResponse({ok: false, error: error.message}));
