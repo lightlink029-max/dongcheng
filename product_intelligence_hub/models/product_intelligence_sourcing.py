@@ -148,6 +148,30 @@ class ProductIntelligenceSourcingOffer(models.Model):
         return {"type": "ir.actions.act_url", "url": self.product_url, "target": "new"}
 
 
+class ProductIntelligenceSourceInsight(models.Model):
+    _name = "product.intelligence.source.insight"
+    _description = "产品机会数据源商机记录"
+    _order = "captured_at desc, id desc"
+    _check_company_auto = True
+
+    candidate_id = fields.Many2one(
+        "product.intelligence.candidate", string="产品机会", required=True,
+        ondelete="cascade", index=True, check_company=True,
+    )
+    company_id = fields.Many2one(related="candidate_id.company_id", store=True, index=True)
+    source_platform = fields.Char(string="数据源", required=True, index=True)
+    external_ref = fields.Char(string="来源记录 ID", required=True, index=True)
+    source_product_name = fields.Char(string="关联商品")
+    source_url = fields.Char(string="来源链接")
+    insight_content = fields.Text(string="AI商机识别", required=True)
+    captured_at = fields.Datetime(string="采集时间", default=fields.Datetime.now, required=True)
+
+    _candidate_source_ref_unique = models.Constraint(
+        "UNIQUE(candidate_id, source_platform, external_ref)",
+        "同一产品机会下不能重复保存相同数据源的商机记录。",
+    )
+
+
 class ProductIntelligenceCandidateSourcing(models.Model):
     _inherit = "product.intelligence.candidate"
 
@@ -157,6 +181,10 @@ class ProductIntelligenceCandidateSourcing(models.Model):
         "product.intelligence.sourcing.offer", "candidate_id", string="1688 货源报价", copy=False,
     )
     sourcing_offer_count = fields.Integer(string="货源数量", compute="_compute_sourcing_offer_count")
+    source_insight_ids = fields.One2many(
+        "product.intelligence.source.insight", "candidate_id",
+        string="数据源商机记录", copy=False,
+    )
     preferred_sourcing_offer_id = fields.Many2one(
         "product.intelligence.sourcing.offer", string="推荐货源", copy=False,
         domain="[('candidate_id', '=', id)]",
