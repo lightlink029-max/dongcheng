@@ -41,4 +41,18 @@
             </xpath>
         </field>
     </record>
+
+    <record id="view_product_supplierinfo_list_product_intelligence" model="ir.ui.view">
+        <field name="name">product.supplierinfo.list.product.intelligence</field>
+        <field name="model">product.supplierinfo</field>
+        <field name="inherit_id" ref="product.product_supplierinfo_tree_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='delay']" position="after">
+                <field name="pi_sourcing_offer_id" column_invisible="True"/>
+                <button name="action_open_pi_sourcing_offer" type="object"
+                        string="来源详情" icon="fa-external-link"
+                        invisible="not pi_sourcing_offer_id"/>
+            </xpath>
+        </field>
+    </record>
 </odoo>
