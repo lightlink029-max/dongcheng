@@ -2,6 +2,7 @@ from urllib.parse import quote_from_bytes
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
+from odoo.tools import html2plaintext
 
 
 class ProductIntelligenceSourcingOffer(models.Model):
@@ -20,6 +21,9 @@ class ProductIntelligenceSourcingOffer(models.Model):
     name = fields.Char(string="货源商品", required=True)
     product_url = fields.Char(string="商品链接")
     image_url = fields.Char(string="货源主图")
+    image_512 = fields.Image(
+        string="主图", max_width=512, max_height=512, attachment=True, copy=False,
+    )
     supplier_name = fields.Char(string="供应商", index=True)
     merchant_features = fields.Char(string="商家特色", index=True)
     merchant_join_time = fields.Char(string="商家入驻时间")
@@ -48,6 +52,7 @@ class ProductIntelligenceSourcingOffer(models.Model):
     )
     minimum_order_qty = fields.Float(string="最小起订量", default=1.0)
     sales_text = fields.Char(string="销量/成交")
+    ai_opportunity_snapshot = fields.Text(string="AI商机识别快照", copy=False, readonly=True)
     delivery_days = fields.Integer(string="预计交期（天）")
     domestic_freight = fields.Monetary(string="国内运费/件", currency_field="currency_id")
     estimated_total_cost = fields.Monetary(
@@ -103,6 +108,30 @@ class ProductIntelligenceSourcingOffer(models.Model):
         self.unlink()
         return {"type": "ir.actions.client", "tag": "reload"}
 
+    @api.model
+    def _prepare_ai_opportunity_snapshot(self, candidate):
+        recommendation = dict(candidate._fields["recommendation"].selection).get(
+            candidate.recommendation, candidate.recommendation or "-"
+        )
+        lines = [
+            _("综合评分：%(score).2f", score=candidate.total_score),
+            _("系统建议：%(recommendation)s", recommendation=recommendation),
+            _("需求：%(value).2f", value=candidate.demand_score),
+            _("增长：%(value).2f", value=candidate.growth_score),
+            _("利润：%(value).2f", value=candidate.margin_score),
+            _("竞争：%(value).2f", value=candidate.competition_score),
+            _("物流：%(value).2f", value=candidate.logistics_score),
+            _("合规：%(value).2f", value=candidate.compliance_score),
+            _("内容：%(value).2f", value=candidate.content_score),
+        ]
+        brief = html2plaintext(candidate.description or "").strip()
+        decision = html2plaintext(candidate.decision_notes or "").strip()
+        if brief:
+            lines.extend(["", _("产品简报："), brief])
+        if decision:
+            lines.extend(["", _("决策说明："), decision])
+        return "\n".join(lines)
+
     def action_set_preferred(self):
         self.ensure_one()
         self.candidate_id.sourcing_offer_ids.filtered(
@@ -151,7 +180,7 @@ class ProductIntelligenceCandidateSourcing(models.Model):
         keyword_query = quote_from_bytes(keyword.encode("gb18030"))
         url = (
             "https://s.1688.com/selloffer/offer_search.htm?keywords=%s"
-            "&pih_candidate_id=%s" % (keyword_query, self.id)
+            "&pih_candidate_id=%s&pih_search_mode=keyword" % (keyword_query, self.id)
         )
         return {"type": "ir.actions.act_url", "url": url, "target": "new"}
 
@@ -164,7 +193,7 @@ class ProductIntelligenceCandidateSourcing(models.Model):
             self.sourcing_image_url = image_url
         url = (
             "https://s.1688.com/youyuan/index.htm?tab=imageSearch"
-            "&pih_candidate_id=%s" % self.id
+            "&pih_candidate_id=%s&pih_search_mode=image" % self.id
         )
         return {"type": "ir.actions.act_url", "url": url, "target": "new"}
 
