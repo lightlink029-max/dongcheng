@@ -155,16 +155,22 @@ class ProductIntelligenceIngestController(http.Controller):
                     continue
                 external_id = str(item.get("product_id") or "")[:128]
                 name = str(item.get("product_title") or "").strip()[:512]
+                platform = str(item.get("source_platform") or "1688").strip().lower()
+                if platform not in ("1688", "yiwugo"):
+                    skipped += 1
+                    continue
                 if not external_id or not name:
                     skipped += 1
                     continue
                 image_url = str(item.get("main_image") or "")[:2048]
-                product_url = Offer._validated_1688_product_url(
-                    external_id, str(item.get("product_url") or "")[:2048]
+                raw_product_url = str(item.get("product_url") or "")[:2048]
+                product_url = (
+                    Offer._validated_1688_product_url(external_id, raw_product_url)
+                    if platform == "1688" else raw_product_url
                 )
                 values = {
                     "candidate_id": candidate.id,
-                    "platform": "1688",
+                    "platform": platform,
                     "external_id": external_id,
                     "name": name,
                     "product_url": product_url,
@@ -190,7 +196,7 @@ class ProductIntelligenceIngestController(http.Controller):
                 }
                 offer = Offer.search([
                     ("candidate_id", "=", candidate.id),
-                    ("platform", "=", "1688"),
+                    ("platform", "=", platform),
                     ("external_id", "=", external_id),
                 ], limit=1)
                 if image_url and (not offer or offer.image_url != image_url or not offer.image_512):
@@ -210,7 +216,7 @@ class ProductIntelligenceIngestController(http.Controller):
                         values["image_512"] = base64.b64encode(output.getvalue())
                     except Exception:
                         _logger.warning(
-                            "Unable to cache 1688 sourcing image %s", image_url, exc_info=True,
+                            "Unable to cache sourcing image %s", image_url, exc_info=True,
                         )
                 if offer:
                     offer.write(values)
@@ -222,7 +228,7 @@ class ProductIntelligenceIngestController(http.Controller):
                 if insight_content:
                     insight_values = {
                         "candidate_id": candidate.id,
-                        "source_platform": "1688",
+                        "source_platform": dict(Offer._fields["platform"].selection).get(platform, platform),
                         "external_ref": external_id,
                         "source_product_name": name,
                         "source_url": values["product_url"],
@@ -231,7 +237,7 @@ class ProductIntelligenceIngestController(http.Controller):
                     }
                     insight = Insight.search([
                         ("candidate_id", "=", candidate.id),
-                        ("source_platform", "=", "1688"),
+                        ("source_platform", "=", dict(Offer._fields["platform"].selection).get(platform, platform)),
                         ("external_ref", "=", external_id),
                     ], limit=1)
                     if insight:
