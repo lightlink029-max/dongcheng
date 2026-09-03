@@ -103,12 +103,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             && searchButton.getClientRects().length > 0;
           if (enabled) {
             searchButton.scrollIntoView({block: 'center', inline: 'center'});
-            for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
-              const EventClass = type.startsWith('pointer') ? PointerEvent : MouseEvent;
-              searchButton.dispatchEvent(new EventClass(type, {
-                bubbles: true, cancelable: true, composed: true, view: window,
-              }));
-            }
+            searchButton.click();
             return {ok: true, searched: true};
           }
           await new Promise(resolve => setTimeout(resolve, 250));
