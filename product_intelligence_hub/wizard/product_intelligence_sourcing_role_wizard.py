@@ -7,7 +7,8 @@ class ProductIntelligenceSourcingRoleWizard(models.TransientModel):
     _description = "批量设置货源角色"
 
     offer_ids = fields.Many2many(
-        "product.intelligence.sourcing.offer", string="已选货源", required=True,
+        "product.intelligence.sourcing.offer", "pi_sourcing_role_offer_rel",
+        string="已选货源", required=True,
     )
     main_offer_id = fields.Many2one(
         "product.intelligence.sourcing.offer", string="主货源", required=True,
