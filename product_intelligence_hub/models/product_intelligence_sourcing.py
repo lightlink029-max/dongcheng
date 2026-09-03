@@ -1,4 +1,4 @@
-from urllib.parse import quote_from_bytes, quote_plus
+from urllib.parse import quote_from_bytes
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -136,8 +136,7 @@ class ProductIntelligenceCandidateSourcing(models.Model):
             self.sourcing_image_url = image_url
         url = (
             "https://s.1688.com/youyuan/index.htm?tab=imageSearch"
-            "&pih_candidate_id=%s&pih_image_url=%s"
-            % (self.id, quote_plus(image_url))
+            "&pih_candidate_id=%s" % self.id
         )
         return {"type": "ir.actions.act_url", "url": url, "target": "new"}
 
