@@ -118,3 +118,75 @@ class ProductIntelligenceIngestController(http.Controller):
         except Exception:
             _logger.exception("Product detail update failed for source %s", source_id)
             return request.make_json_response({"ok": False, "error": "internal_error"}, status=500)
+
+    @http.route(
+        "/product-intelligence/v1/sourcing-result/<int:source_id>", type="http",
+        auth="public", methods=["POST"], csrf=False, save_session=False,
+    )
+    def sourcing_result(self, source_id, **kwargs):
+        source = self._authorized_source(source_id)
+        if not source:
+            return request.make_json_response({"ok": False, "error": "unauthorized"}, status=401)
+        try:
+            payload = json.loads(request.httprequest.get_data(as_text=True) or "{}")
+            candidate_id = int(payload.get("candidate_id") or 0)
+            items = payload.get("items") or []
+            if not candidate_id or not isinstance(items, list) or len(items) > 200:
+                return request.make_json_response({"ok": False, "error": "invalid_payload"}, status=400)
+            candidate = request.env["product.intelligence.candidate"].sudo().browse(candidate_id).exists()
+            if not candidate or candidate.company_id != source.company_id:
+                return request.make_json_response({"ok": False, "error": "candidate_not_found"}, status=404)
+            Offer = request.env["product.intelligence.sourcing.offer"].sudo()
+            created = updated = skipped = 0
+            for item in items:
+                if not isinstance(item, dict):
+                    skipped += 1
+                    continue
+                external_id = str(item.get("product_id") or "")[:128]
+                name = str(item.get("product_title") or "").strip()[:512]
+                if not external_id or not name:
+                    skipped += 1
+                    continue
+                values = {
+                    "candidate_id": candidate.id,
+                    "platform": "1688",
+                    "external_id": external_id,
+                    "name": name,
+                    "product_url": str(item.get("product_url") or "")[:2048],
+                    "image_url": str(item.get("main_image") or "")[:2048],
+                    "supplier_name": str(item.get("supplier_name") or "")[:512],
+                    "supplier_url": str(item.get("supplier_url") or "")[:2048],
+                    "contact_name": str(item.get("contact_name") or "")[:256],
+                    "contact_phone": str(item.get("contact_phone") or "")[:128],
+                    "contact_details": str(item.get("contact_details") or "")[:2000],
+                    "supplier_location": str(item.get("supplier_location") or "")[:256],
+                    "price_text": str(item.get("price_text") or "")[:256],
+                    "purchase_price": float(item.get("min_price") or 0),
+                    "minimum_order_qty": float(item.get("moq") or 1),
+                    "sales_text": str(item.get("sales_text") or "")[:256],
+                    "delivery_days": int(float(item.get("delivery_days") or 0)),
+                    "captured_at": fields.Datetime.now(),
+                }
+                offer = Offer.search([
+                    ("candidate_id", "=", candidate.id),
+                    ("platform", "=", "1688"),
+                    ("external_id", "=", external_id),
+                ], limit=1)
+                if offer:
+                    offer.write(values)
+                    updated += 1
+                else:
+                    Offer.create(values)
+                    created += 1
+            if created or updated:
+                candidate.message_post(body=(
+                    "1688货源采集完成：新增 %s，更新 %s，跳过 %s。" % (created, updated, skipped)
+                ))
+            return request.make_json_response({
+                "ok": True, "created": created, "updated": updated, "skipped": skipped,
+            })
+        except (ValueError, TypeError, json.JSONDecodeError) as exc:
+            return request.make_json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception:
+            _logger.exception("1688 sourcing update failed for source %s", source_id)
+            return request.make_json_response({"ok": False, "error": "internal_error"}, status=500)
