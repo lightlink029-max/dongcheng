@@ -212,6 +212,7 @@
                                     <field name="name"/>
                                     <field name="supplier_name"/>
                                     <field name="merchant_features" optional="show"/>
+                                    <field name="merchant_join_time" optional="show"/>
                                     <field name="supplier_location" optional="show"/>
                                     <field name="price_text" optional="show"/>
                                     <field name="purchase_price"/>
