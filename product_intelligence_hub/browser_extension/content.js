@@ -304,6 +304,8 @@ async function upload1688ReferenceImage(){
   const saved=await chrome.storage.local.get(['last1688CandidateId','endpoint','token']);
   const candidateId=Number(params.get('pih_candidate_id')||saved.last1688CandidateId||0);
   if(!candidateId||!saved.endpoint||!saved.token) return;
+  const searchGuard=`pih1688ImageSearched:${candidateId}`;
+  if(sessionStorage.getItem(searchGuard)==='1') return;
   const match=saved.endpoint.match(/^(.*\/product-intelligence\/v1\/)ingest\/(\d+)\/?$/);
   if(!match) return;
   const imageUrl=`${match[1]}sourcing-image/${match[2]}/${candidateId}`;
@@ -332,6 +334,7 @@ async function upload1688ReferenceImage(){
       type:'PIH_1688_MAIN_WORLD_UPLOAD',data:btoa(binary),mimeType:'image/jpeg',
     });
     if(!result?.ok) throw new Error(result?.error||'1688主页面上传失败');
+    if(result.searched) sessionStorage.setItem(searchGuard,'1');
   }catch(error){
     console.warn('LightLink: 1688 reference image upload failed',error);
   }
