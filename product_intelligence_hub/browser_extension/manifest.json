@@ -1,6 +1,21 @@
 {
   "manifest_version": 3,
   "name": "LightLink 选品情报助手",
+  "version": "1.6.1",
+  "description": "将阿里巴巴国际站选品信息及1688、义乌购货源报价推送到 Odoo。",
+  "permissions": ["activeTab", "storage", "scripting", "tabs"],
+  "host_permissions": ["https://*.alibaba.com/*", "https://*.alicdn.com/*", "https://*.1688.com/*", "https://1688.com/*", "https://*.yiwugo.com/*", "https://yiwugo.com/*", "https://*.odoo.com/*"],
+  "action": {"default_popup": "popup.html", "default_title": "选品情报助手"},
+  "background": {"service_worker": "background.js"},
+  "content_scripts": [{
+    "matches": ["https://*.alibaba.com/trade/search*", "https://*.alibaba.com/product-detail/*", "https://*.1688.com/*", "https://1688.com/*", "https://*.yiwugo.com/search*", "https://yiwugo.com/search*", "https://*.odoo.com/odoo/*"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }]
+}
+{
+  "manifest_version": 3,
+  "name": "LightLink 选品情报助手",
   "version": "1.6.0",
   "description": "将阿里巴巴国际站选品信息及1688、义乌购货源报价推送到 Odoo。",
   "permissions": ["activeTab", "storage", "scripting", "tabs"],
