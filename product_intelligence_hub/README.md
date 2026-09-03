@@ -1,5 +1,15 @@
 # Product Intelligence Hub
 
+## 1688 国内货源研判（第一期）
+
+1. 产品机会进入“研判”阶段，在“1688货源研判”页确认检索关键词和参考图片。
+2. 点击“打开1688关键词搜索”，登录1688并正常浏览、滚动加载商品。
+3. 打开 LightLink 选品情报助手，点击“采集当前页并推送”。
+4. 回到产品机会，对采购价、起订量、国内运费和预计交期进行复核，点击“推荐”选择货源。
+5. 审批后创建 Odoo 产品，系统同时创建/更新供应商及产品采购价目。
+
+联系方式只读取1688当前页面公开显示的内容；未公开的电话或联系人需要人工补充。
+
 Odoo 19 module implementing the first stage of an OODA product-selection system.
 
 The interface uses English as its source language and includes Simplified Chinese
