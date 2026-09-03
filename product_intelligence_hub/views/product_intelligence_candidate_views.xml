@@ -203,6 +203,17 @@
                                     <field name="preferred_sourcing_offer_id"/>
                                 </group>
                             </group>
+                            <separator string="数据源商机记录"/>
+                            <field name="source_insight_ids" nolabel="1" readonly="1">
+                                <list default_order="captured_at desc">
+                                    <field name="source_platform"/>
+                                    <field name="source_product_name"/>
+                                    <field name="insight_content" string="AI商机识别"/>
+                                    <field name="source_url" widget="url" optional="show"/>
+                                    <field name="captured_at"/>
+                                </list>
+                            </field>
+                            <separator string="货源报价"/>
                             <field name="sourcing_offer_ids" context="{'default_candidate_id': id}">
                                 <list editable="bottom" default_order="is_preferred desc, estimated_margin_percent desc">
                                     <header>
