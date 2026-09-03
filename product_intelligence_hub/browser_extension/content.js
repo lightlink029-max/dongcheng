@@ -351,9 +351,16 @@ function capture1688(){
     // Advertising redirect shells sometimes expose an offer id without the
     // visible product/supplier/price fields. Never push those incomplete rows.
     if(!title||!supplierName||!price) continue;
+    const detailLink=[...card.querySelectorAll('a[href],a[data-href]')].find(node=>{
+      const href=absoluteUrl(node.getAttribute('href')||node.getAttribute('data-href')||'');
+      return new RegExp(`^https?://detail\\.1688\\.com/offer/${id}\\.html(?:[?#]|$)`,'i').test(href);
+    });
+    const actualProductUrl=absoluteUrl(
+      detailLink?.getAttribute('href')||detailLink?.getAttribute('data-href')||''
+    );
     items.push({
       product_id:id,product_title:title,
-      product_url:`https://detail.1688.com/offer/${id}.html`,
+      product_url:actualProductUrl||`https://detail.1688.com/offer/${id}.html`,
       main_image:absoluteUrl(image?.currentSrc||image?.getAttribute('data-lazy-src')||image?.getAttribute('src')||'')
         .replace(/_\.(?:webp|avif)(?=\?|#|$)/i,''),
       supplier_name:supplierName,supplier_url:supplierLink?.href||'',
