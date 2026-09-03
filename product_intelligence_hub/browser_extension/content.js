@@ -283,6 +283,7 @@ function capture1688(){
       ...activeMerchantFeatures,
       ...(badgeText.match(/实力商家|超级工厂|源头旗舰|实力供应商|深度验厂|诚信通/g)||[]),
     ])].join('、');
+    const merchantJoinTime=(badgeText.match(/(?:诚信通\s*\d+\s*年|\d+\s*年诚信通|经营\s*\d+\s*年|入驻\s*\d+\s*年|成立\s*\d+\s*年)/)||[])[0]||'';
     const phone=(text.match(/(?:1[3-9]\d{9}|0\d{2,3}[- ]?\d{7,8})/)||[])[0]||'';
     const moqMatch=text.match(/(?:起批|起订|≥)\s*([\d,.]+)\s*(?:件|个|套|台|双|箱|只|米|千克|公斤|pcs?)/i);
     const sales=(text.match(/(?:成交|已售|销量|复购率)[^¥￥]{0,30}/i)||[])[0]||'';
@@ -293,6 +294,7 @@ function capture1688(){
       main_image:absoluteUrl(image?.currentSrc||image?.getAttribute('data-lazy-src')||image?.getAttribute('src')||''),
       supplier_name:supplierName,supplier_url:supplierLink?.href||'',
       merchant_features:merchantFeatures,
+      merchant_join_time:merchantJoinTime.replace(/\s+/g,''),
       contact_phone:phone,contact_details:phone?'页面公开联系电话':'页面未公开显示联系电话',
       supplier_location:location,price_text:price?(price.startsWith('¥')||price.startsWith('￥')?price:`¥${price}`):'',
       min_price:number(price,/([\d,.]+)/),
