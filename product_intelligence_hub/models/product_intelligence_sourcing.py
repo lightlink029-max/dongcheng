@@ -1,4 +1,4 @@
-from urllib.parse import quote_plus
+from urllib.parse import quote_from_bytes, quote_plus
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -118,9 +118,26 @@ class ProductIntelligenceCandidateSourcing(models.Model):
             self.sourcing_keyword = keyword
         if not self.sourcing_image_url:
             self.sourcing_image_url = self.image_url or self.original_image_url
+        # The desktop 1688 search endpoint still decodes `keywords` as GB18030.
+        # Sending the usual UTF-8 query string turns 棕色鞋子 into 妫曡壊闉嬪瓙.
+        keyword_query = quote_from_bytes(keyword.encode("gb18030"))
         url = (
             "https://s.1688.com/selloffer/offer_search.htm?keywords=%s"
-            "&pih_candidate_id=%s" % (quote_plus(keyword), self.id)
+            "&pih_candidate_id=%s" % (keyword_query, self.id)
+        )
+        return {"type": "ir.actions.act_url", "url": url, "target": "new"}
+
+    def action_open_1688_image_search(self):
+        self.ensure_one()
+        image_url = self.sourcing_image_url or self.image_url or self.original_image_url
+        if not image_url:
+            raise UserError(_("当前产品没有可用于找货的参考图片。"))
+        if not self.sourcing_image_url:
+            self.sourcing_image_url = image_url
+        url = (
+            "https://s.1688.com/youyuan/index.htm?tab=imageSearch"
+            "&pih_candidate_id=%s&pih_image_url=%s"
+            % (self.id, quote_plus(image_url))
         )
         return {"type": "ir.actions.act_url", "url": url, "target": "new"}
 
