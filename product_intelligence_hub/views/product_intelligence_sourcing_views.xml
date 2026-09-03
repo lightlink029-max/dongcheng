@@ -14,7 +14,7 @@
                 <separator/>
                 <filter name="powerful_merchant" string="实力商家" domain="[('merchant_features', 'ilike', '实力商家')]"/>
                 <filter name="super_factory" string="超级工厂" domain="[('merchant_features', 'ilike', '超级工厂')]"/>
-                <filter name="source_flagship" string="源头旗舰" domain="[('merchant_features', 'ilike', '源头旗舰')]"/>
+                <filter name="source_flagship" string="源头旗舰店" domain="[('merchant_features', 'ilike', '源头旗舰店')]"/>
                 <group name="group_by">
                     <filter name="group_candidate" string="产品机会" context="{'group_by': 'candidate_id'}"/>
                     <filter name="group_supplier" string="供应商" context="{'group_by': 'supplier_name'}"/>
@@ -34,6 +34,7 @@
                 </header>
                 <field name="is_preferred" readonly="1"/>
                 <field name="candidate_id" optional="show"/>
+                <field name="image_512" widget="image" string="主图" options="{'size': [80, 80]}" optional="show"/>
                 <field name="image_url" widget="url" optional="hide"/>
                 <field name="name"/>
                 <field name="supplier_name"/>
@@ -47,6 +48,7 @@
                 <field name="is_cheaper_than_opportunity" readonly="1" optional="show"/>
                 <field name="minimum_order_qty"/>
                 <field name="sales_text" optional="show"/>
+                <field name="ai_opportunity_snapshot" optional="hide"/>
                 <field name="delivery_days" optional="show"/>
                 <field name="estimated_total_cost"/>
                 <field name="estimated_profit"/>
@@ -68,6 +70,7 @@
                     <button name="action_open_source" type="object" string="打开1688商品"/>
                 </header>
                 <sheet>
+                    <field name="image_512" widget="image" class="oe_avatar" options="{'preview_image': 'image_512'}"/>
                     <div class="oe_title"><h1><field name="name"/></h1></div>
                     <group>
                         <group string="货源商品">
@@ -111,6 +114,9 @@
                         <field name="purchase_price"/>
                         <field name="price_difference"/>
                         <field name="is_cheaper_than_opportunity"/>
+                    </group>
+                    <group string="AI商机识别">
+                        <field name="ai_opportunity_snapshot" nolabel="1" readonly="1"/>
                     </group>
                 </sheet>
             </form>
