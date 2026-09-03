@@ -9,6 +9,7 @@
                 <field name="candidate_id"/>
                 <field name="supplier_name"/>
                 <field name="merchant_features"/>
+                <field name="merchant_join_time"/>
                 <filter name="cheaper_than_opportunity" string="1688价格更低" domain="[('is_cheaper_than_opportunity', '=', True)]"/>
                 <separator/>
                 <filter name="powerful_merchant" string="实力商家" domain="[('merchant_features', 'ilike', '实力商家')]"/>
@@ -37,6 +38,7 @@
                 <field name="name"/>
                 <field name="supplier_name"/>
                 <field name="merchant_features" optional="show"/>
+                <field name="merchant_join_time" optional="show"/>
                 <field name="supplier_location" optional="show"/>
                 <field name="price_text" optional="show"/>
                 <field name="purchase_price"/>
@@ -83,6 +85,7 @@
                         <group string="供应商">
                             <field name="supplier_name"/>
                             <field name="merchant_features"/>
+                            <field name="merchant_join_time"/>
                             <field name="supplier_url" widget="url"/>
                             <field name="supplier_location"/>
                             <field name="contact_name"/>
