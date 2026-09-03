@@ -111,6 +111,7 @@
                     <button name="action_submit_review" type="object" string="提交决策" class="btn-primary" invisible="stage != 'orient'"/>
                     <button name="action_approve" type="object" string="批准" class="btn-primary" invisible="stage != 'review'" groups="product_intelligence_hub.group_product_intelligence_manager"/>
                     <button name="action_reject" type="object" string="淘汰" invisible="stage not in ('review', 'approved')" groups="product_intelligence_hub.group_product_intelligence_manager"/>
+                    <button name="action_open_1688_search" type="object" string="1688找货" class="btn-secondary" invisible="stage not in ('orient', 'review')"/>
                     <button name="action_create_product" type="object" string="创建 Odoo 产品" class="btn-primary" invisible="stage != 'approved'"/>
                     <button name="action_sync_product_details" type="object" string="同步详情到 Odoo 产品" class="btn-secondary" invisible="not product_tmpl_id"/>
                     <field name="stage" widget="statusbar" statusbar_visible="observe,orient,review,approved,executed"/>
@@ -119,6 +120,9 @@
                     <div class="oe_button_box" name="button_box">
                         <button name="action_open_product" type="object" class="oe_stat_button" icon="fa-cube" invisible="not product_tmpl_id">
                             <span class="o_stat_text">Odoo 产品</span>
+                        </button>
+                        <button name="action_view_sourcing_offers" type="object" class="oe_stat_button" icon="fa-truck">
+                            <field name="sourcing_offer_count" widget="statinfo" string="1688货源"/>
                         </button>
                     </div>
                     <field name="product_tmpl_id" invisible="1"/>
@@ -178,6 +182,43 @@
                                     <field name="name"/>
                                     <field name="source_url" widget="url"/>
                                     <field name="product_image_id" readonly="1" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="1688货源研判">
+                            <div class="alert alert-info" role="alert">
+                                填写检索关键词后打开1688搜索页，再使用“LightLink 选品情报助手”采集当前结果。联系方式仅保存页面已公开显示的内容。
+                            </div>
+                            <group>
+                                <group string="找货条件">
+                                    <field name="sourcing_keyword" placeholder="例如：PVC 防滑条纹门垫"/>
+                                    <field name="sourcing_image_url" widget="url"/>
+                                    <button name="action_open_1688_search" type="object" string="打开1688关键词搜索" class="btn-primary"/>
+                                </group>
+                                <group string="利润参数">
+                                    <field name="target_sale_price"/>
+                                    <field name="logistics_cost"/>
+                                    <field name="other_cost"/>
+                                    <field name="preferred_sourcing_offer_id"/>
+                                </group>
+                            </group>
+                            <field name="sourcing_offer_ids" context="{'default_candidate_id': id}">
+                                <list editable="bottom" default_order="is_preferred desc, estimated_margin_percent desc">
+                                    <field name="is_preferred" readonly="1"/>
+                                    <field name="name"/>
+                                    <field name="supplier_name"/>
+                                    <field name="supplier_location" optional="show"/>
+                                    <field name="price_text" optional="show"/>
+                                    <field name="purchase_price"/>
+                                    <field name="minimum_order_qty"/>
+                                    <field name="sales_text" optional="show"/>
+                                    <field name="contact_phone" optional="show"/>
+                                    <field name="domestic_freight" optional="show"/>
+                                    <field name="estimated_total_cost" readonly="1"/>
+                                    <field name="estimated_profit" readonly="1"/>
+                                    <field name="estimated_margin_percent" readonly="1" widget="percentage"/>
+                                    <field name="product_url" widget="url" optional="show"/>
+                                    <button name="action_set_preferred" type="object" string="推荐" icon="fa-star"/>
                                 </list>
                             </field>
                         </page>
