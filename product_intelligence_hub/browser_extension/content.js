@@ -323,11 +323,15 @@ async function upload1688ReferenceImage(){
     if(!response.ok) throw new Error(`HTTP ${response.status}`);
     const blob=await response.blob();
     if(blob.type!=='image/jpeg') throw new Error(`Unexpected content type: ${blob.type||'unknown'}`);
-    const file=new File([blob],'pih-reference.jpg',{type:'image/jpeg'});
-    const transfer=new DataTransfer(); transfer.items.add(file);
-    input.files=transfer.files;
-    input.dispatchEvent(new Event('input',{bubbles:true}));
-    input.dispatchEvent(new Event('change',{bubbles:true}));
+    const bytes=new Uint8Array(await blob.arrayBuffer());
+    let binary='';
+    for(let offset=0;offset<bytes.length;offset+=32768){
+      binary+=String.fromCharCode(...bytes.subarray(offset,offset+32768));
+    }
+    const result=await chrome.runtime.sendMessage({
+      type:'PIH_1688_MAIN_WORLD_UPLOAD',data:btoa(binary),mimeType:'image/jpeg',
+    });
+    if(!result?.ok) throw new Error(result?.error||'1688主页面上传失败');
   }catch(error){
     console.warn('LightLink: 1688 reference image upload failed',error);
   }
