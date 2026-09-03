@@ -93,14 +93,22 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         input.files = transfer.files;
         input.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
         input.dispatchEvent(new Event('change', {bubbles: true, composed: true}));
-        for (let i = 0; i < 40; i++) {
-          const searchButton = [...document.querySelectorAll('button,[role="button"],a')]
-            .find(node => (node.textContent || '').replace(/\s+/g, '').trim() === '搜索图片');
+        for (let i = 0; i < 80; i++) {
+          const searchButton = [...document.querySelectorAll('button,[role="button"],a,div,span')]
+            .filter(node => (node.textContent || '').replace(/\s+/g, '').trim() === '搜索图片')
+            .filter(node => node.getClientRects().length > 0)
+            .sort((left, right) => left.children.length - right.children.length)[0];
           const enabled = searchButton && !searchButton.disabled
             && searchButton.getAttribute('aria-disabled') !== 'true'
             && searchButton.getClientRects().length > 0;
           if (enabled) {
-            searchButton.click();
+            searchButton.scrollIntoView({block: 'center', inline: 'center'});
+            for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+              const EventClass = type.startsWith('pointer') ? PointerEvent : MouseEvent;
+              searchButton.dispatchEvent(new EventClass(type, {
+                bubbles: true, cancelable: true, composed: true, view: window,
+              }));
+            }
             return {ok: true, searched: true};
           }
           await new Promise(resolve => setTimeout(resolve, 250));
