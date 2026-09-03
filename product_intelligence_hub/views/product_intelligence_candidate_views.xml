@@ -185,16 +185,18 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="1688货源研判">
+                        <page string="货源研判">
                             <div class="alert alert-info" role="alert">
-                                填写检索关键词后打开1688搜索页，再使用“LightLink 选品情报助手”采集当前结果。联系方式仅保存页面已公开显示的内容。
+                                填写关键词后打开1688或义乌购搜索页，再使用“LightLink 选品情报助手”采集当前结果。联系方式仅保存页面已公开显示的内容。
                             </div>
                             <group>
                                 <group string="找货条件">
-                                    <field name="sourcing_keyword" placeholder="例如：PVC 防滑条纹门垫"/>
+                                    <field name="sourcing_keyword" string="检索关键词" placeholder="例如：PVC 防滑条纹门垫"/>
                                     <field name="sourcing_image_url" widget="url"/>
                                     <button name="action_open_1688_search" type="object" string="打开1688关键词搜索" class="btn-primary"/>
                                     <button name="action_open_1688_image_search" type="object" string="打开1688图片搜索" class="btn-secondary"/>
+                                    <button name="action_open_yiwugo_search" type="object" string="打开义乌购关键词搜索" class="btn-primary"/>
+                                    <button name="action_open_yiwugo_image_search" type="object" string="打开义乌购图片搜索" class="btn-secondary"/>
                                 </group>
                                 <group string="利润参数">
                                     <field name="target_sale_price"/>
@@ -218,10 +220,11 @@
                                 <list open_form_view="1" decoration-success="is_preferred" decoration-warning="is_backup" default_order="is_preferred desc, is_backup desc, estimated_margin_percent desc">
                                     <header>
                                         <button name="action_open_bulk_role_wizard" type="object" string="批量设置货源" display="always" class="btn-primary"/>
-                                        <button name="action_bulk_delete" type="object" string="删除所选货源" display="always" class="btn-secondary" groups="product_intelligence_hub.group_product_intelligence_manager" confirm="删除后无法恢复，确认删除所选1688货源吗？"/>
+                                        <button name="action_bulk_delete" type="object" string="删除所选货源" display="always" class="btn-secondary" groups="product_intelligence_hub.group_product_intelligence_manager" confirm="删除后无法恢复，确认删除所选货源吗？"/>
                                     </header>
                                     <field name="is_preferred" readonly="1"/>
                                     <field name="is_backup" readonly="1"/>
+                                    <field name="platform" optional="show"/>
                                     <field name="name"/>
                                     <field name="supplier_name"/>
                                     <field name="merchant_features" optional="show"/>
