@@ -236,6 +236,7 @@ function captureAlibabaDetail(){
 }
 function closest1688Card(link){
   if(link?.matches?.('a.search-offer-item,a.search-offer-wrapper')) return link;
+  if(link?.querySelector?.('[class*="titleText"],[class*="priceItem"]')) return link;
   let node=link;
   let fallback=link.parentElement;
   for(let i=0;i<10&&node?.parentElement;i++,node=node.parentElement){
@@ -245,6 +246,17 @@ function closest1688Card(link){
     if(offerCount===1&&text.length<2500) fallback=node;
   }
   return fallback;
+}
+function extract1688OfferId(link,card,url){
+  const direct=(url.match(/\/offer\/(\d+)(?:\.html)?/i)||url.match(/[?&](?:offerId|id)=(\d+)/i)||[])[1];
+  if(direct) return direct;
+  for(const node of card?.querySelectorAll?.('[href],[data-href],[data-offer-id],[data-offerid]')||[]){
+    const value=[node.getAttribute('href'),node.getAttribute('data-href'),node.getAttribute('data-offer-id'),node.getAttribute('data-offerid')].filter(Boolean).join(' ');
+    const found=(value.match(/\/offer\/(\d+)(?:\.html)?/i)||value.match(/(?:offerId|offer_id|data-offer-id)[=:\"']+(\d+)/i)||[])[1];
+    if(found) return found;
+  }
+  const html=card?.innerHTML||link?.outerHTML||'';
+  return (html.match(/(?:offerId|offer_id|offer-id)(?:%3D|[=:\"']+)(\d{8,})/i)||[])[1]||'';
 }
 function capture1688(){
   const params=new URL(location.href).searchParams;
@@ -257,27 +269,29 @@ function capture1688(){
   if(candidateId) chrome.storage.local.set({last1688CandidateId:candidateId});
   const items=[],seen=new Set();
   const links=[...document.querySelectorAll(
-    'a.search-offer-item[href*="offerId="],a.search-offer-wrapper[href*="offerId="],a[href*="detail.1688.com"],a[href*="/offer/"]'
+    'a.search-offer-item,a.search-offer-wrapper,a[href*="detail.1688.com"],a[href*="/offer/"],a[href*="offerId="]'
   )];
   for(const link of links){
     const url=absoluteUrl(link.getAttribute('href')||link.getAttribute('data-href')||'');
-    const id=(url.match(/\/offer\/(\d+)(?:\.html)?/i)||url.match(/[?&](?:offerId|id)=(\d+)/i)||[])[1];
-    if(!id||seen.has(id)) continue;
     const card=closest1688Card(link),text=(card?.innerText||'').replace(/\s+/g,' ').trim();
+    const id=extract1688OfferId(link,card,url);
+    if(!id||seen.has(id)) continue;
     if(!text) continue;
     seen.add(id);
-    const titleNode=card.querySelector('.title-text,[class~="title-text"],[class*="offer-title"]');
+    const titleNode=card.querySelector('.title-text')||card.querySelector('[class*="titleText"]')||
+      card.querySelector('[class*="offer-title"]')||card.querySelector('[class*="titleRow"]');
     let title=(titleNode?.getAttribute('title')||titleNode?.textContent||link.getAttribute('title')||link.getAttribute('aria-label')||'').replace(/\s+/g,' ').trim();
     if(!title){
       title=(card.innerText||'').split('\n').map(value=>value.trim()).find(value=>value.length>=4&&!/[¥￥]\s*[\d,.]+/.test(value))||`1688商品 ${id}`;
     }
-    const image=card.querySelector('img');
-    const priceNode=card.querySelector('.price-item,[class~="price-item"],[class*="offer-price"]');
+    const image=card.querySelector('img.main-img,img[class*="mainImg"],[class*="offerImg"] img,[class*="offer-img"] img,img');
+    const priceNode=card.querySelector('.price-item')||card.querySelector('[class*="priceItem"]')||
+      card.querySelector('[class*="offer-price"]')||card.querySelector('[class*="priceRow"]');
     const price=((priceNode?.textContent||'').replace(/\s+/g,'').match(/[¥￥]?[\d,.]+(?:[-~至][\d,.]+)?/)||
       text.match(/[¥￥]\s*[\d,.]+(?:\s*[-~至]\s*[\d,.]+)?/)||[])[0]||'';
     const supplierLink=[...card.querySelectorAll('a')].find(a=>/\.1688\.com\/?(?:\?|$)|winport\.1688\.com/i.test(a.href)&&!a.href.includes('/offer/'));
     const supplierName=(supplierLink?.getAttribute('title')||supplierLink?.textContent||'').replace(/\s+/g,' ').trim();
-    const badgeText=`${text} ${[...card.querySelectorAll('.badge-text,.desc-text,[title],[alt]')]
+    const badgeText=`${text} ${[...card.querySelectorAll('.badge-text,.desc-text,[class*="badgeText"],[class*="descText"],[title],[alt]')]
       .map(node=>node.getAttribute('title')||node.getAttribute('alt')||node.textContent||'').join(' ')}`;
     const merchantFeatures=[...new Set([
       ...activeMerchantFeatures,
