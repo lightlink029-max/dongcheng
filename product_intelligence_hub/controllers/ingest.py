@@ -1,6 +1,7 @@
 import base64
 import json
 import logging
+import re
 from io import BytesIO
 
 from PIL import Image
@@ -186,9 +187,12 @@ class ProductIntelligenceIngestController(http.Controller):
                 ], limit=1)
                 if image_url and (not offer or offer.image_url != image_url or not offer.image_512):
                     try:
+                        download_url = re.sub(
+                            r"_\.(?:webp|avif)(?=\?|#|$)", "", image_url, flags=re.IGNORECASE,
+                        )
                         image_data, _content_type = request.env[
                             "product.image.storage.oss"
-                        ].sudo().download_image(image_url)
+                        ].sudo().download_image(download_url)
                         with Image.open(BytesIO(image_data)) as source_image:
                             source_image.thumbnail((512, 512), Image.Resampling.LANCZOS)
                             if source_image.mode not in ("RGB", "RGBA"):
