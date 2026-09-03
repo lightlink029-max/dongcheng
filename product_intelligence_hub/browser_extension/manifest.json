@@ -1,14 +1,14 @@
 {
   "manifest_version": 3,
   "name": "LightLink 选品情报助手",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "将阿里巴巴国际站选品信息和1688货源报价推送到 Odoo。",
   "permissions": ["activeTab", "storage", "scripting", "tabs"],
   "host_permissions": ["https://*.alibaba.com/*", "https://*.alicdn.com/*", "https://*.1688.com/*", "https://1688.com/*", "https://*.odoo.com/*"],
   "action": {"default_popup": "popup.html", "default_title": "选品情报助手"},
   "background": {"service_worker": "background.js"},
   "content_scripts": [{
-    "matches": ["https://*.alibaba.com/trade/search*", "https://*.alibaba.com/product-detail/*", "https://*.1688.com/*", "https://1688.com/*"],
+    "matches": ["https://*.alibaba.com/trade/search*", "https://*.alibaba.com/product-detail/*", "https://*.1688.com/*", "https://1688.com/*", "https://*.odoo.com/odoo/*"],
     "js": ["content.js"],
     "run_at": "document_idle"
   }]
