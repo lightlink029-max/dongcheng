@@ -196,18 +196,33 @@ class ProductIntelligenceIngestController(http.Controller):
 
     @http.route(
         "/product-intelligence/v1/sourcing-image/<int:source_id>/<int:candidate_id>",
-        type="http", auth="public", methods=["GET"], csrf=False, save_session=False,
+        type="http", auth="public", methods=["GET", "OPTIONS"], csrf=False,
+        save_session=False, cors="*",
     )
     def sourcing_image(self, source_id, candidate_id, **kwargs):
+        cors_headers = [
+            ("Access-Control-Allow-Origin", "*"),
+            ("Access-Control-Allow-Methods", "GET, OPTIONS"),
+            ("Access-Control-Allow-Headers", "Authorization, X-PIH-Token, Content-Type"),
+            ("Access-Control-Max-Age", "600"),
+        ]
+        if request.httprequest.method == "OPTIONS":
+            return request.make_response("", headers=cors_headers, status=204)
         source = self._authorized_source(source_id)
         if not source:
-            return request.make_json_response({"ok": False, "error": "unauthorized"}, status=401)
+            return request.make_json_response(
+                {"ok": False, "error": "unauthorized"}, status=401, headers=cors_headers,
+            )
         candidate = request.env["product.intelligence.candidate"].sudo().browse(candidate_id).exists()
         if not candidate or candidate.company_id != source.company_id:
-            return request.make_json_response({"ok": False, "error": "candidate_not_found"}, status=404)
+            return request.make_json_response(
+                {"ok": False, "error": "candidate_not_found"}, status=404, headers=cors_headers,
+            )
         image_url = candidate.sourcing_image_url or candidate.image_url or candidate.original_image_url
         if not image_url:
-            return request.make_json_response({"ok": False, "error": "image_not_found"}, status=404)
+            return request.make_json_response(
+                {"ok": False, "error": "image_not_found"}, status=404, headers=cors_headers,
+            )
         try:
             data, _content_type = request.env["product.image.storage.oss"].sudo().download_image(image_url)
             with Image.open(BytesIO(data)) as image:
@@ -224,7 +239,10 @@ class ProductIntelligenceIngestController(http.Controller):
                 ("Content-Type", "image/jpeg"),
                 ("Content-Disposition", 'inline; filename="pih-reference.jpg"'),
                 ("Cache-Control", "private, max-age=300"),
+                *cors_headers,
             ])
         except Exception:
             _logger.exception("Unable to prepare sourcing image for candidate %s", candidate_id)
-            return request.make_json_response({"ok": False, "error": "image_prepare_failed"}, status=422)
+            return request.make_json_response(
+                {"ok": False, "error": "image_prepare_failed"}, status=422, headers=cors_headers,
+            )
