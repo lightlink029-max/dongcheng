@@ -110,6 +110,20 @@ class ProductIntelligenceSourcingOffer(models.Model):
         self.unlink()
         return {"type": "ir.actions.client", "tag": "reload"}
 
+    def action_open_bulk_role_wizard(self):
+        if not self:
+            raise UserError(_("请先勾选需要设置的货源。"))
+        if len(self.mapped("candidate_id")) != 1:
+            raise UserError(_("一次只能设置同一个产品机会下的货源。"))
+        action = self.env.ref(
+            "product_intelligence_hub.action_product_intelligence_sourcing_role_wizard"
+        ).read()[0]
+        action["context"] = {
+            "active_model": self._name,
+            "active_ids": self.ids,
+        }
+        return action
+
     @api.model
     def _prepare_ai_opportunity_snapshot(self, candidate):
         recommendation = dict(candidate._fields["recommendation"].selection).get(
