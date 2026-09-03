@@ -275,7 +275,7 @@ function capture1688(){
   )];
   for(const link of links){
     const url=absoluteUrl(link.getAttribute('href')||link.getAttribute('data-href')||'');
-    const card=closest1688Card(link),text=(card?.innerText||'').replace(/\s+/g,' ').trim();
+    const card=closest1688Card(link),rawText=card?.innerText||'',text=rawText.replace(/\s+/g,' ').trim();
     const id=extract1688OfferId(link,card,url);
     if(!id||seen.has(id)) continue;
     if(!text) continue;
@@ -315,6 +315,18 @@ function capture1688(){
       .find(node=>/^\s*\d+(?:\.\d+)?(?:万)?\+?\s*(?:件|笔|人付款|已售)\s*$/i.test(node.textContent||''));
     const sales=(salesNode?.textContent||
       (text.match(/(?:成交|已售|销量|复购率)[^¥￥]{0,30}/i)||[])[0]||'').replace(/\s+/g,'').trim();
+    const rawLines=rawText.split('\n').map(value=>value.replace(/\s+/g,' ').trim()).filter(Boolean);
+    const aiParts=[];
+    for(const label of ['需求识别','下游售价','图搜趋势']){
+      const lineIndex=rawLines.findIndex(value=>value.includes(label));
+      if(lineIndex<0) continue;
+      const line=rawLines[lineIndex];
+      let value=line.slice(line.indexOf(label)+label.length).replace(/^[：:\s-]+/,'').trim();
+      if(!value&&rawLines[lineIndex+1]&&!/^(?:需求识别|下游售价|图搜趋势|AI商机识别)/.test(rawLines[lineIndex+1])){
+        value=rawLines[lineIndex+1];
+      }
+      if(value) aiParts.push(`${label}：${value}`);
+    }
     const location=(text.match(/广东|浙江|江苏|福建|山东|河北|河南|上海|北京|天津|安徽|湖北|湖南|江西|四川|重庆|广西|辽宁|吉林|黑龙江|山西|陕西|云南|贵州|甘肃|青海|海南|内蒙古|宁夏|新疆|西藏|香港|澳门|台湾/)||[])[0]||'';
     // Advertising redirect shells sometimes expose an offer id without the
     // visible product/supplier/price fields. Never push those incomplete rows.
@@ -330,6 +342,7 @@ function capture1688(){
       supplier_location:location,price_text:price?(price.startsWith('¥')||price.startsWith('￥')?price:`¥${price}`):'',
       min_price:number(price,/([\d,.]+)/),
       moq:moqMatch?Number(moqMatch[1].replace(/,/g,'')):1,sales_text:sales,
+      ai_business_opportunity:aiParts.join('\n'),
       captured_at:new Date().toISOString(),
     });
     if(items.length>=100) break;
