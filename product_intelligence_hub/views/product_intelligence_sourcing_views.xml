@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_intelligence_sourcing_offer_list" model="ir.ui.view">
+        <field name="name">product.intelligence.sourcing.offer.list</field>
+        <field name="model">product.intelligence.sourcing.offer</field>
+        <field name="arch" type="xml">
+            <list decoration-success="is_preferred" default_order="is_preferred desc, estimated_margin_percent desc">
+                <field name="is_preferred" readonly="1"/>
+                <field name="candidate_id" optional="show"/>
+                <field name="image_url" widget="url" optional="hide"/>
+                <field name="name"/>
+                <field name="supplier_name"/>
+                <field name="supplier_location" optional="show"/>
+                <field name="price_text" optional="show"/>
+                <field name="purchase_price"/>
+                <field name="minimum_order_qty"/>
+                <field name="sales_text" optional="show"/>
+                <field name="delivery_days" optional="show"/>
+                <field name="estimated_total_cost"/>
+                <field name="estimated_profit"/>
+                <field name="estimated_margin_percent" widget="percentage"/>
+                <field name="contact_phone" optional="show"/>
+                <field name="product_url" widget="url" optional="show"/>
+                <button name="action_set_preferred" type="object" string="设为推荐" icon="fa-star"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_product_intelligence_sourcing_offer_form" model="ir.ui.view">
+        <field name="name">product.intelligence.sourcing.offer.form</field>
+        <field name="model">product.intelligence.sourcing.offer</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_set_preferred" type="object" string="设为推荐货源" class="btn-primary" invisible="is_preferred"/>
+                    <button name="action_open_source" type="object" string="打开1688商品"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group string="货源商品">
+                            <field name="candidate_id"/>
+                            <field name="platform"/>
+                            <field name="external_id"/>
+                            <field name="product_url" widget="url"/>
+                            <field name="image_url" widget="url"/>
+                            <field name="price_text"/>
+                            <field name="purchase_price"/>
+                            <field name="minimum_order_qty"/>
+                            <field name="sales_text"/>
+                            <field name="delivery_days"/>
+                        </group>
+                        <group string="供应商">
+                            <field name="supplier_name"/>
+                            <field name="supplier_url" widget="url"/>
+                            <field name="supplier_location"/>
+                            <field name="contact_name"/>
+                            <field name="contact_phone"/>
+                            <field name="contact_details"/>
+                            <field name="supplier_partner_id"/>
+                            <field name="supplierinfo_id"/>
+                        </group>
+                    </group>
+                    <group string="利润测算">
+                        <group>
+                            <field name="domestic_freight"/>
+                            <field name="estimated_total_cost"/>
+                        </group>
+                        <group>
+                            <field name="estimated_profit"/>
+                            <field name="estimated_margin_percent" widget="percentage"/>
+                            <field name="is_preferred"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_product_intelligence_sourcing_offer" model="ir.actions.act_window">
+        <field name="name">1688货源报价</field>
+        <field name="res_model">product.intelligence.sourcing.offer</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
