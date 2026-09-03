@@ -3,7 +3,7 @@ const token = document.querySelector('#token');
 const status = document.querySelector('#status');
 const CAPTURE_MESSAGE = 'PIH_CAPTURE_V108';
 const DETAIL_MESSAGE = 'PIH_DETAIL_V110';
-const SOURCING_MESSAGE = 'PIH_1688_CAPTURE_V100';
+const SOURCING_MESSAGE = 'PIH_1688_CAPTURE_V104';
 chrome.storage.local.get(['endpoint','token','detailProgress'], v => {
   endpoint.value=v.endpoint||''; token.value=v.token||'';
   if(v.detailProgress?.message) status.textContent=v.detailProgress.message;
@@ -28,11 +28,14 @@ document.querySelector('#push').addEventListener('click', async () => {
     const is1688=/^https:\/\/([a-z0-9-]+\.)*1688\.com\//i.test(tab.url||'');
     let result;
     if(is1688){
-      result=await chrome.tabs.sendMessage(tab.id,{type:SOURCING_MESSAGE}).catch(async error=>{
-        if(!String(error?.message||error).includes('Receiving end does not exist')) throw error;
+      // The versioned message is ignored by stale listeners. Inject the
+      // packaged script only when the current version is not present yet.
+      try{
+        result=await chrome.tabs.sendMessage(tab.id,{type:SOURCING_MESSAGE});
+      }catch(error){
         await chrome.scripting.executeScript({target:{tabId:tab.id},files:['content.js']});
-        return await chrome.tabs.sendMessage(tab.id,{type:SOURCING_MESSAGE});
-      });
+        result=await chrome.tabs.sendMessage(tab.id,{type:SOURCING_MESSAGE});
+      }
       if(!result?.candidate_id){
         const saved=await chrome.storage.local.get(['last1688CandidateId']);
         result ||= {items:[]};
