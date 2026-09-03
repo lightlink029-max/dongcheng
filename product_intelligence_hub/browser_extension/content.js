@@ -239,7 +239,7 @@ function closest1688Card(link){
   let fallback=link.parentElement;
   for(let i=0;i<10&&node?.parentElement;i++,node=node.parentElement){
     const text=(node.innerText||'').trim();
-    const offerCount=node.querySelectorAll?.('a[href*="detail.1688.com/offer/"]').length||0;
+    const offerCount=node.querySelectorAll?.('a[href*="detail.1688.com"],a[href*="/offer/"],a[href*="offerId="]').length||0;
     if(text.length>20&&text.length<1800&&offerCount===1&&/[¥￥]\s*[\d,.]+/.test(text)) return node;
     if(offerCount===1&&text.length<2500) fallback=node;
   }
@@ -248,16 +248,21 @@ function closest1688Card(link){
 function capture1688(){
   const params=new URL(location.href).searchParams;
   const candidateId=Number(params.get('pih_candidate_id')||0);
+  if(candidateId) chrome.storage.local.set({last1688CandidateId:candidateId});
   const items=[],seen=new Set();
-  const links=[...document.querySelectorAll('a[href*="detail.1688.com/offer/"],a[href*="/offer/"][href*=".html"]')];
+  const links=[...document.querySelectorAll('a[href*="detail.1688.com"],a[href*="/offer/"],a[href*="offerId="]')];
   for(const link of links){
-    const url=absoluteUrl(link.getAttribute('href'));
-    const id=(url.match(/\/offer\/(\d+)\.html/i)||[])[1];
+    const url=absoluteUrl(link.getAttribute('href')||link.getAttribute('data-href')||'');
+    const id=(url.match(/\/offer\/(\d+)(?:\.html)?/i)||url.match(/[?&](?:offerId|id)=(\d+)/i)||[])[1];
     if(!id||seen.has(id)) continue;
     const card=closest1688Card(link),text=(card?.innerText||'').replace(/\s+/g,' ').trim();
     if(!text) continue;
     seen.add(id);
-    const title=(link.getAttribute('title')||link.textContent||card.querySelector('[title]')?.getAttribute('title')||'').replace(/\s+/g,' ').trim();
+    const titleNode=card.querySelector('[class*="title"],[class*="name"],h1,h2,h3');
+    let title=(link.getAttribute('title')||link.getAttribute('aria-label')||link.textContent||titleNode?.getAttribute('title')||titleNode?.textContent||'').replace(/\s+/g,' ').trim();
+    if(!title){
+      title=(card.innerText||'').split('\n').map(value=>value.trim()).find(value=>value.length>=4&&!/[¥￥]\s*[\d,.]+/.test(value))||`1688商品 ${id}`;
+    }
     const image=card.querySelector('img');
     const price=(text.match(/[¥￥]\s*[\d,.]+(?:\s*[-~至]\s*[\d,.]+)?/)||[])[0]||'';
     const supplierLink=[...card.querySelectorAll('a')].find(a=>/\.1688\.com\/?(?:\?|$)|winport\.1688\.com/i.test(a.href)&&!a.href.includes('/offer/'));
@@ -279,6 +284,19 @@ function capture1688(){
     if(items.length>=100) break;
   }
   return {candidate_id:candidateId,items};
+}
+function rememberCandidateContext(){
+  const params=new URL(location.href).searchParams;
+  const from1688=Number(params.get('pih_candidate_id')||0);
+  if(from1688){
+    chrome.storage.local.set({last1688CandidateId:from1688});
+    return;
+  }
+  if(!location.hostname.endsWith('odoo.com')) return;
+  const recordId=Number((location.pathname.match(/\/odoo\/action-\d+\/(\d+)/)||[])[1]||0);
+  if(recordId&&/1688货源(?:研判)?/.test(document.body?.innerText||'')){
+    chrome.storage.local.set({last1688CandidateId:recordId});
+  }
 }
 async function upload1688ReferenceImage(){
   const params=new URL(location.href).searchParams;
@@ -310,6 +328,7 @@ async function upload1688ReferenceImage(){
   }
 }
 upload1688ReferenceImage();
+rememberCandidateContext();
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
   if(message?.type==='PIH_CAPTURE_V108') sendResponse({items:captureAlibaba()});
   if(message?.type==='PIH_DETAIL_V110') sendResponse(captureAlibabaDetail());
