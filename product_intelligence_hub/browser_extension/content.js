@@ -235,6 +235,8 @@ function captureAlibabaDetail(){
   };
 }
 function closest1688Card(link){
+  const imageSearchCard=link?.closest?.('[class*="searchOfferWrapper"]');
+  if(imageSearchCard) return imageSearchCard;
   if(link?.matches?.('a.search-offer-item,a.search-offer-wrapper')) return link;
   if(link?.querySelector?.('[class*="titleText"],[class*="priceItem"]')) return link;
   let node=link;
@@ -269,7 +271,7 @@ function capture1688(){
   if(candidateId) chrome.storage.local.set({last1688CandidateId:candidateId});
   const items=[],seen=new Set();
   const links=[...document.querySelectorAll(
-    'a.search-offer-item,a.search-offer-wrapper,a[href*="detail.1688.com"],a[href*="/offer/"],a[href*="offerId="]'
+    '[class*="searchOfferWrapper"],a.search-offer-item,a.search-offer-wrapper,a[href*="detail.1688.com"],a[href*="/offer/"],a[href*="offerId="]'
   )];
   for(const link of links){
     const url=absoluteUrl(link.getAttribute('href')||link.getAttribute('data-href')||'');
@@ -289,13 +291,22 @@ function capture1688(){
       card.querySelector('[class*="offer-price"]')||card.querySelector('[class*="priceRow"]');
     const price=((priceNode?.textContent||'').replace(/\s+/g,'').match(/[¥￥]?[\d,.]+(?:[-~至][\d,.]+)?/)||
       text.match(/[¥￥]\s*[\d,.]+(?:\s*[-~至]\s*[\d,.]+)?/)||[])[0]||'';
-    const supplierLink=[...card.querySelectorAll('a')].find(a=>/\.1688\.com\/?(?:\?|$)|winport\.1688\.com/i.test(a.href)&&!a.href.includes('/offer/'));
-    const supplierName=(supplierLink?.getAttribute('title')||supplierLink?.textContent||'').replace(/\s+/g,' ').trim();
+    const supplierNode=card.querySelector('[class*="shopName"]');
+    const supplierLink=[...card.querySelectorAll('a')].find(a=>{
+      try{
+        const host=new URL(a.href).hostname;
+        return host.endsWith('.1688.com')&&!/^(?:air|work|detail|detail\.m)\.1688\.com$/i.test(host)&&!a.href.includes('/offer/');
+      }catch{return false;}
+    });
+    const supplierName=(supplierNode?.getAttribute('title')||supplierNode?.textContent||supplierLink?.getAttribute('title')||supplierLink?.textContent||'').replace(/\s+/g,' ').trim();
     const badgeText=`${text} ${[...card.querySelectorAll('.badge-text,.desc-text,[class*="badgeText"],[class*="descText"],[title],[alt]')]
       .map(node=>node.getAttribute('title')||node.getAttribute('alt')||node.textContent||'').join(' ')}`;
+    const detectedFeatures=badgeText.match(/实力商家|超级工厂|源头旗舰|实力供应商|深度验厂|诚信通/g)||[];
+    if(/真实工厂认证/.test(badgeText)) detectedFeatures.push('超级工厂');
+    if(/实力认证/.test(badgeText)) detectedFeatures.push('实力商家');
     const merchantFeatures=[...new Set([
       ...activeMerchantFeatures,
-      ...(badgeText.match(/实力商家|超级工厂|源头旗舰|实力供应商|深度验厂|诚信通/g)||[]),
+      ...detectedFeatures,
     ])].join('、')||'未标注';
     const merchantJoinTime=(badgeText.match(/(?:诚信通\s*\d+\s*年|\d+\s*年诚信通|经营\s*\d+\s*年|入驻\s*\d+\s*年|成立\s*\d+\s*年)/)||[])[0]||'';
     const phone=(text.match(/(?:1[3-9]\d{9}|0\d{2,3}[- ]?\d{7,8})/)||[])[0]||'';
@@ -306,7 +317,8 @@ function capture1688(){
     // visible product/supplier/price fields. Never push those incomplete rows.
     if(!title||!supplierName||!price) continue;
     items.push({
-      product_id:id,product_title:title,product_url:url,
+      product_id:id,product_title:title,
+      product_url:(!url||/air\.1688\.com\/app\/ocms/i.test(url))?`https://detail.1688.com/offer/${id}.html`:url,
       main_image:absoluteUrl(image?.currentSrc||image?.getAttribute('data-lazy-src')||image?.getAttribute('src')||''),
       supplier_name:supplierName,supplier_url:supplierLink?.href||'',
       merchant_features:merchantFeatures,
@@ -380,5 +392,5 @@ rememberCandidateContext();
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
   if(message?.type==='PIH_CAPTURE_V108') sendResponse({items:captureAlibaba()});
   if(message?.type==='PIH_DETAIL_V110') sendResponse(captureAlibabaDetail());
-  if(message?.type==='PIH_1688_CAPTURE_V104') sendResponse(capture1688());
+  if(message?.type==='PIH_1688_CAPTURE_V106') sendResponse(capture1688());
 });
