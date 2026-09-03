@@ -159,6 +159,7 @@ class ProductIntelligenceIngestController(http.Controller):
                     "image_url": str(item.get("main_image") or "")[:2048],
                     "supplier_name": str(item.get("supplier_name") or "")[:512],
                     "merchant_features": str(item.get("merchant_features") or "")[:256],
+                    "merchant_join_time": str(item.get("merchant_join_time") or "")[:128],
                     "supplier_url": str(item.get("supplier_url") or "")[:2048],
                     "contact_name": str(item.get("contact_name") or "")[:256],
                     "contact_phone": str(item.get("contact_phone") or "")[:128],
