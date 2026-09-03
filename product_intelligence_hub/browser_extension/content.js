@@ -442,5 +442,5 @@ rememberCandidateContext();
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
   if(message?.type==='PIH_CAPTURE_V108') sendResponse({items:captureAlibaba()});
   if(message?.type==='PIH_DETAIL_V110') sendResponse(captureAlibabaDetail());
-  if(message?.type==='PIH_1688_CAPTURE_V108') sendResponse(capture1688());
+  if(message?.type==='PIH_1688_CAPTURE_V109') sendResponse(capture1688());
 });
