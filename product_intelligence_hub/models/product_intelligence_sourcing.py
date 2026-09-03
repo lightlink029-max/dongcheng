@@ -8,7 +8,7 @@ from odoo.tools import html2plaintext
 class ProductIntelligenceSourcingOffer(models.Model):
     _name = "product.intelligence.sourcing.offer"
     _description = "国内货源报价"
-    _order = "is_preferred desc, estimated_margin_percent desc, purchase_price asc, id desc"
+    _order = "is_preferred desc, is_backup desc, estimated_margin_percent desc, purchase_price asc, id desc"
     _check_company_auto = True
 
     candidate_id = fields.Many2one(
@@ -67,7 +67,8 @@ class ProductIntelligenceSourcingOffer(models.Model):
     estimated_margin_percent = fields.Float(
         string="预计利润率 %", compute="_compute_profit", store=True, digits=(16, 2),
     )
-    is_preferred = fields.Boolean(string="推荐货源", index=True, copy=False)
+    is_preferred = fields.Boolean(string="主推荐货源", index=True, copy=False)
+    is_backup = fields.Boolean(string="备选货源", index=True, copy=False)
     captured_at = fields.Datetime(string="采集时间", default=fields.Datetime.now)
     supplier_partner_id = fields.Many2one("res.partner", string="Odoo 供应商", readonly=True, copy=False)
     supplierinfo_id = fields.Many2one("product.supplierinfo", string="产品供应商价目", readonly=True, copy=False)
@@ -138,7 +139,22 @@ class ProductIntelligenceSourcingOffer(models.Model):
         self.candidate_id.sourcing_offer_ids.filtered(
             lambda item: item != self and item.is_preferred
         ).write({"is_preferred": False})
-        self.write({"is_preferred": True})
+        self.write({"is_preferred": True, "is_backup": False})
+        self.candidate_id.preferred_sourcing_offer_id = self.id
+        return {"type": "ir.actions.client", "tag": "reload"}
+
+    def action_toggle_backup(self):
+        self.ensure_one()
+        if self.is_preferred:
+            raise UserError(_("主推荐货源不能同时设为备选货源。"))
+        self.is_backup = not self.is_backup
+        return {"type": "ir.actions.client", "tag": "reload"}
+
+    def action_clear_sourcing_role(self):
+        self.ensure_one()
+        if self.candidate_id.preferred_sourcing_offer_id == self:
+            self.candidate_id.preferred_sourcing_offer_id = False
+        self.write({"is_preferred": False, "is_backup": False})
         return {"type": "ir.actions.client", "tag": "reload"}
 
     def action_open_source(self):
@@ -186,7 +202,7 @@ class ProductIntelligenceCandidateSourcing(models.Model):
         string="数据源商机记录", copy=False,
     )
     preferred_sourcing_offer_id = fields.Many2one(
-        "product.intelligence.sourcing.offer", string="推荐货源", copy=False,
+        "product.intelligence.sourcing.offer", string="主推荐货源", copy=False,
         domain="[('candidate_id', '=', id)]",
     )
 
@@ -235,63 +251,66 @@ class ProductIntelligenceCandidateSourcing(models.Model):
         action["context"] = {"default_candidate_id": self.id}
         return action
 
-    def _selected_sourcing_offer(self):
+    def _selected_sourcing_offers(self):
         self.ensure_one()
-        offer = self.preferred_sourcing_offer_id
-        if not offer:
-            offer = self.sourcing_offer_ids.filtered("is_preferred")[:1]
-        return offer
+        main_offer = self.preferred_sourcing_offer_id
+        if not main_offer:
+            main_offer = self.sourcing_offer_ids.filtered("is_preferred")[:1]
+        backup_offers = self.sourcing_offer_ids.filtered(
+            lambda offer: offer.is_backup and offer != main_offer
+        )
+        return main_offer | backup_offers
 
     def _sync_selected_supplier(self, product):
         self.ensure_one()
-        offer = self._selected_sourcing_offer()
-        if not offer:
+        offers = self._selected_sourcing_offers()
+        if not offers:
             return False
-        partner = offer.supplier_partner_id
-        if not partner:
-            domain = []
-            if offer.supplier_url:
-                domain = [("website", "=", offer.supplier_url)]
-            if not domain and offer.supplier_name:
-                domain = [("name", "=", offer.supplier_name)]
-            partner = self.env["res.partner"].search(domain, limit=1) if domain else False
-        partner_values = {
-            "name": offer.supplier_name or offer.name,
-            "company_type": "company",
-            "supplier_rank": 1,
-            "website": offer.supplier_url or offer.product_url,
-            "phone": offer.contact_phone,
-            "comment": _("1688货源商品：%(name)s\n%(url)s\n%(details)s") % {
-                "name": offer.name,
-                "url": offer.product_url or "",
-                "details": offer.contact_details or "",
-            },
-        }
-        if partner:
-            partner.write({key: value for key, value in partner_values.items() if value})
-        else:
-            partner = self.env["res.partner"].create(partner_values)
-        supplierinfo = offer.supplierinfo_id
-        supplier_values = {
-            "partner_id": partner.id,
-            "product_tmpl_id": product.id,
-            "product_name": offer.name,
-            "price": offer.purchase_price,
-            "min_qty": offer.minimum_order_qty or 1.0,
-            "delay": offer.delivery_days or 1,
-            "currency_id": offer.currency_id.id,
-        }
-        if supplierinfo:
-            supplierinfo.write(supplier_values)
-        else:
-            supplierinfo = self.env["product.supplierinfo"].create(supplier_values)
-        offer.write({
-            "supplier_partner_id": partner.id,
-            "supplierinfo_id": supplierinfo.id,
-            "is_preferred": True,
-        })
-        self.preferred_sourcing_offer_id = offer.id
-        return supplierinfo
+        supplierinfos = self.env["product.supplierinfo"]
+        for position, offer in enumerate(offers):
+            partner = offer.supplier_partner_id
+            if not partner:
+                domain = [("website", "=", offer.supplier_url)] if offer.supplier_url else []
+                if not domain and offer.supplier_name:
+                    domain = [("name", "=", offer.supplier_name)]
+                partner = self.env["res.partner"].search(domain, limit=1) if domain else False
+            partner_values = {
+                "name": offer.supplier_name or offer.name,
+                "company_type": "company",
+                "supplier_rank": 1,
+                "website": offer.supplier_url or offer.product_url,
+                "phone": offer.contact_phone,
+                "comment": _("1688货源商品：%(name)s\n%(url)s\n%(details)s") % {
+                    "name": offer.name,
+                    "url": offer.product_url or "",
+                    "details": offer.contact_details or "",
+                },
+            }
+            if partner:
+                partner.write({key: value for key, value in partner_values.items() if value})
+            else:
+                partner = self.env["res.partner"].create(partner_values)
+            supplierinfo = offer.supplierinfo_id
+            supplier_values = {
+                "partner_id": partner.id,
+                "product_tmpl_id": product.id,
+                "product_name": offer.name,
+                "price": offer.purchase_price,
+                "min_qty": offer.minimum_order_qty or 1.0,
+                "delay": offer.delivery_days or 1,
+                "currency_id": offer.currency_id.id,
+                "sequence": 1 if offer.is_preferred else 10 + position,
+            }
+            if supplierinfo:
+                supplierinfo.write(supplier_values)
+            else:
+                supplierinfo = self.env["product.supplierinfo"].create(supplier_values)
+            offer.write({
+                "supplier_partner_id": partner.id,
+                "supplierinfo_id": supplierinfo.id,
+            })
+            supplierinfos |= supplierinfo
+        return supplierinfos
 
     def action_create_product(self):
         result = super().action_create_product()
