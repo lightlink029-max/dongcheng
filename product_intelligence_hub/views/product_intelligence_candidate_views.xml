@@ -215,11 +215,12 @@
                             </field>
                             <separator string="货源报价"/>
                             <field name="sourcing_offer_ids" context="{'default_candidate_id': id}">
-                                <list editable="bottom" default_order="is_preferred desc, estimated_margin_percent desc">
+                                <list editable="bottom" decoration-success="is_preferred" decoration-warning="is_backup" default_order="is_preferred desc, is_backup desc, estimated_margin_percent desc">
                                     <header>
                                         <button name="action_bulk_delete" type="object" string="删除所选货源" display="always" class="btn-secondary" groups="product_intelligence_hub.group_product_intelligence_manager" confirm="删除后无法恢复，确认删除所选1688货源吗？"/>
                                     </header>
                                     <field name="is_preferred" readonly="1"/>
+                                    <field name="is_backup" readonly="1"/>
                                     <field name="name"/>
                                     <field name="supplier_name"/>
                                     <field name="merchant_features" optional="show"/>
@@ -232,14 +233,16 @@
                                     <field name="is_cheaper_than_opportunity" readonly="1" optional="show"/>
                                     <field name="minimum_order_qty"/>
                                     <field name="sales_text" optional="show"/>
-                                    <field name="ai_business_opportunity" optional="show"/>
                                     <field name="contact_phone" optional="show"/>
                                     <field name="domestic_freight" optional="show"/>
                                     <field name="estimated_total_cost" readonly="1"/>
                                     <field name="estimated_profit" readonly="1"/>
                                     <field name="estimated_margin_percent" readonly="1" widget="percentage"/>
                                     <field name="product_url" widget="url" optional="show"/>
-                                    <button name="action_set_preferred" type="object" string="推荐" icon="fa-star"/>
+                                    <button name="action_set_preferred" type="object" string="设为主推荐" icon="fa-star" invisible="is_preferred"/>
+                                    <button name="action_toggle_backup" type="object" string="设为备选" icon="fa-bookmark-o" invisible="is_preferred or is_backup"/>
+                                    <button name="action_toggle_backup" type="object" string="取消备选" icon="fa-bookmark" invisible="not is_backup"/>
+                                    <button name="action_clear_sourcing_role" type="object" string="取消主推荐" icon="fa-star-o" invisible="not is_preferred"/>
                                 </list>
                             </field>
                         </page>
