@@ -234,7 +234,54 @@ function captureAlibabaDetail(){
     videos:detailVideos(),
   };
 }
+function closest1688Card(link){
+  let node=link;
+  let fallback=link.parentElement;
+  for(let i=0;i<10&&node?.parentElement;i++,node=node.parentElement){
+    const text=(node.innerText||'').trim();
+    const offerCount=node.querySelectorAll?.('a[href*="detail.1688.com/offer/"]').length||0;
+    if(text.length>20&&text.length<1800&&offerCount===1&&/[¥￥]\s*[\d,.]+/.test(text)) return node;
+    if(offerCount===1&&text.length<2500) fallback=node;
+  }
+  return fallback;
+}
+function capture1688(){
+  const params=new URL(location.href).searchParams;
+  const candidateId=Number(params.get('pih_candidate_id')||0);
+  const items=[],seen=new Set();
+  const links=[...document.querySelectorAll('a[href*="detail.1688.com/offer/"],a[href*="/offer/"][href*=".html"]')];
+  for(const link of links){
+    const url=absoluteUrl(link.getAttribute('href'));
+    const id=(url.match(/\/offer\/(\d+)\.html/i)||[])[1];
+    if(!id||seen.has(id)) continue;
+    const card=closest1688Card(link),text=(card?.innerText||'').replace(/\s+/g,' ').trim();
+    if(!text) continue;
+    seen.add(id);
+    const title=(link.getAttribute('title')||link.textContent||card.querySelector('[title]')?.getAttribute('title')||'').replace(/\s+/g,' ').trim();
+    const image=card.querySelector('img');
+    const price=(text.match(/[¥￥]\s*[\d,.]+(?:\s*[-~至]\s*[\d,.]+)?/)||[])[0]||'';
+    const supplierLink=[...card.querySelectorAll('a')].find(a=>/\.1688\.com\/?(?:\?|$)|winport\.1688\.com/i.test(a.href)&&!a.href.includes('/offer/'));
+    const supplierName=(supplierLink?.getAttribute('title')||supplierLink?.textContent||'').replace(/\s+/g,' ').trim();
+    const phone=(text.match(/(?:1[3-9]\d{9}|0\d{2,3}[- ]?\d{7,8})/)||[])[0]||'';
+    const moqMatch=text.match(/(?:起批|起订|≥)\s*([\d,.]+)\s*(?:件|个|套|台|双|箱|只|米|千克|公斤|pcs?)/i);
+    const sales=(text.match(/(?:成交|已售|销量|复购率)[^¥￥]{0,30}/i)||[])[0]||'';
+    const location=(text.match(/(?:广东|浙江|江苏|福建|山东|河北|河南|上海|北京|天津|安徽|湖北|湖南|江西|四川|重庆|广西|辽宁)[^\s,，]{0,12}/)||[])[0]||'';
+    if(!title) continue;
+    items.push({
+      product_id:id,product_title:title,product_url:url,
+      main_image:absoluteUrl(image?.currentSrc||image?.getAttribute('data-lazy-src')||image?.getAttribute('src')||''),
+      supplier_name:supplierName,supplier_url:supplierLink?.href||'',
+      contact_phone:phone,contact_details:phone?'页面公开联系电话':'页面未公开显示联系电话',
+      supplier_location:location,price_text:price,min_price:number(price,/([\d,.]+)/),
+      moq:moqMatch?Number(moqMatch[1].replace(/,/g,'')):1,sales_text:sales,
+      captured_at:new Date().toISOString(),
+    });
+    if(items.length>=100) break;
+  }
+  return {candidate_id:candidateId,items};
+}
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
   if(message?.type==='PIH_CAPTURE_V108') sendResponse({items:captureAlibaba()});
   if(message?.type==='PIH_DETAIL_V110') sendResponse(captureAlibabaDetail());
+  if(message?.type==='PIH_1688_CAPTURE_V100') sendResponse(capture1688());
 });
