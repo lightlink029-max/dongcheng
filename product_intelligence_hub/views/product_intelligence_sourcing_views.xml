@@ -34,7 +34,7 @@
                 </header>
                 <field name="is_preferred" readonly="1"/>
                 <field name="candidate_id" optional="show"/>
-                <field name="image_512" widget="image" string="主图" options="{'size': [80, 80]}" optional="show"/>
+                <field name="image_preview" widget="html" string="主图" optional="show"/>
                 <field name="image_url" widget="url" optional="hide"/>
                 <field name="name"/>
                 <field name="supplier_name"/>
@@ -48,7 +48,7 @@
                 <field name="is_cheaper_than_opportunity" readonly="1" optional="show"/>
                 <field name="minimum_order_qty"/>
                 <field name="sales_text" optional="show"/>
-                <field name="ai_opportunity_snapshot" optional="hide"/>
+                <field name="ai_business_opportunity" optional="show"/>
                 <field name="delivery_days" optional="show"/>
                 <field name="estimated_total_cost"/>
                 <field name="estimated_profit"/>
@@ -116,7 +116,7 @@
                         <field name="is_cheaper_than_opportunity"/>
                     </group>
                     <group string="AI商机识别">
-                        <field name="ai_opportunity_snapshot" nolabel="1" readonly="1"/>
+                        <field name="ai_business_opportunity" nolabel="1" readonly="1" placeholder="当前1688结果未显示AI商机识别内容"/>
                     </group>
                 </sheet>
             </form>
