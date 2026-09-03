@@ -1,4 +1,5 @@
-from urllib.parse import quote_from_bytes
+import re
+from urllib.parse import quote_from_bytes, urlparse
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -79,9 +80,21 @@ class ProductIntelligenceSourcingOffer(models.Model):
     )
 
     @api.model
-    def _canonical_1688_product_url(self, external_id):
+    def _validated_1688_product_url(self, external_id, product_url=None):
         external_id = str(external_id or "").strip()
-        if external_id.isdigit():
+        if not external_id.isdigit():
+            return False
+        product_url = str(product_url or "").strip()
+        if product_url:
+            parsed = urlparse(product_url)
+            match = re.search(r"/offer/(\d+)\.html", parsed.path, re.IGNORECASE)
+            if (
+                parsed.scheme in ("http", "https")
+                and (parsed.hostname or "").lower() == "detail.1688.com"
+                and match and match.group(1) == external_id
+            ):
+                return product_url
+        if external_id:
             return "https://detail.1688.com/offer/%s.html" % external_id
         return False
 
@@ -89,19 +102,23 @@ class ProductIntelligenceSourcingOffer(models.Model):
     def create(self, values_list):
         for values in values_list:
             if values.get("platform", "1688") == "1688":
-                canonical_url = self._canonical_1688_product_url(values.get("external_id"))
-                if canonical_url:
-                    values["product_url"] = canonical_url
+                validated_url = self._validated_1688_product_url(
+                    values.get("external_id"), values.get("product_url")
+                )
+                if validated_url:
+                    values["product_url"] = validated_url
         return super().create(values_list)
 
     def write(self, values):
         result = super().write(values)
         if "external_id" in values or "product_url" in values or "platform" in values:
             for offer in self.filtered(lambda item: item.platform == "1688"):
-                canonical_url = self._canonical_1688_product_url(offer.external_id)
-                if canonical_url and offer.product_url != canonical_url:
+                validated_url = self._validated_1688_product_url(
+                    offer.external_id, offer.product_url
+                )
+                if validated_url and offer.product_url != validated_url:
                     super(ProductIntelligenceSourcingOffer, offer).write(
-                        {"product_url": canonical_url}
+                        {"product_url": validated_url}
                     )
         return result
 
@@ -113,8 +130,13 @@ class ProductIntelligenceSourcingOffer(models.Model):
                SET product_url = 'https://detail.1688.com/offer/' || external_id || '.html'
              WHERE platform = '1688'
                AND external_id ~ '^[0-9]+$'
-               AND product_url IS DISTINCT FROM
-                   'https://detail.1688.com/offer/' || external_id || '.html'
+               AND (
+                   product_url IS NULL
+                   OR product_url !~ (
+                       '^https?://detail[.]1688[.]com/offer/' || external_id
+                       || '[.]html([?#].*)?$'
+                   )
+               )
             """
         )
 
