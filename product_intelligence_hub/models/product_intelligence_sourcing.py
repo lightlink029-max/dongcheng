@@ -264,6 +264,44 @@ class ProductIntelligenceSourceInsight(models.Model):
     )
 
 
+class ProductSupplierInfo(models.Model):
+    _inherit = "product.supplierinfo"
+
+    pi_sourcing_offer_id = fields.Many2one(
+        "product.intelligence.sourcing.offer",
+        string="货源详情",
+        compute="_compute_pi_sourcing_offer_id",
+        compute_sudo=True,
+    )
+
+    def _compute_pi_sourcing_offer_id(self):
+        for supplierinfo in self:
+            supplierinfo.pi_sourcing_offer_id = False
+        if not self.ids:
+            return
+        offers = self.env["product.intelligence.sourcing.offer"].sudo().search([
+            ("supplierinfo_id", "in", self.ids),
+        ])
+        offer_by_supplierinfo = {
+            offer.supplierinfo_id.id: offer for offer in offers if offer.supplierinfo_id
+        }
+        for supplierinfo in self:
+            supplierinfo.pi_sourcing_offer_id = offer_by_supplierinfo.get(supplierinfo.id)
+
+    def action_open_pi_sourcing_offer(self):
+        self.ensure_one()
+        if not self.pi_sourcing_offer_id:
+            raise UserError(_("该供应商价目没有关联的选品货源记录。"))
+        return {
+            "type": "ir.actions.act_window",
+            "name": self.pi_sourcing_offer_id.display_name,
+            "res_model": "product.intelligence.sourcing.offer",
+            "view_mode": "form",
+            "res_id": self.pi_sourcing_offer_id.id,
+            "target": "current",
+        }
+
+
 class ProductIntelligenceCandidateSourcing(models.Model):
     _inherit = "product.intelligence.candidate"
 
