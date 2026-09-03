@@ -32,6 +32,7 @@
         <field name="arch" type="xml">
             <list decoration-success="is_preferred" decoration-warning="is_backup" decoration-info="is_cheaper_than_opportunity" default_order="is_preferred desc, is_backup desc, is_cheaper_than_opportunity desc, price_difference desc">
                 <header>
+                    <button name="action_open_bulk_role_wizard" type="object" string="批量设置货源" display="always" class="btn-primary"/>
                     <button name="action_bulk_delete" type="object" string="删除所选货源" display="always" class="btn-secondary" groups="product_intelligence_hub.group_product_intelligence_manager" confirm="删除后无法恢复，确认删除所选1688货源吗？"/>
                 </header>
                 <field name="is_preferred" readonly="1"/>
