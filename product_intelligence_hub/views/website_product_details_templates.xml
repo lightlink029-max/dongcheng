@@ -3,6 +3,35 @@
     <template id="product_intelligence_product_attribute_layout" inherit_id="website_sale.product">
         <xpath expr="//div[@id='product_detail_main']" position="after">
             <style>
+                .product-intelligence-details > .row > div {
+                    flex: 0 0 100%;
+                    max-width: 100%;
+                    width: 100%;
+                }
+                .product-intelligence-details .card {
+                    border-radius: 0.55rem;
+                    overflow: hidden;
+                }
+                .product-intelligence-details .card-header {
+                    padding: 0.85rem 1.4rem;
+                    background: #f8f8f8 !important;
+                    border-bottom: 1px solid #dedede;
+                }
+                .product-intelligence-details .card-header h3 {
+                    font-family: Georgia, "Times New Roman", serif;
+                    font-size: clamp(1.35rem, 2.3vw, 1.8rem);
+                    font-weight: 500;
+                    line-height: 1.2;
+                }
+                .product-intelligence-details .card-body {
+                    padding: 0.35rem 1.4rem !important;
+                }
+                .product-intelligence-details .card-body > p {
+                    padding: 0.85rem 0 !important;
+                    border-color: #dedede !important;
+                    font-size: clamp(1rem, 1.55vw, 1.18rem);
+                    line-height: 1.45;
+                }
                 @media (min-width: 768px) {
                     .product-intelligence-details .row > div:first-child .card-body,
                     .product-intelligence-details .pi-important-attributes-grid {
@@ -10,6 +39,12 @@
                         grid-template-columns: repeat(2, minmax(0, 1fr));
                         column-gap: 1.5rem;
                         align-content: start;
+                    }
+                }
+                @media (max-width: 767.98px) {
+                    .product-intelligence-details .row > div:first-child .card-body,
+                    .product-intelligence-details .pi-important-attributes-grid {
+                        display: block;
                     }
                 }
             </style>
