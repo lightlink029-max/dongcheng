@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 from io import BytesIO
@@ -140,6 +141,7 @@ class ProductIntelligenceIngestController(http.Controller):
             if not candidate or candidate.company_id != source.company_id:
                 return request.make_json_response({"ok": False, "error": "candidate_not_found"}, status=404)
             Offer = request.env["product.intelligence.sourcing.offer"].sudo()
+            ai_snapshot = Offer._prepare_ai_opportunity_snapshot(candidate)
             created = updated = skipped = 0
             for item in items:
                 if not isinstance(item, dict):
@@ -150,13 +152,14 @@ class ProductIntelligenceIngestController(http.Controller):
                 if not external_id or not name:
                     skipped += 1
                     continue
+                image_url = str(item.get("main_image") or "")[:2048]
                 values = {
                     "candidate_id": candidate.id,
                     "platform": "1688",
                     "external_id": external_id,
                     "name": name,
                     "product_url": str(item.get("product_url") or "")[:2048],
-                    "image_url": str(item.get("main_image") or "")[:2048],
+                    "image_url": image_url,
                     "supplier_name": str(item.get("supplier_name") or "")[:512],
                     "merchant_features": str(item.get("merchant_features") or "")[:256],
                     "merchant_join_time": str(item.get("merchant_join_time") or "")[:128],
@@ -169,6 +172,7 @@ class ProductIntelligenceIngestController(http.Controller):
                     "purchase_price": float(item.get("min_price") or 0),
                     "minimum_order_qty": float(item.get("moq") or 1),
                     "sales_text": str(item.get("sales_text") or "")[:256],
+                    "ai_opportunity_snapshot": ai_snapshot,
                     "delivery_days": int(float(item.get("delivery_days") or 0)),
                     "captured_at": fields.Datetime.now(),
                 }
@@ -177,6 +181,22 @@ class ProductIntelligenceIngestController(http.Controller):
                     ("platform", "=", "1688"),
                     ("external_id", "=", external_id),
                 ], limit=1)
+                if image_url and (not offer or offer.image_url != image_url or not offer.image_512):
+                    try:
+                        image_data, _content_type = request.env[
+                            "product.image.storage.oss"
+                        ].sudo().download_image(image_url)
+                        with Image.open(BytesIO(image_data)) as source_image:
+                            source_image.thumbnail((512, 512), Image.Resampling.LANCZOS)
+                            if source_image.mode not in ("RGB", "RGBA"):
+                                source_image = source_image.convert("RGBA")
+                            output = BytesIO()
+                            source_image.save(output, format="PNG", optimize=True)
+                        values["image_512"] = base64.b64encode(output.getvalue())
+                    except Exception:
+                        _logger.warning(
+                            "Unable to cache 1688 sourcing image %s", image_url, exc_info=True,
+                        )
                 if offer:
                     offer.write(values)
                     updated += 1
