@@ -221,6 +221,7 @@
                                     <field name="is_cheaper_than_opportunity" readonly="1" optional="show"/>
                                     <field name="minimum_order_qty"/>
                                     <field name="sales_text" optional="show"/>
+                                    <field name="ai_opportunity_snapshot" optional="hide"/>
                                     <field name="contact_phone" optional="show"/>
                                     <field name="domestic_freight" optional="show"/>
                                     <field name="estimated_total_cost" readonly="1"/>
