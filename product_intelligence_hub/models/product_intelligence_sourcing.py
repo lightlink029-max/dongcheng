@@ -78,6 +78,46 @@ class ProductIntelligenceSourcingOffer(models.Model):
         "同一产品机会下不能重复保存相同货源商品。",
     )
 
+    @api.model
+    def _canonical_1688_product_url(self, external_id):
+        external_id = str(external_id or "").strip()
+        if external_id.isdigit():
+            return "https://detail.1688.com/offer/%s.html" % external_id
+        return False
+
+    @api.model_create_multi
+    def create(self, values_list):
+        for values in values_list:
+            if values.get("platform", "1688") == "1688":
+                canonical_url = self._canonical_1688_product_url(values.get("external_id"))
+                if canonical_url:
+                    values["product_url"] = canonical_url
+        return super().create(values_list)
+
+    def write(self, values):
+        result = super().write(values)
+        if "external_id" in values or "product_url" in values or "platform" in values:
+            for offer in self.filtered(lambda item: item.platform == "1688"):
+                canonical_url = self._canonical_1688_product_url(offer.external_id)
+                if canonical_url and offer.product_url != canonical_url:
+                    super(ProductIntelligenceSourcingOffer, offer).write(
+                        {"product_url": canonical_url}
+                    )
+        return result
+
+    def init(self):
+        """Repair historical search-page URLs after upgrading the module."""
+        self.env.cr.execute(
+            """
+            UPDATE product_intelligence_sourcing_offer
+               SET product_url = 'https://detail.1688.com/offer/' || external_id || '.html'
+             WHERE platform = '1688'
+               AND external_id ~ '^[0-9]+$'
+               AND product_url IS DISTINCT FROM
+                   'https://detail.1688.com/offer/' || external_id || '.html'
+            """
+        )
+
     @api.depends(
         "purchase_price", "domestic_freight", "candidate_id.logistics_cost",
         "candidate_id.other_cost", "candidate_id.target_sale_price",
