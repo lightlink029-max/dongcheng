@@ -21,6 +21,7 @@ class ProductIntelligenceSourcingOffer(models.Model):
     product_url = fields.Char(string="商品链接")
     image_url = fields.Char(string="货源主图")
     supplier_name = fields.Char(string="供应商", index=True)
+    merchant_features = fields.Char(string="商家特色", index=True)
     supplier_url = fields.Char(string="供应商主页")
     contact_name = fields.Char(string="联系人")
     contact_phone = fields.Char(string="联系电话")
@@ -32,6 +33,18 @@ class ProductIntelligenceSourcingOffer(models.Model):
         default=lambda self: self.env.ref("base.CNY", raise_if_not_found=False) or self.env.company.currency_id,
     )
     purchase_price = fields.Monetary(string="采购单价", currency_field="currency_id")
+    opportunity_price = fields.Monetary(
+        string="机会商品价格", currency_field="currency_id",
+        related="candidate_id.supplier_price", store=True, readonly=True,
+    )
+    price_difference = fields.Monetary(
+        string="价格优势", currency_field="currency_id",
+        compute="_compute_price_comparison", store=True,
+        help="机会商品价格减去1688采购价格。正数表示1688价格更低。",
+    )
+    is_cheaper_than_opportunity = fields.Boolean(
+        string="1688价格更低", compute="_compute_price_comparison", store=True, index=True,
+    )
     minimum_order_qty = fields.Float(string="最小起订量", default=1.0)
     sales_text = fields.Char(string="销量/成交")
     delivery_days = fields.Integer(string="预计交期（天）")
@@ -74,6 +87,20 @@ class ProductIntelligenceSourcingOffer(models.Model):
             offer.estimated_margin_percent = (
                 (sale_price - total) / sale_price * 100.0 if sale_price else 0.0
             )
+
+    @api.depends("purchase_price", "candidate_id.supplier_price")
+    def _compute_price_comparison(self):
+        for offer in self:
+            opportunity_price = offer.candidate_id.supplier_price or 0.0
+            offer.price_difference = opportunity_price - offer.purchase_price
+            offer.is_cheaper_than_opportunity = bool(
+                opportunity_price > 0 and offer.purchase_price > 0
+                and opportunity_price > offer.purchase_price
+            )
+
+    def action_bulk_delete(self):
+        self.unlink()
+        return {"type": "ir.actions.client", "tag": "reload"}
 
     def action_set_preferred(self):
         self.ensure_one()
