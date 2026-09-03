@@ -334,7 +334,8 @@ function capture1688(){
     items.push({
       product_id:id,product_title:title,
       product_url:(!url||/air\.1688\.com\/app\/ocms/i.test(url))?`https://detail.1688.com/offer/${id}.html`:url,
-      main_image:absoluteUrl(image?.currentSrc||image?.getAttribute('data-lazy-src')||image?.getAttribute('src')||''),
+      main_image:absoluteUrl(image?.currentSrc||image?.getAttribute('data-lazy-src')||image?.getAttribute('src')||'')
+        .replace(/_\.(?:webp|avif)(?=\?|#|$)/i,''),
       supplier_name:supplierName,supplier_url:supplierLink?.href||'',
       merchant_features:merchantFeatures,
       merchant_join_time:merchantJoinTime.replace(/\s+/g,''),
