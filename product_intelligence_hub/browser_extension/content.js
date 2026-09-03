@@ -353,7 +353,7 @@ function capture1688(){
     if(!title||!supplierName||!price) continue;
     items.push({
       product_id:id,product_title:title,
-      product_url:(!url||/air\.1688\.com\/app\/ocms/i.test(url))?`https://detail.1688.com/offer/${id}.html`:url,
+      product_url:`https://detail.1688.com/offer/${id}.html`,
       main_image:absoluteUrl(image?.currentSrc||image?.getAttribute('data-lazy-src')||image?.getAttribute('src')||'')
         .replace(/_\.(?:webp|avif)(?=\?|#|$)/i,''),
       supplier_name:supplierName,supplier_url:supplierLink?.href||'',
