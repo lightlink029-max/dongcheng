@@ -136,7 +136,11 @@ class ProductIntelligenceIngestController(http.Controller):
             payload = json.loads(request.httprequest.get_data(as_text=True) or "{}")
             candidate_id = int(payload.get("candidate_id") or 0)
             items = payload.get("items") or []
-            if not candidate_id or not isinstance(items, list) or len(items) > 200:
+            source_insights = payload.get("source_insights") or []
+            if (
+                not candidate_id or not isinstance(items, list) or len(items) > 200
+                or not isinstance(source_insights, list) or len(source_insights) > 50
+            ):
                 return request.make_json_response({"ok": False, "error": "invalid_payload"}, status=400)
             candidate = request.env["product.intelligence.candidate"].sudo().browse(candidate_id).exists()
             if not candidate or candidate.company_id != source.company_id:
@@ -231,6 +235,34 @@ class ProductIntelligenceIngestController(http.Controller):
                         insight.write(insight_values)
                     else:
                         Insight.create(insight_values)
+            for source_insight in source_insights:
+                if not isinstance(source_insight, dict):
+                    continue
+                content = str(source_insight.get("insight_content") or "").strip()[:4000]
+                external_ref = str(source_insight.get("external_ref") or "").strip()[:256]
+                platform = str(source_insight.get("source_platform") or "1688").strip()[:64]
+                if not content or not external_ref or not platform:
+                    continue
+                insight_values = {
+                    "candidate_id": candidate.id,
+                    "source_platform": platform,
+                    "external_ref": external_ref,
+                    "source_product_name": str(
+                        source_insight.get("source_product_name") or ""
+                    ).strip()[:512],
+                    "source_url": str(source_insight.get("source_url") or "").strip()[:2048],
+                    "insight_content": content,
+                    "captured_at": fields.Datetime.now(),
+                }
+                insight = Insight.search([
+                    ("candidate_id", "=", candidate.id),
+                    ("source_platform", "=", platform),
+                    ("external_ref", "=", external_ref),
+                ], limit=1)
+                if insight:
+                    insight.write(insight_values)
+                else:
+                    Insight.create(insight_values)
             if created or updated:
                 candidate.message_post(body=(
                     "1688货源采集完成：新增 %s，更新 %s，跳过 %s。" % (created, updated, skipped)
