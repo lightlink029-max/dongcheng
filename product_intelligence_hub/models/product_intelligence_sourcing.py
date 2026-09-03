@@ -17,7 +17,10 @@ class ProductIntelligenceSourcingOffer(models.Model):
         ondelete="cascade", index=True, check_company=True,
     )
     company_id = fields.Many2one(related="candidate_id.company_id", store=True, index=True)
-    platform = fields.Selection([("1688", "1688")], required=True, default="1688", index=True)
+    platform = fields.Selection(
+        [("1688", "1688"), ("yiwugo", "义乌购")],
+        string="数据来源", required=True, default="1688", index=True,
+    )
     external_id = fields.Char(string="货源商品 ID", required=True, index=True)
     name = fields.Char(string="货源商品", required=True)
     product_url = fields.Char(string="商品链接")
@@ -305,10 +308,10 @@ class ProductSupplierInfo(models.Model):
 class ProductIntelligenceCandidateSourcing(models.Model):
     _inherit = "product.intelligence.candidate"
 
-    sourcing_keyword = fields.Char(string="1688 检索关键词")
+    sourcing_keyword = fields.Char(string="检索关键词")
     sourcing_image_url = fields.Char(string="找货参考图片")
     sourcing_offer_ids = fields.One2many(
-        "product.intelligence.sourcing.offer", "candidate_id", string="1688 货源报价", copy=False,
+        "product.intelligence.sourcing.offer", "candidate_id", string="货源报价", copy=False,
     )
     sourcing_offer_count = fields.Integer(string="货源数量", compute="_compute_sourcing_offer_count")
     source_insight_ids = fields.One2many(
@@ -356,6 +359,32 @@ class ProductIntelligenceCandidateSourcing(models.Model):
         )
         return {"type": "ir.actions.act_url", "url": url, "target": "new"}
 
+    def action_open_yiwugo_search(self):
+        self.ensure_one()
+        keyword = self.sourcing_keyword or self.keyword_text or self.name
+        if not keyword:
+            raise UserError(_("请先填写检索关键词。"))
+        if not self.sourcing_keyword:
+            self.sourcing_keyword = keyword
+        url = (
+            "https://www.yiwugo.com/search?q=%s&pih_candidate_id=%s"
+            "&pih_search_mode=keyword" % (quote_from_bytes(keyword.encode("utf-8")), self.id)
+        )
+        return {"type": "ir.actions.act_url", "url": url, "target": "new"}
+
+    def action_open_yiwugo_image_search(self):
+        self.ensure_one()
+        image_url = self.sourcing_image_url or self.image_url or self.original_image_url
+        if not image_url:
+            raise UserError(_("当前产品没有可用于找货的参考图片。"))
+        if not self.sourcing_image_url:
+            self.sourcing_image_url = image_url
+        url = (
+            "https://www.yiwugo.com/search/imgsearch.html?imageRetrievalMethod=fg_clip2"
+            "&pih_candidate_id=%s&pih_search_mode=image" % self.id
+        )
+        return {"type": "ir.actions.act_url", "url": url, "target": "new"}
+
     def action_view_sourcing_offers(self):
         self.ensure_one()
         action = self.env.ref(
@@ -394,7 +423,10 @@ class ProductIntelligenceCandidateSourcing(models.Model):
                 "supplier_rank": 1,
                 "website": offer.supplier_url or offer.product_url,
                 "phone": offer.contact_phone,
-                "comment": _("1688货源商品：%(name)s\n%(url)s\n%(details)s") % {
+                "comment": _("%(platform)s货源商品：%(name)s\n%(url)s\n%(details)s") % {
+                    "platform": dict(offer._fields["platform"].selection).get(
+                        offer.platform, offer.platform
+                    ),
                     "name": offer.name,
                     "url": offer.product_url or "",
                     "details": offer.contact_details or "",
