@@ -384,7 +384,7 @@ class ProductIntelligenceCandidateSourcing(models.Model):
         image_query = quote_from_bytes(image_url.encode("utf-8"), safe="")
         url = (
             "https://www.yiwugo.com/search/imgsearch.html?url=%s"
-            "&imageRetrievalMethod=fg_clip2&pih_candidate_id=%s&pih_search_mode=image"
+            "&imageRetrievalMethod=fg_clip2_new&pih_candidate_id=%s&pih_search_mode=image"
             % (image_query, self.id)
         )
         return {"type": "ir.actions.act_url", "url": url, "target": "new"}
