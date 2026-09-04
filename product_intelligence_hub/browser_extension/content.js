@@ -463,6 +463,12 @@ async function uploadSourcingReferenceImage(){
   if(!match) return;
   const imageUrl=`${match[1]}sourcing-image/${match[2]}/${candidateId}`;
   if(location.hostname.endsWith('yiwugo.com')){
+    // A URL supplied by Odoo is processed automatically by YiwuGo. Do not
+    // inject it again or click Search a second time.
+    if(params.get('url')){
+      sessionStorage.setItem(searchGuard,'1');
+      return;
+    }
     try{
       const infoUrl=`${match[1]}sourcing-image-info/${match[2]}/${candidateId}`;
       const response=await fetch(infoUrl,{credentials:'omit',headers:{'Authorization':`Bearer ${saved.token}`}});
