@@ -49,6 +49,11 @@ document.querySelector('#push').addEventListener('click', async () => {
       result=await captureFromTab(tab.id);
     }
     if(!result?.items?.length) throw new Error('当前页面没有识别到商品，请向下滚动加载商品后重试');
+    if(isYiwugo){
+      status.textContent=`识别到 ${result.items.length} 件，正在补充商家联系方式…`;
+      const enriched=await chrome.runtime.sendMessage({type:'PIH_ENRICH_YIWUGO_CONTACTS',items:result.items});
+      if(enriched?.items?.length) result.items=enriched.items;
+    }
     status.textContent=`识别到 ${result.items.length} 件，正在推送…`;
     const pushUrl=(is1688||isYiwugo)?apiUrl(ep,'sourcing-result'):ep;
     const payload=(is1688||isYiwugo)?{
