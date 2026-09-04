@@ -120,7 +120,7 @@ class MediaModel(models.Model):
     ], string="媒体类型", required=True)
     provider = fields.Selection([
         ("openai", "OpenAI"), ("fal", "fal.ai"), ("dashscope", "阿里云百炼/万相"),
-        ("tencent", "腾讯混元"),
+        ("tencent", "腾讯混元"), ("vidu", "Vidu"), ("qianfan", "百度千帆/蒸汽机"),
         ("bfl", "Black Forest Labs"),
         ("runway", "Runway"), ("ffmpeg", "自建 FFmpeg"),
         ("creatomate", "Creatomate"), ("shotstack", "Shotstack"),
@@ -307,6 +307,7 @@ class ContentVariant(models.Model):
             "openai": "ai.openai_key", "fal": "ai.fal_key",
             "dashscope": "ai.dashscope_key",
             "tencent": "ai.tencent_secret_key",
+            "vidu": "ai.vidu_key", "qianfan": "ai.qianfan_key",
             "bfl": "ai.bfl_key", "runway": "ai.runway_key",
         }.get(media_model.provider)
         key = parameter and self.env["ir.config_parameter"].sudo().get_param(parameter)
@@ -465,6 +466,99 @@ class ContentVariant(models.Model):
                 raise ValueError("%s: %s" % (status.get("ErrorCode"), status.get("ErrorMessage")))
             time.sleep(5)
         raise ValueError("Tencent video generation timed out")
+
+    def _vidu_submit_and_wait(self, media_model, prompt, timeout=600):
+        self.ensure_one()
+        api_key = self._media_api_key(media_model)
+        endpoint = (media_model.api_base_url or "https://api.vidu.com").rstrip("/")
+        headers = {"Authorization": "Token %s" % api_key, "Content-Type": "application/json"}
+        submit = requests.post("%s/ent/v2/img2video" % endpoint, headers=headers, json={
+            "model": media_model.model_code,
+            "images": [self._source_image_data_url()],
+            "prompt": prompt[:5000], "duration": 5, "resolution": "720p",
+            "movement_amplitude": "auto", "off_peak": False,
+        }, timeout=60)
+        submit.raise_for_status()
+        task_id = submit.json().get("task_id")
+        if not task_id:
+            raise ValueError("Vidu response did not contain task_id")
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            response = requests.get(
+                "%s/ent/v2/tasks/%s/creations" % (endpoint, task_id), headers=headers, timeout=30,
+            )
+            response.raise_for_status()
+            result = response.json()
+            state = (result.get("state") or result.get("status") or "").lower()
+            creations = result.get("creations") or []
+            if creations:
+                video_url = creations[0].get("url") or creations[0].get("video_url")
+                if video_url:
+                    return video_url
+            if state in ("failed", "failure", "cancelled"):
+                raise ValueError(result.get("err_code") or result.get("message") or str(result))
+            time.sleep(5)
+        raise ValueError("Vidu video generation timed out")
+
+    @api.model
+    def _find_video_url(self, value):
+        if isinstance(value, dict):
+            for key in ("video_url", "videoUrl"):
+                candidate = value.get(key)
+                if isinstance(candidate, str) and candidate.startswith(("http://", "https://")):
+                    return candidate
+            candidate = value.get("url")
+            mimetype = str(value.get("mime_type") or value.get("content_type") or "").lower()
+            if (
+                isinstance(candidate, str)
+                and candidate.startswith(("http://", "https://"))
+                and ("video" in mimetype or ".mp4" in candidate.lower())
+            ):
+                return candidate
+            for nested in value.values():
+                candidate = self._find_video_url(nested)
+                if candidate:
+                    return candidate
+        elif isinstance(value, list):
+            for nested in value:
+                candidate = self._find_video_url(nested)
+                if candidate:
+                    return candidate
+        return False
+
+    def _qianfan_submit_and_wait(self, media_model, prompt, timeout=600):
+        self.ensure_one()
+        api_key = self._media_api_key(media_model)
+        endpoint = (media_model.api_base_url or "https://qianfan.baidubce.com").rstrip("/")
+        headers = {"Authorization": "Bearer %s" % api_key, "Content-Type": "application/json"}
+        submit = requests.post("%s/video/generations" % endpoint, headers=headers, json={
+            "model": media_model.model_code,
+            "content": [
+                {"type": "text", "text": prompt[:500]},
+                {"type": "image_url", "image_url": {"url": self._source_image_data_url()}},
+            ],
+            "duration": 5, "watermark": False,
+        }, timeout=60)
+        submit.raise_for_status()
+        task_id = submit.json().get("task_id")
+        if not task_id:
+            raise ValueError("Baidu response did not contain task_id")
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            response = requests.get(
+                "%s/beta/video/generations/qianfan-video" % endpoint,
+                headers=headers, params={"task_id": task_id, "model": media_model.model_code}, timeout=30,
+            )
+            response.raise_for_status()
+            result = response.json()
+            video_url = self._find_video_url(result)
+            if video_url:
+                return video_url
+            state = str(result.get("status") or result.get("state") or "").lower()
+            if state in ("failed", "failure", "fail", "cancelled"):
+                raise ValueError(result.get("message") or result.get("error_msg") or str(result))
+            time.sleep(5)
+        raise ValueError("Baidu video generation timed out")
 
     @api.model
     def _response_output_text(self, response_data):
@@ -777,8 +871,8 @@ class ContentVariant(models.Model):
     def action_generate_social_video(self):
         for variant in self:
             media_model = variant.channel_id.video_model_id
-            if not media_model or media_model.provider not in ("fal", "dashscope", "tencent"):
-                raise UserError(_("请选择已接入的 fal.ai、阿里云万相或腾讯混元视频模型。"))
+            if not media_model or media_model.provider not in ("fal", "dashscope", "tencent", "vidu", "qianfan"):
+                raise UserError(_("请选择已经接入的视频生成模型。"))
             if media_model.deprecated:
                 raise UserError(_("所选视频模型已停用，请更换模型。"))
             variant.write({"video_ai_state": "processing", "video_ai_model": media_model.model_code})
@@ -788,12 +882,17 @@ class ContentVariant(models.Model):
                     "Preserve the real product identity, shape, colors, materials and proportions.",
                 ]))
                 if media_model.provider == "fal":
-                    result = variant._fal_submit_and_wait(media_model, {
+                    fal_payload = {
                         "prompt": prompt,
                         "image_url": variant._source_image_data_url(),
                         "duration": "5",
                         "aspect_ratio": variant.channel_id.image_ratio.replace("_", ":"),
-                    })
+                    }
+                    if "minimax" in media_model.model_code:
+                        fal_payload.update({"duration": 6})
+                    elif "seedance" in media_model.model_code:
+                        fal_payload.update({"resolution": "720p", "generate_audio": True})
+                    result = variant._fal_submit_and_wait(media_model, fal_payload)
                     video = result.get("video") or (result.get("videos") or [{}])[0]
                     video_url = video.get("url") if isinstance(video, dict) else video
                 elif media_model.provider == "dashscope":
@@ -810,9 +909,13 @@ class ContentVariant(models.Model):
                     })
                     output = result.get("output") or {}
                     video_url = output.get("video_url") or (output.get("video") or {}).get("url")
-                else:
+                elif media_model.provider == "tencent":
                     result = variant._tencent_submit_and_wait(media_model, prompt)
                     video_url = result.get("ResultVideoUrl")
+                elif media_model.provider == "vidu":
+                    video_url = variant._vidu_submit_and_wait(media_model, prompt)
+                else:
+                    video_url = variant._qianfan_submit_and_wait(media_model, prompt)
                 if not video_url:
                     raise ValueError("Video API response did not contain a video URL")
                 download = requests.get(video_url, timeout=180)
