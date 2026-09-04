@@ -392,17 +392,16 @@ function captureYiwugo(){
   const candidateId=Number(params.get('pih_candidate_id')||0);
   if(candidateId) chrome.storage.local.set({lastYiwugoCandidateId:candidateId});
   const items=[],seen=new Set();
-  const links=[...document.querySelectorAll('a[href*="/product/detail/"]')];
-  for(const link of links){
+  // YiwuGo renders two product links per tile (image + information). Iterate
+  // the tile itself so every record reads only its own product fields.
+  const cards=[...document.querySelectorAll('.tile-item')];
+  for(const card of cards){
+    const productLinks=[...card.querySelectorAll('a[href*="/product/detail/"]')];
+    const link=productLinks.find(node=>(node.innerText||'').trim())||productLinks[0];
+    if(!link) continue;
     const url=absoluteUrl(link.getAttribute('href')||'');
     const id=(url.match(/\/product\/detail\/(\d+)\.html/i)||[])[1]||'';
     if(!id||seen.has(id)) continue;
-    let card=link;
-    for(let i=0;i<8&&card?.parentElement;i++,card=card.parentElement){
-      const count=card.querySelectorAll('a[href*="/product/detail/"]').length;
-      const cardText=(card.innerText||'').trim();
-      if(count===1&&cardText.length>20&&cardText.length<1500) break;
-    }
     const rawText=card?.innerText||link.innerText||'';
     const lines=rawText.split('\n').map(value=>value.replace(/\s+/g,' ').trim()).filter(Boolean);
     const text=lines.join(' ');
@@ -432,6 +431,20 @@ function captureYiwugo(){
     if(items.length>=100) break;
   }
   return {candidate_id:candidateId,items,source_insights:[]};
+}
+function captureYiwugoSupplierContact(){
+  const lines=(document.body?.innerText||'').split(/\n+/).map(value=>value.replace(/\s+/g,' ').trim()).filter(Boolean);
+  const email=(lines.join('\n').match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/)||[])[0]||'';
+  const mobile=(lines.join('\n').match(/(?:^|\D)(1[3-9]\d{9})(?!\d)/m)||[])[1]||'';
+  const landline=(lines.join('\n').match(/(?:^|\D)(0\d{2,3}[- ]?\d{7,8})(?!\d)/m)||[])[1]||'';
+  const contactIndex=lines.findIndex(value=>value===mobile||value===landline||value===email);
+  const before=contactIndex>0?lines.slice(Math.max(0,contactIndex-8),contactIndex):[];
+  const name=[...before].reverse().find(value=>/^[\u4e00-\u9fff·]{2,8}$/.test(value)&&!/客服|关注|消息|注册|登录/.test(value))||'';
+  const numeric=lines.slice(Math.max(0,contactIndex),contactIndex+10)
+    .filter(value=>/^\d{5,12}$/.test(value)&&value!==mobile&&value!==landline);
+  const qq=[...new Set(numeric)].join('、');
+  return {contact_name:name,contact_phone:mobile,contact_landline:landline,contact_email:email,contact_qq:qq,
+    contact_details:[name&&`联系人：${name}`,mobile&&`手机：${mobile}`,landline&&`座机：${landline}`,email&&`邮箱：${email}`,qq&&`QQ：${qq}`].filter(Boolean).join('\n')};
 }
 function rememberCandidateContext(){
   const params=new URL(location.href).searchParams;
@@ -501,4 +514,5 @@ chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
   if(message?.type==='PIH_DETAIL_V110') sendResponse(captureAlibabaDetail());
   if(message?.type==='PIH_1688_CAPTURE_V109') sendResponse(capture1688());
   if(message?.type==='PIH_YIWUGO_CAPTURE_V100') sendResponse(captureYiwugo());
+  if(message?.type==='PIH_YIWUGO_SUPPLIER_CONTACT_V100') sendResponse(captureYiwugoSupplierContact());
 });
