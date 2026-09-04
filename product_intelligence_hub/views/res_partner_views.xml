@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_product_intelligence_source" model="ir.ui.view">
+        <field name="name">res.partner.form.product.intelligence.source</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_pi_sourcing_offer" type="object"
+                        class="oe_stat_button" icon="fa-external-link"
+                        invisible="not pi_sourcing_offer_id">
+                    <span class="o_stat_text">货源详情</span>
+                </button>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="货源与联系方式" name="pi_sourcing_contact" invisible="not pi_sourcing_offer_id">
+                    <group>
+                        <group string="数据来源">
+                            <field name="pi_sourcing_offer_id"/>
+                            <field name="pi_source_platform"/>
+                            <field name="pi_supplier_homepage" widget="url"/>
+                            <field name="pi_source_product_url" widget="url"/>
+                            <field name="pi_contact_enrichment_state"/>
+                        </group>
+                        <group string="商家联系方式">
+                            <field name="pi_contact_name"/>
+                            <field name="phone"/>
+                            <field name="pi_contact_landline"/>
+                            <field name="email" widget="email"/>
+                            <field name="pi_contact_qq"/>
+                            <button name="action_queue_pi_supplier_contact" type="object"
+                                    string="加入商家信息补充队列" class="btn-primary"
+                                    invisible="pi_source_platform != 'yiwugo'"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
