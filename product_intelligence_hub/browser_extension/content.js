@@ -467,7 +467,7 @@ async function uploadSourcingReferenceImage(){
   for(let i=0;i<40&&!input;i++){
     input=document.querySelector('input[type="file"][accept*="image"],input[type="file"]');
     if(!input){
-      const camera=isYiwugo ? document.querySelector('#ico-img-search')
+      const camera=isYiwugo ? document.querySelector('#ico-img-search, .camera-wrap img[src*="xiangji.png"]')
         : [...document.querySelectorAll('button,a,[role="button"],span,i')]
           .find(node=>/(以图搜|图片搜索|搜图|camera)/i.test(node.getAttribute('aria-label')||node.getAttribute('title')||node.textContent||node.className||''));
       camera?.click();
