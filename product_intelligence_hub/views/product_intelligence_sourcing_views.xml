@@ -58,6 +58,8 @@
                 <field name="estimated_profit"/>
                 <field name="estimated_margin_percent" widget="percentage"/>
                 <field name="contact_phone" optional="show"/>
+                <field name="contact_email" optional="hide"/>
+                <field name="contact_qq" optional="hide"/>
                 <field name="product_url" widget="url" optional="show"/>
                 <button name="action_set_preferred" type="object" string="设为主推荐" icon="fa-star" invisible="is_preferred"/>
                 <button name="action_toggle_backup" type="object" string="设为备选" icon="fa-bookmark-o" invisible="is_preferred or is_backup"/>
@@ -103,6 +105,9 @@
                             <field name="supplier_location"/>
                             <field name="contact_name"/>
                             <field name="contact_phone"/>
+                            <field name="contact_landline"/>
+                            <field name="contact_email" widget="email"/>
+                            <field name="contact_qq"/>
                             <field name="contact_details"/>
                             <field name="supplier_partner_id"/>
                             <field name="supplierinfo_id"/>
