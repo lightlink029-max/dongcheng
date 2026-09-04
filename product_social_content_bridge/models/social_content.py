@@ -117,7 +117,8 @@ class MediaModel(models.Model):
         ("image", "图片生成"), ("video", "视频生成"),
     ], string="媒体类型", required=True)
     provider = fields.Selection([
-        ("openai", "OpenAI"), ("fal", "fal.ai"), ("bfl", "Black Forest Labs"),
+        ("openai", "OpenAI"), ("fal", "fal.ai"), ("dashscope", "阿里云百炼/万相"),
+        ("bfl", "Black Forest Labs"),
         ("runway", "Runway"), ("ffmpeg", "自建 FFmpeg"),
         ("creatomate", "Creatomate"), ("shotstack", "Shotstack"),
         ("custom", "自定义接口"),
@@ -301,6 +302,7 @@ class ContentVariant(models.Model):
     def _media_api_key(self, media_model):
         parameter = media_model.api_key_parameter or {
             "openai": "ai.openai_key", "fal": "ai.fal_key",
+            "dashscope": "ai.dashscope_key",
             "bfl": "ai.bfl_key", "runway": "ai.runway_key",
         }.get(media_model.provider)
         key = parameter and self.env["ir.config_parameter"].sudo().get_param(parameter)
@@ -345,6 +347,39 @@ class ContentVariant(models.Model):
     def _source_image_data_url(self):
         raw, _filename, mimetype = self._source_product_image()
         return "data:%s;base64,%s" % (mimetype, base64.b64encode(raw).decode())
+
+    def _dashscope_submit_and_wait(self, media_model, payload, timeout=600):
+        self.ensure_one()
+        api_key = self._media_api_key(media_model)
+        endpoint = (media_model.api_base_url or
+                    "https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis")
+        headers = {
+            "Authorization": "Bearer %s" % api_key,
+            "Content-Type": "application/json",
+            "X-DashScope-Async": "enable",
+        }
+        submit = requests.post(endpoint, headers=headers, json=payload, timeout=60)
+        submit.raise_for_status()
+        task_id = (submit.json().get("output") or {}).get("task_id")
+        if not task_id:
+            raise ValueError("DashScope response did not contain task_id")
+        api_root = endpoint.split("/services/", 1)[0]
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            status = requests.get(
+                "%s/tasks/%s" % (api_root, task_id),
+                headers={"Authorization": "Bearer %s" % api_key}, timeout=30,
+            )
+            status.raise_for_status()
+            result = status.json()
+            output = result.get("output") or {}
+            state = (output.get("task_status") or "").upper()
+            if state == "SUCCEEDED":
+                return result
+            if state in ("FAILED", "CANCELED", "UNKNOWN"):
+                raise ValueError(output.get("message") or result.get("message") or str(result))
+            time.sleep(5)
+        raise ValueError("DashScope generation timed out")
 
     @api.model
     def _response_output_text(self, response_data):
@@ -657,8 +692,8 @@ class ContentVariant(models.Model):
     def action_generate_social_video(self):
         for variant in self:
             media_model = variant.channel_id.video_model_id
-            if not media_model or media_model.provider != "fal":
-                raise UserError(_("请选择已接入的 fal.ai 视频模型。"))
+            if not media_model or media_model.provider not in ("fal", "dashscope"):
+                raise UserError(_("请选择已接入的 fal.ai 或阿里云万相视频模型。"))
             if media_model.deprecated:
                 raise UserError(_("所选视频模型已停用，请更换模型。"))
             variant.write({"video_ai_state": "processing", "video_ai_model": media_model.model_code})
@@ -667,16 +702,31 @@ class ContentVariant(models.Model):
                     variant.video_script, variant.caption,
                     "Preserve the real product identity, shape, colors, materials and proportions.",
                 ]))
-                result = variant._fal_submit_and_wait(media_model, {
-                    "prompt": prompt,
-                    "image_url": variant._source_image_data_url(),
-                    "duration": "5",
-                    "aspect_ratio": variant.channel_id.image_ratio.replace("_", ":"),
-                })
-                video = result.get("video") or (result.get("videos") or [{}])[0]
-                video_url = video.get("url") if isinstance(video, dict) else video
+                if media_model.provider == "fal":
+                    result = variant._fal_submit_and_wait(media_model, {
+                        "prompt": prompt,
+                        "image_url": variant._source_image_data_url(),
+                        "duration": "5",
+                        "aspect_ratio": variant.channel_id.image_ratio.replace("_", ":"),
+                    })
+                    video = result.get("video") or (result.get("videos") or [{}])[0]
+                    video_url = video.get("url") if isinstance(video, dict) else video
+                else:
+                    result = variant._dashscope_submit_and_wait(media_model, {
+                        "model": media_model.model_code,
+                        "input": {
+                            "prompt": prompt[:5000],
+                            "media": [{"type": "first_frame", "url": variant._source_image_data_url()}],
+                        },
+                        "parameters": {
+                            "resolution": "720P", "duration": 5,
+                            "prompt_extend": True, "watermark": False,
+                        },
+                    })
+                    output = result.get("output") or {}
+                    video_url = output.get("video_url") or (output.get("video") or {}).get("url")
                 if not video_url:
-                    raise ValueError("fal.ai response did not contain a video URL")
+                    raise ValueError("Video API response did not contain a video URL")
                 download = requests.get(video_url, timeout=180)
                 download.raise_for_status()
                 attachment = self.env["ir.attachment"].create({

@@ -43,6 +43,16 @@
         <field name="sequence">30</field>
         <field name="notes">高质量商品视频备用模型；成本较高。</field>
     </record>
+    <record id="media_model_dashscope_wan_27" model="psc.media.model">
+        <field name="name">阿里云万相 Wan 2.7（国内）</field>
+        <field name="media_type">video</field>
+        <field name="provider">dashscope</field>
+        <field name="model_code">wan2.7-i2v</field>
+        <field name="api_base_url">https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis</field>
+        <field name="api_key_parameter">ai.dashscope_key</field>
+        <field name="sequence">15</field>
+        <field name="notes">国内图生视频模型。使用前在阿里云百炼开通模型，并配置系统参数 ai.dashscope_key。</field>
+    </record>
     <record id="media_model_openai_sora_2_legacy" model="psc.media.model">
         <field name="name">OpenAI Sora 2（即将停用）</field>
         <field name="media_type">video</field>
