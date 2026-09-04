@@ -1,6 +1,7 @@
 import json
 import logging
 import base64
+import binascii
 import hashlib
 import hmac
 import mimetypes
@@ -47,19 +48,33 @@ class MediaAsset(models.Model):
     channel_id = fields.Many2one("psc.publishing.channel", string="适用渠道")
     usage_instructions = fields.Text(string="使用说明", translate=True)
 
+    def _uploaded_file_size(self):
+        self.ensure_one()
+        file_data = self.with_context(bin_size=False).file_data or b""
+        try:
+            return len(base64.b64decode(file_data, validate=True))
+        except (binascii.Error, TypeError, ValueError):
+            attachment = self.env["ir.attachment"].sudo().search([
+                ("res_model", "=", self._name),
+                ("res_id", "=", self.id),
+                ("res_field", "=", "file_data"),
+            ], limit=1)
+            return attachment.file_size or 0
+
     @api.depends("file_data", "file_name")
     def _compute_file_info(self):
         for asset in self:
-            raw = base64.b64decode(asset.file_data or b"")
-            asset.file_size = len(raw)
+            # Form saves are read back with ``bin_size=True``. In that context a
+            # Binary field may contain a display value such as ``"12.4 Kb"``
+            # instead of base64 content, so explicitly fetch the real payload.
+            asset.file_size = asset._uploaded_file_size()
             asset.mimetype = mimetypes.guess_type(asset.file_name or "")[0] or "application/octet-stream"
             asset.is_image = asset.mimetype.startswith("image/")
 
     @api.constrains("file_data", "file_name", "asset_type")
     def _check_file(self):
         for asset in self:
-            raw = base64.b64decode(asset.file_data or b"")
-            if len(raw) > MAX_ASSET_BYTES:
+            if asset._uploaded_file_size() > MAX_ASSET_BYTES:
                 raise UserError(_("单个素材不能超过 50 MB。"))
             mimetype = mimetypes.guess_type(asset.file_name or "")[0] or ""
             if asset.asset_type in ("image_template", "reference_image", "logo", "packaging") and not mimetype.startswith("image/"):
