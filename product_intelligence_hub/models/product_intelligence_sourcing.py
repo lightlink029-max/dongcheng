@@ -34,6 +34,9 @@ class ProductIntelligenceSourcingOffer(models.Model):
     supplier_url = fields.Char(string="供应商主页")
     contact_name = fields.Char(string="联系人")
     contact_phone = fields.Char(string="联系电话")
+    contact_landline = fields.Char(string="座机")
+    contact_email = fields.Char(string="邮箱")
+    contact_qq = fields.Char(string="QQ")
     contact_details = fields.Text(string="联系方式/备注")
     supplier_location = fields.Char(string="所在地")
     price_text = fields.Char(string="页面价格")
@@ -423,14 +426,16 @@ class ProductIntelligenceCandidateSourcing(models.Model):
                 "company_type": "company",
                 "supplier_rank": 1,
                 "website": offer.supplier_url or offer.product_url,
-                "phone": offer.contact_phone,
+                "mobile": offer.contact_phone,
+                "phone": offer.contact_landline or offer.contact_phone,
+                "email": offer.contact_email,
                 "comment": _("%(platform)s货源商品：%(name)s\n%(url)s\n%(details)s") % {
                     "platform": dict(offer._fields["platform"].selection).get(
                         offer.platform, offer.platform
                     ),
                     "name": offer.name,
                     "url": offer.product_url or "",
-                    "details": offer.contact_details or "",
+                    "details": "\n".join(filter(None, [offer.contact_details or "", f"QQ: {offer.contact_qq}" if offer.contact_qq else ""])),
                 },
             }
             if partner:
