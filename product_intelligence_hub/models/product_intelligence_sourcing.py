@@ -38,6 +38,10 @@ class ProductIntelligenceSourcingOffer(models.Model):
     contact_email = fields.Char(string="邮箱")
     contact_qq = fields.Char(string="QQ")
     contact_details = fields.Text(string="联系方式/备注")
+    contact_enrichment_state = fields.Selection([
+        ("none", "未加入"), ("queued", "等待补充"),
+        ("done", "已完成"), ("failed", "失败"),
+    ], string="商家信息状态", default="none", copy=False, index=True)
     supplier_location = fields.Char(string="所在地")
     price_text = fields.Char(string="页面价格")
     currency_id = fields.Many2one(
@@ -245,6 +249,11 @@ class ProductIntelligenceSourcingOffer(models.Model):
             raise UserError(_("该货源没有商品链接。"))
         return {"type": "ir.actions.act_url", "url": self.product_url, "target": "new"}
 
+    def action_queue_supplier_contacts(self):
+        offers = self.filtered(lambda item: item.platform == "yiwugo" and item.supplier_url)
+        offers.write({"contact_enrichment_state": "queued"})
+        return True
+
 
 class ProductIntelligenceSourceInsight(models.Model):
     _name = "product.intelligence.source.insight"
@@ -306,7 +315,6 @@ class ProductSupplierInfo(models.Model):
             "res_id": self.pi_sourcing_offer_id.id,
             "target": "current",
         }
-
 
 class ProductIntelligenceCandidateSourcing(models.Model):
     _inherit = "product.intelligence.candidate"
