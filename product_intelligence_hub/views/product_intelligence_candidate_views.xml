@@ -238,6 +238,8 @@
                                     <field name="minimum_order_qty"/>
                                     <field name="sales_text" optional="show"/>
                                     <field name="contact_phone" optional="show"/>
+                                    <field name="contact_email" optional="hide"/>
+                                    <field name="contact_qq" optional="hide"/>
                                     <field name="domestic_freight" optional="show"/>
                                     <field name="estimated_total_cost" readonly="1"/>
                                     <field name="estimated_profit" readonly="1"/>
