@@ -1,7 +1,11 @@
 import json
 import logging
+import base64
+import mimetypes
+from io import BytesIO
 
 import requests
+from PIL import Image, ImageOps
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -11,7 +15,56 @@ from odoo.tools import html2plaintext
 _logger = logging.getLogger(__name__)
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
+OPENAI_IMAGES_EDIT_URL = "https://api.openai.com/v1/images/edits"
 DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
+DEFAULT_OPENAI_IMAGE_MODEL = "gpt-image-2"
+MAX_ASSET_BYTES = 50 * 1024 * 1024
+
+
+class MediaAsset(models.Model):
+    _name = "psc.media.asset"
+    _description = "内容模板与素材"
+    _order = "sequence, name"
+
+    name = fields.Char(string="素材名称", required=True)
+    sequence = fields.Integer(default=10)
+    active = fields.Boolean(default=True)
+    asset_type = fields.Selection([
+        ("image_template", "图片模板"), ("video_template", "视频模板"),
+        ("reference_image", "参考图片"), ("logo", "品牌Logo"),
+        ("packaging", "包装图片"), ("video_clip", "视频片段"),
+        ("audio", "音频素材"),
+    ], string="素材类型", required=True, default="reference_image")
+    file_data = fields.Binary(string="本地文件", required=True, attachment=True)
+    file_name = fields.Char(string="文件名", required=True)
+    mimetype = fields.Char(string="文件类型", compute="_compute_file_info", store=True)
+    file_size = fields.Integer(string="文件大小（字节）", compute="_compute_file_info", store=True)
+    is_image = fields.Boolean(string="图片素材", compute="_compute_file_info", store=True)
+    product_line_id = fields.Many2one("psc.product.line", string="品牌/产品线")
+    channel_id = fields.Many2one("psc.publishing.channel", string="适用渠道")
+    usage_instructions = fields.Text(string="使用说明", translate=True)
+
+    @api.depends("file_data", "file_name")
+    def _compute_file_info(self):
+        for asset in self:
+            raw = base64.b64decode(asset.file_data or b"")
+            asset.file_size = len(raw)
+            asset.mimetype = mimetypes.guess_type(asset.file_name or "")[0] or "application/octet-stream"
+            asset.is_image = asset.mimetype.startswith("image/")
+
+    @api.constrains("file_data", "file_name", "asset_type")
+    def _check_file(self):
+        for asset in self:
+            raw = base64.b64decode(asset.file_data or b"")
+            if len(raw) > MAX_ASSET_BYTES:
+                raise UserError(_("单个素材不能超过 50 MB。"))
+            mimetype = mimetypes.guess_type(asset.file_name or "")[0] or ""
+            if asset.asset_type in ("image_template", "reference_image", "logo", "packaging") and not mimetype.startswith("image/"):
+                raise UserError(_("图片模板和图片素材只能上传图片文件。"))
+            if asset.asset_type in ("video_template", "video_clip") and not mimetype.startswith("video/"):
+                raise UserError(_("视频模板和视频片段只能上传视频文件。"))
+            if asset.asset_type == "audio" and not mimetype.startswith("audio/"):
+                raise UserError(_("音频素材只能上传音频文件。"))
 
 
 class ProductLine(models.Model):
@@ -68,6 +121,13 @@ class PublishingChannel(models.Model):
     image_ratio = fields.Selection([("1_1", "1:1"), ("4_5", "4:5"), ("9_16", "9:16")], default="1_1")
     max_caption_length = fields.Integer(string="文案字数限制", default=2200)
     default_instructions = fields.Text(string="渠道内容规则", translate=True)
+    image_quality = fields.Selection([
+        ("low", "低（测试/省费用）"), ("medium", "中（推荐）"), ("high", "高"),
+    ], string="图片质量", default="medium", required=True)
+    template_asset_ids = fields.Many2many(
+        "psc.media.asset", "psc_channel_template_asset_rel", "channel_id", "asset_id",
+        string="默认模板与素材",
+    )
 
 
 class PublishingProject(models.Model):
@@ -92,6 +152,10 @@ class PublishingProject(models.Model):
     content_ids = fields.One2many("psc.content.variant", "project_id", string="渠道内容")
     content_count = fields.Integer(compute="_compute_content_count")
     ai_model = fields.Char(string="AI模型", default=DEFAULT_OPENAI_MODEL)
+    material_asset_ids = fields.Many2many(
+        "psc.media.asset", "psc_project_material_asset_rel", "project_id", "asset_id",
+        string="项目模板与素材",
+    )
 
     @api.depends("content_ids")
     def _compute_content_count(self):
@@ -149,7 +213,12 @@ class ContentVariant(models.Model):
     hashtags = fields.Char(string="标签")
     video_script = fields.Text(string="短视频脚本", translate=True)
     image_attachment_id = fields.Many2one("ir.attachment", string="发布图片")
+    generated_image = fields.Binary(related="image_attachment_id.datas", string="图片预览", readonly=True)
     video_attachment_id = fields.Many2one("ir.attachment", string="发布视频")
+    material_asset_ids = fields.Many2many(
+        "psc.media.asset", "psc_content_material_asset_rel", "content_id", "asset_id",
+        string="本次使用的模板与素材",
+    )
     state = fields.Selection([
         ("draft", "草稿"), ("ready", "待发布"),
         ("published", "已发布"), ("failed", "失败"),
@@ -165,6 +234,11 @@ class ContentVariant(models.Model):
     ai_input_tokens = fields.Integer(string="输入Token", readonly=True)
     ai_output_tokens = fields.Integer(string="输出Token", readonly=True)
     image_prompt = fields.Text(string="图片素材提示词", translate=True)
+    image_ai_state = fields.Selection([
+        ("pending", "待生成"), ("done", "已生成"), ("failed", "生成失败"),
+    ], string="图片生成状态", default="pending", required=True, readonly=True)
+    image_ai_model = fields.Char(string="图片模型", readonly=True)
+    image_generated_at = fields.Datetime(string="图片生成时间", readonly=True)
 
     _variant_unique = models.Constraint(
         "UNIQUE(project_id, product_id, market_id, channel_id)",
@@ -310,6 +384,141 @@ class ContentVariant(models.Model):
                 variant.write({
                     "ai_state": "failed",
                     "ai_model": payload["model"],
+                    "error_message": detail[:2000],
+                })
+        return True
+
+    def _source_product_image(self):
+        self.ensure_one()
+        encoded = self.product_id.image_1920
+        if not encoded:
+            raise UserError(_("产品没有主图，请先在产品中上传主图。"))
+        try:
+            raw = base64.b64decode(encoded)
+        except (ValueError, TypeError) as error:
+            raise UserError(_("产品主图数据无效。")) from error
+        if raw.startswith(b"\x89PNG"):
+            return raw, "product.png", "image/png"
+        if raw.startswith(b"\xff\xd8"):
+            return raw, "product.jpg", "image/jpeg"
+        if raw[:4] in (b"RIFF", b"WEBP") or raw[8:12] == b"WEBP":
+            return raw, "product.webp", "image/webp"
+        return raw, "product.png", "application/octet-stream"
+
+    def _image_size(self):
+        self.ensure_one()
+        return "1024x1024" if self.channel_id.image_ratio == "1_1" else "1024x1536"
+
+    def _selected_image_inputs(self):
+        self.ensure_one()
+        assets = (
+            self.channel_id.template_asset_ids
+            | self.project_id.material_asset_ids
+            | self.material_asset_ids
+        ).filtered(
+            lambda item: item.active and item.asset_type in ("image_template", "reference_image", "logo", "packaging")
+        ).sorted(lambda item: (item.sequence, item.id))[:4]
+        result = []
+        for asset in assets:
+            raw = base64.b64decode(asset.file_data or b"")
+            if raw:
+                result.append((asset, raw, asset.file_name, asset.mimetype))
+        return result
+
+    def _finalize_social_image(self, raw_image):
+        self.ensure_one()
+        target_sizes = {"1_1": (1080, 1080), "4_5": (1080, 1350), "9_16": (1080, 1920)}
+        target_size = target_sizes.get(self.channel_id.image_ratio, (1080, 1080))
+        with Image.open(BytesIO(raw_image)) as source:
+            image = ImageOps.exif_transpose(source).convert("RGB")
+            image = ImageOps.fit(image, target_size, method=Image.Resampling.LANCZOS)
+            output = BytesIO()
+            image.save(output, format="JPEG", quality=88, optimize=True, progressive=True)
+            return output.getvalue()
+
+    def action_generate_social_image(self):
+        api_key = self._openai_api_key()
+        for variant in self:
+            if variant.ai_state != "done":
+                raise UserError(_("请先生成并确认文字内容，再生成图片素材。"))
+            source_image, filename, mimetype = variant._source_product_image()
+            selected_images = variant._selected_image_inputs()
+            asset_roles = "; ".join(
+                "%s: %s%s" % (index + 2, asset.name, (" — " + asset.usage_instructions) if asset.usage_instructions else "")
+                for index, (asset, _raw, _filename, _mimetype) in enumerate(selected_images)
+            )
+            prompt = "\n".join(filter(None, [
+                variant.image_prompt,
+                "Create a polished commercial social-media product image using the supplied real product photo as the reference.",
+                "Keep the product identity, shape, colors, materials, construction details, and proportions faithful to the reference.",
+                "Do not add logos, certifications, prices, discounts, watermarks, labels, packaging claims, or readable text.",
+                "Use a clean export-commerce composition suitable for %s in the %s market." % (
+                    variant.channel_id.name, variant.market_id.name,
+                ),
+                "Reference image 1 is the real product and must remain the visual source of truth.",
+                ("Additional ordered references/templates: %s" % asset_roles) if asset_roles else "",
+                "Use templates as layout guidance and logos only when explicitly supplied as a logo asset.",
+            ]))
+            try:
+                files = [("image[]", (filename, source_image, mimetype))]
+                files.extend(
+                    ("image[]", (asset_filename, raw, asset_mimetype))
+                    for _asset, raw, asset_filename, asset_mimetype in selected_images
+                )
+                response = requests.post(
+                    OPENAI_IMAGES_EDIT_URL,
+                    headers={"Authorization": "Bearer %s" % api_key},
+                    data={
+                        "model": DEFAULT_OPENAI_IMAGE_MODEL,
+                        "prompt": prompt,
+                        "size": variant._image_size(),
+                        "quality": variant.channel_id.image_quality,
+                        "output_format": "png",
+                    },
+                    files=files,
+                    timeout=180,
+                )
+                response.raise_for_status()
+                response_data = response.json()
+                result = (response_data.get("data") or [{}])[0]
+                if result.get("b64_json"):
+                    generated = base64.b64decode(result["b64_json"])
+                elif result.get("url"):
+                    download = requests.get(result["url"], timeout=90)
+                    download.raise_for_status()
+                    generated = download.content
+                else:
+                    raise ValueError("OpenAI image response did not contain image data")
+                final_image = variant._finalize_social_image(generated)
+                attachment = self.env["ir.attachment"].create({
+                    "name": "social-%s-%s-%s.jpg" % (variant.product_id.id, variant.market_id.id, variant.channel_id.id),
+                    "type": "binary",
+                    "datas": base64.b64encode(final_image),
+                    "mimetype": "image/jpeg",
+                    "res_model": variant._name,
+                    "res_id": variant.id,
+                })
+                previous = variant.image_attachment_id
+                variant.write({
+                    "image_attachment_id": attachment.id,
+                    "image_ai_state": "done",
+                    "image_ai_model": DEFAULT_OPENAI_IMAGE_MODEL,
+                    "image_generated_at": fields.Datetime.now(),
+                    "error_message": False,
+                })
+                if previous and previous != attachment:
+                    previous.unlink()
+            except (requests.RequestException, ValueError, OSError) as error:
+                detail = str(error)
+                if isinstance(error, requests.HTTPError) and error.response is not None:
+                    try:
+                        detail = (error.response.json().get("error") or {}).get("message") or detail
+                    except (ValueError, AttributeError):
+                        pass
+                _logger.exception("OpenAI image generation failed for variant %s", variant.id)
+                variant.write({
+                    "image_ai_state": "failed",
+                    "image_ai_model": DEFAULT_OPENAI_IMAGE_MODEL,
                     "error_message": detail[:2000],
                 })
         return True
