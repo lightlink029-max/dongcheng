@@ -49,9 +49,16 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='delay']" position="after">
                 <field name="pi_sourcing_offer_id" column_invisible="True"/>
+                <field name="pi_source_platform" optional="show"/>
+                <field name="pi_supplier_url" widget="url" optional="show"/>
+                <field name="pi_product_url" widget="url" optional="show"/>
+                <field name="pi_contact_enrichment_state" optional="show"/>
                 <button name="action_open_pi_sourcing_offer" type="object"
                         string="来源详情" icon="fa-external-link"
                         invisible="not pi_sourcing_offer_id"/>
+                <button name="action_queue_pi_supplier_contact" type="object"
+                        string="补充联系方式" icon="fa-address-card"
+                        invisible="not pi_sourcing_offer_id or pi_source_platform != 'yiwugo'"/>
             </xpath>
         </field>
     </record>
