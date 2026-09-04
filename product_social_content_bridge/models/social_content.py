@@ -1,6 +1,8 @@
 import json
 import logging
 import base64
+import hashlib
+import hmac
 import mimetypes
 import time
 from io import BytesIO
@@ -118,6 +120,7 @@ class MediaModel(models.Model):
     ], string="媒体类型", required=True)
     provider = fields.Selection([
         ("openai", "OpenAI"), ("fal", "fal.ai"), ("dashscope", "阿里云百炼/万相"),
+        ("tencent", "腾讯混元"),
         ("bfl", "Black Forest Labs"),
         ("runway", "Runway"), ("ffmpeg", "自建 FFmpeg"),
         ("creatomate", "Creatomate"), ("shotstack", "Shotstack"),
@@ -303,6 +306,7 @@ class ContentVariant(models.Model):
         parameter = media_model.api_key_parameter or {
             "openai": "ai.openai_key", "fal": "ai.fal_key",
             "dashscope": "ai.dashscope_key",
+            "tencent": "ai.tencent_secret_key",
             "bfl": "ai.bfl_key", "runway": "ai.runway_key",
         }.get(media_model.provider)
         key = parameter and self.env["ir.config_parameter"].sudo().get_param(parameter)
@@ -380,6 +384,87 @@ class ContentVariant(models.Model):
                 raise ValueError(output.get("message") or result.get("message") or str(result))
             time.sleep(5)
         raise ValueError("DashScope generation timed out")
+
+    @api.model
+    def _tencent_secret_id(self):
+        secret_id = self.env["ir.config_parameter"].sudo().get_param("ai.tencent_secret_id")
+        if not secret_id:
+            raise UserError(_("尚未配置腾讯云 SecretId，请设置系统参数 ai.tencent_secret_id。"))
+        return secret_id
+
+    def _tencent_api_call(self, media_model, action, payload):
+        self.ensure_one()
+        secret_id = self._tencent_secret_id()
+        secret_key = self._media_api_key(media_model)
+        endpoint = (media_model.api_base_url or "https://vclm.tencentcloudapi.com").rstrip("/")
+        host = endpoint.split("://", 1)[-1].split("/", 1)[0]
+        service = "vclm"
+        timestamp = int(time.time())
+        date = time.strftime("%Y-%m-%d", time.gmtime(timestamp))
+        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        canonical_headers = (
+            "content-type:application/json; charset=utf-8\n"
+            "host:%s\n"
+            "x-tc-action:%s\n" % (host, action.lower())
+        )
+        signed_headers = "content-type;host;x-tc-action"
+        canonical_request = "POST\n/\n\n%s\n%s\n%s" % (
+            canonical_headers, signed_headers, hashlib.sha256(body.encode()).hexdigest(),
+        )
+        credential_scope = "%s/%s/tc3_request" % (date, service)
+        string_to_sign = "TC3-HMAC-SHA256\n%s\n%s\n%s" % (
+            timestamp, credential_scope, hashlib.sha256(canonical_request.encode()).hexdigest(),
+        )
+
+        def sign(key, message):
+            return hmac.new(key, message.encode(), hashlib.sha256).digest()
+
+        secret_date = sign(("TC3" + secret_key).encode(), date)
+        secret_service = sign(secret_date, service)
+        secret_signing = sign(secret_service, "tc3_request")
+        signature = hmac.new(secret_signing, string_to_sign.encode(), hashlib.sha256).hexdigest()
+        authorization = (
+            "TC3-HMAC-SHA256 Credential=%s/%s, SignedHeaders=%s, Signature=%s" %
+            (secret_id, credential_scope, signed_headers, signature)
+        )
+        response = requests.post(endpoint, data=body.encode("utf-8"), headers={
+            "Authorization": authorization,
+            "Content-Type": "application/json; charset=utf-8",
+            "Host": host,
+            "X-TC-Action": action,
+            "X-TC-Version": "2024-05-23",
+            "X-TC-Region": self.env["ir.config_parameter"].sudo().get_param(
+                "ai.tencent_region", "ap-guangzhou"
+            ),
+            "X-TC-Timestamp": str(timestamp),
+        }, timeout=60)
+        response.raise_for_status()
+        result = response.json().get("Response") or {}
+        if result.get("Error"):
+            error = result["Error"]
+            raise ValueError("%s: %s" % (error.get("Code"), error.get("Message")))
+        return result
+
+    def _tencent_submit_and_wait(self, media_model, prompt, timeout=600):
+        self.ensure_one()
+        source_image, _filename, _mimetype = self._source_product_image()
+        result = self._tencent_api_call(media_model, "SubmitImageToVideoGeneralJob", {
+            "Image": {"Base64": base64.b64encode(source_image).decode()},
+            "Prompt": prompt[:200],
+        })
+        job_id = result.get("JobId")
+        if not job_id:
+            raise ValueError("Tencent response did not contain JobId")
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            status = self._tencent_api_call(media_model, "DescribeImageToVideoGeneralJob", {"JobId": job_id})
+            state = (status.get("Status") or "").upper()
+            if state == "DONE":
+                return status
+            if state == "FAIL":
+                raise ValueError("%s: %s" % (status.get("ErrorCode"), status.get("ErrorMessage")))
+            time.sleep(5)
+        raise ValueError("Tencent video generation timed out")
 
     @api.model
     def _response_output_text(self, response_data):
@@ -692,8 +777,8 @@ class ContentVariant(models.Model):
     def action_generate_social_video(self):
         for variant in self:
             media_model = variant.channel_id.video_model_id
-            if not media_model or media_model.provider not in ("fal", "dashscope"):
-                raise UserError(_("请选择已接入的 fal.ai 或阿里云万相视频模型。"))
+            if not media_model or media_model.provider not in ("fal", "dashscope", "tencent"):
+                raise UserError(_("请选择已接入的 fal.ai、阿里云万相或腾讯混元视频模型。"))
             if media_model.deprecated:
                 raise UserError(_("所选视频模型已停用，请更换模型。"))
             variant.write({"video_ai_state": "processing", "video_ai_model": media_model.model_code})
@@ -711,7 +796,7 @@ class ContentVariant(models.Model):
                     })
                     video = result.get("video") or (result.get("videos") or [{}])[0]
                     video_url = video.get("url") if isinstance(video, dict) else video
-                else:
+                elif media_model.provider == "dashscope":
                     result = variant._dashscope_submit_and_wait(media_model, {
                         "model": media_model.model_code,
                         "input": {
@@ -725,6 +810,9 @@ class ContentVariant(models.Model):
                     })
                     output = result.get("output") or {}
                     video_url = output.get("video_url") or (output.get("video") or {}).get("url")
+                else:
+                    result = variant._tencent_submit_and_wait(media_model, prompt)
+                    video_url = result.get("ResultVideoUrl")
                 if not video_url:
                     raise ValueError("Video API response did not contain a video URL")
                 download = requests.get(video_url, timeout=180)

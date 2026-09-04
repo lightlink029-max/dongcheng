@@ -53,6 +53,16 @@
         <field name="sequence">15</field>
         <field name="notes">国内图生视频模型。使用前在阿里云百炼开通模型，并配置系统参数 ai.dashscope_key。</field>
     </record>
+    <record id="media_model_tencent_hunyuan_i2v" model="psc.media.model">
+        <field name="name">腾讯混元图生视频（国内）</field>
+        <field name="media_type">video</field>
+        <field name="provider">tencent</field>
+        <field name="model_code">hunyuan-image-to-video-general</field>
+        <field name="api_base_url">https://vclm.tencentcloudapi.com</field>
+        <field name="api_key_parameter">ai.tencent_secret_key</field>
+        <field name="sequence">16</field>
+        <field name="notes">使用腾讯云 API 3.0。配置 ai.tencent_secret_id、ai.tencent_secret_key，可选 ai.tencent_region。</field>
+    </record>
     <record id="media_model_openai_sora_2_legacy" model="psc.media.model">
         <field name="name">OpenAI Sora 2（即将停用）</field>
         <field name="media_type">video</field>
