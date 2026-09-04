@@ -10,7 +10,12 @@ async function enrichYiwugoContacts(items) {
     const tab = await chrome.tabs.create({url, active: false});
     try {
       await waitTab(tab.id);
-      await new Promise(resolve => setTimeout(resolve, 900));
+      await new Promise(resolve => setTimeout(resolve, 2200 + Math.floor(Math.random() * 1800)));
+      const guard = await chrome.scripting.executeScript({
+        target: {tabId: tab.id},
+        func: () => /验证码|安全验证|滑块验证|访问过于频繁|请登录后继续/.test(document.body?.innerText || ''),
+      });
+      if (guard?.[0]?.result) throw new Error('义乌购触发安全验证，已停止补充商家联系方式');
       let contact;
       try { contact = await chrome.tabs.sendMessage(tab.id, {type: YIWUGO_CONTACT_MESSAGE}); }
       catch (_) {
@@ -18,12 +23,37 @@ async function enrichYiwugoContacts(items) {
         contact = await chrome.tabs.sendMessage(tab.id, {type: YIWUGO_CONTACT_MESSAGE});
       }
       cache.set(url, contact || {});
-    } catch (_) { cache.set(url, {}); }
+    } catch (error) {
+      cache.set(url, {});
+      if (/安全验证|验证码|访问过于频繁/.test(error.message || '')) throw error;
+    }
     finally { await chrome.tabs.remove(tab.id).catch(() => {}); }
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Randomized 4-7 second interval avoids opening supplier pages in a fixed,
+    // machine-like rhythm. Duplicate supplier URLs are already visited once.
+    await new Promise(resolve => setTimeout(resolve, 4000 + Math.floor(Math.random() * 3000)));
   }
   await setProgress(`商家联系方式补充完成：${urls.length} 家`, false);
   return (items || []).map(item => ({...item, ...(cache.get(item.supplier_url) || {})}));
+}
+
+async function runSupplierContactQueue(endpoint, token) {
+  const headers = {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`};
+  const response = await fetch(apiUrl(endpoint, 'supplier-contact-queue'), {headers});
+  const queue = await response.json().catch(() => ({}));
+  if (!response.ok || !queue.ok) throw new Error(queue.error || `HTTP ${response.status}`);
+  if (!queue.items?.length) throw new Error('没有已选择且等待补充的义乌购商家');
+  for (let index = 0; index < queue.items.length; index++) {
+    const item = queue.items[index];
+    await setProgress(`正在补充商家 ${index + 1}/${queue.items.length}：${item.supplier_name || ''}`);
+    const enriched = await enrichYiwugoContacts([{supplier_url: item.supplier_url}]);
+    const contact = enriched[0] || {};
+    const saved = await fetch(apiUrl(endpoint, 'supplier-contact-result'), {
+      method: 'POST', headers, body: JSON.stringify({...contact, offer_id: item.offer_id}),
+    });
+    const result = await saved.json().catch(() => ({}));
+    if (!saved.ok || !result.ok) throw new Error(result.error || `HTTP ${saved.status}`);
+  }
+  await setProgress(`本批商家信息补充完成：${queue.items.length} 家`, false);
 }
 
 function apiUrl(endpoint, action) {
@@ -97,6 +127,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'PIH_ENRICH_YIWUGO_CONTACTS') {
     enrichYiwugoContacts(message.items).then(items => sendResponse({ok: true, items}))
       .catch(error => sendResponse({ok: false, error: error.message, items: message.items || []}));
+    return true;
+  }
+  if (message?.type === 'PIH_START_SUPPLIER_CONTACTS') {
+    setProgress('正在读取商家信息补充队列…').then(() => {
+      runSupplierContactQueue(message.endpoint, message.token).catch(async error => {
+        await setProgress(`商家信息补充停止：${error.message}`, false);
+      });
+      sendResponse({ok: true});
+    });
     return true;
   }
   if (message?.type === 'PIH_SOURCING_MAIN_WORLD_UPLOAD' || message?.type === 'PIH_1688_MAIN_WORLD_UPLOAD') {
