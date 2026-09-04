@@ -3,6 +3,7 @@
     <menuitem id="menu_psc_root" name="内容发布" sequence="35"/>
     <menuitem id="menu_psc_projects" name="发布项目" parent="menu_psc_root" action="action_psc_project" sequence="10"/>
     <menuitem id="menu_psc_contents" name="渠道内容" parent="menu_psc_root" action="action_psc_content" sequence="20"/>
+    <menuitem id="menu_psc_assets" name="素材库" parent="menu_psc_root" action="action_psc_media_asset" sequence="30"/>
     <menuitem id="menu_psc_config" name="配置" parent="menu_psc_root" sequence="80"/>
     <menuitem id="menu_psc_product_lines" name="品牌/产品线" parent="menu_psc_config" action="action_psc_product_line" sequence="10"/>
     <menuitem id="menu_psc_markets" name="目标市场" parent="menu_psc_config" action="action_psc_market" sequence="20"/>
