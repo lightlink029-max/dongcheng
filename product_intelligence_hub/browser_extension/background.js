@@ -1,4 +1,30 @@
 const DETAIL_MESSAGE = 'PIH_DETAIL_V110';
+const YIWUGO_CONTACT_MESSAGE = 'PIH_YIWUGO_SUPPLIER_CONTACT_V100';
+
+async function enrichYiwugoContacts(items) {
+  const cache = new Map();
+  const urls = [...new Set((items || []).map(item => item.supplier_url).filter(Boolean))];
+  for (let index = 0; index < urls.length; index++) {
+    const url = urls[index];
+    await setProgress(`正在读取义乌购商家联系方式 ${index + 1}/${urls.length}`);
+    const tab = await chrome.tabs.create({url, active: false});
+    try {
+      await waitTab(tab.id);
+      await new Promise(resolve => setTimeout(resolve, 900));
+      let contact;
+      try { contact = await chrome.tabs.sendMessage(tab.id, {type: YIWUGO_CONTACT_MESSAGE}); }
+      catch (_) {
+        await chrome.scripting.executeScript({target: {tabId: tab.id}, files: ['content.js']});
+        contact = await chrome.tabs.sendMessage(tab.id, {type: YIWUGO_CONTACT_MESSAGE});
+      }
+      cache.set(url, contact || {});
+    } catch (_) { cache.set(url, {}); }
+    finally { await chrome.tabs.remove(tab.id).catch(() => {}); }
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  await setProgress(`商家联系方式补充完成：${urls.length} 家`, false);
+  return (items || []).map(item => ({...item, ...(cache.get(item.supplier_url) || {})}));
+}
 
 function apiUrl(endpoint, action) {
   const match = endpoint.match(/^(.*\/product-intelligence\/v1\/)ingest\/(\d+)\/?$/);
@@ -68,6 +94,11 @@ async function runDetailQueue(endpoint, token) {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === 'PIH_ENRICH_YIWUGO_CONTACTS') {
+    enrichYiwugoContacts(message.items).then(items => sendResponse({ok: true, items}))
+      .catch(error => sendResponse({ok: false, error: error.message, items: message.items || []}));
+    return true;
+  }
   if (message?.type === 'PIH_SOURCING_MAIN_WORLD_UPLOAD' || message?.type === 'PIH_1688_MAIN_WORLD_UPLOAD') {
     const tabId = _sender.tab?.id;
     if (!tabId) {
