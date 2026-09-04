@@ -379,9 +379,10 @@ class ProductIntelligenceCandidateSourcing(models.Model):
             raise UserError(_("当前产品没有可用于找货的参考图片。"))
         if not self.sourcing_image_url:
             self.sourcing_image_url = image_url
+        image_query = quote_from_bytes(image_url.encode("utf-8"), safe="")
         url = (
-            "https://www.yiwugo.com/search/imgsearch.html?"
-            "pih_candidate_id=%s&pih_search_mode=image" % self.id
+            "https://www.yiwugo.com/search/imgsearch.html?url=%s"
+            "&pih_candidate_id=%s&pih_search_mode=image" % (image_query, self.id)
         )
         return {"type": "ir.actions.act_url", "url": url, "target": "new"}
 
