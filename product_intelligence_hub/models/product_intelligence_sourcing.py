@@ -434,8 +434,7 @@ class ProductIntelligenceCandidateSourcing(models.Model):
                 "company_type": "company",
                 "supplier_rank": 1,
                 "website": offer.supplier_url or offer.product_url,
-                "mobile": offer.contact_phone,
-                "phone": offer.contact_landline or offer.contact_phone,
+                "phone": offer.contact_phone or offer.contact_landline,
                 "email": offer.contact_email,
                 "comment": _("%(platform)s货源商品：%(name)s\n%(url)s\n%(details)s") % {
                     "platform": dict(offer._fields["platform"].selection).get(
@@ -443,7 +442,11 @@ class ProductIntelligenceCandidateSourcing(models.Model):
                     ),
                     "name": offer.name,
                     "url": offer.product_url or "",
-                    "details": "\n".join(filter(None, [offer.contact_details or "", f"QQ: {offer.contact_qq}" if offer.contact_qq else ""])),
+                    "details": "\n".join(filter(None, [
+                        offer.contact_details or "",
+                        f"座机: {offer.contact_landline}" if offer.contact_landline else "",
+                        f"QQ: {offer.contact_qq}" if offer.contact_qq else "",
+                    ])),
                 },
             }
             if partner:
