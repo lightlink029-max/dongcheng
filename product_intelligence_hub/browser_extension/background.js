@@ -76,8 +76,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
     chrome.scripting.executeScript({
       target: {tabId}, world: 'MAIN',
-      args: [message.data, message.mimeType || 'image/jpeg'],
-      func: async (base64, mimeType) => {
+      args: [message.data, message.mimeType || 'image/jpeg', message.platform || '1688'],
+      func: async (base64, mimeType, platform) => {
         let input = null;
         for (let i = 0; i < 20 && !input; i++) {
           input = document.querySelector('input[type="file"][accept*="image"],input[type="file"]');
@@ -93,6 +93,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         input.files = transfer.files;
         input.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
         input.dispatchEvent(new Event('change', {bubbles: true, composed: true}));
+        if (platform === 'yiwugo') {
+          // YiwuGo's upload component starts image retrieval from the file
+          // input change event. Its top orange button is only for URL input.
+          await new Promise(resolve => setTimeout(resolve, 1800));
+          return {ok: true, searched: true};
+        }
         for (let i = 0; i < 80; i++) {
           const searchButton = [...document.querySelectorAll('button,[role="button"],a,div,span')]
             .filter(node => (node.textContent || '').replace(/\s+/g, '').trim() === '搜索图片')
