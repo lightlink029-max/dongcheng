@@ -49,11 +49,6 @@ document.querySelector('#push').addEventListener('click', async () => {
       result=await captureFromTab(tab.id);
     }
     if(!result?.items?.length) throw new Error('当前页面没有识别到商品，请向下滚动加载商品后重试');
-    if(isYiwugo){
-      status.textContent=`识别到 ${result.items.length} 件，正在补充商家联系方式…`;
-      const enriched=await chrome.runtime.sendMessage({type:'PIH_ENRICH_YIWUGO_CONTACTS',items:result.items});
-      if(enriched?.items?.length) result.items=enriched.items;
-    }
     status.textContent=`识别到 ${result.items.length} 件，正在推送…`;
     const pushUrl=(is1688||isYiwugo)?apiUrl(ep,'sourcing-result'):ep;
     const payload=(is1688||isYiwugo)?{
@@ -97,4 +92,14 @@ document.querySelector('#enrich').addEventListener('click',async()=>{
     if(!started?.ok) throw new Error(started?.error||'无法启动后台任务');
     status.textContent='详情补充任务已在后台启动，切换标签页或关闭弹窗不会中断。';
   }catch(error){status.textContent=`详情补充停止：${error.message}`;}
+});
+document.querySelector('#supplierContacts').addEventListener('click',async()=>{
+  try{
+    const ep=endpoint.value.trim(),tk=token.value.trim();
+    if(!ep||!tk) throw new Error('请先填写接收地址和 Token');
+    await chrome.storage.local.set({endpoint:ep,token:tk});
+    const started=await chrome.runtime.sendMessage({type:'PIH_START_SUPPLIER_CONTACTS',endpoint:ep,token:tk});
+    if(!started?.ok) throw new Error(started?.error||'无法启动商家信息任务');
+    status.textContent='商家信息补充已在后台启动，本批最多5家。';
+  }catch(error){status.textContent=`商家信息补充停止：${error.message}`;}
 });
