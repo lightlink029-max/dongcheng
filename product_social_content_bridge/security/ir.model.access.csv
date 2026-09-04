@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_psc_product_line_user,psc.product.line user,model_psc_product_line,base.group_user,1,1,1,1
+access_psc_target_market_user,psc.target.market user,model_psc_target_market,base.group_user,1,1,1,1
+access_psc_publishing_channel_user,psc.publishing.channel user,model_psc_publishing_channel,base.group_user,1,1,1,1
+access_psc_publishing_project_user,psc.publishing.project user,model_psc_publishing_project,base.group_user,1,1,1,1
+access_psc_content_variant_user,psc.content.variant user,model_psc_content_variant,base.group_user,1,1,1,1
