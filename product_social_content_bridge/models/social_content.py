@@ -2,6 +2,7 @@ import json
 import logging
 import base64
 import mimetypes
+import time
 from io import BytesIO
 
 import requests
@@ -104,6 +105,30 @@ class TargetMarket(models.Model):
     compliance_notes = fields.Text(string="认证与合规要求", translate=True)
 
 
+class MediaModel(models.Model):
+    _name = "psc.media.model"
+    _description = "图片/视频生成模型"
+    _order = "media_type, sequence, name"
+
+    name = fields.Char(string="显示名称", required=True)
+    sequence = fields.Integer(default=10)
+    active = fields.Boolean(default=True)
+    media_type = fields.Selection([
+        ("image", "图片生成"), ("video", "视频生成"),
+    ], string="媒体类型", required=True)
+    provider = fields.Selection([
+        ("openai", "OpenAI"), ("fal", "fal.ai"), ("bfl", "Black Forest Labs"),
+        ("runway", "Runway"), ("ffmpeg", "自建 FFmpeg"),
+        ("creatomate", "Creatomate"), ("shotstack", "Shotstack"),
+        ("custom", "自定义接口"),
+    ], string="服务商", required=True, default="openai")
+    model_code = fields.Char(string="模型/引擎代码", required=True)
+    api_base_url = fields.Char(string="接口地址")
+    api_key_parameter = fields.Char(string="API Key 系统参数", help="填写系统参数名称，例如 ai.fal_key；不要在这里直接填写密钥。")
+    deprecated = fields.Boolean(string="已弃用")
+    notes = fields.Text(string="说明")
+
+
 class PublishingChannel(models.Model):
     _name = "psc.publishing.channel"
     _description = "发布渠道"
@@ -124,6 +149,20 @@ class PublishingChannel(models.Model):
     image_quality = fields.Selection([
         ("low", "低（测试/省费用）"), ("medium", "中（推荐）"), ("high", "高"),
     ], string="图片质量", default="medium", required=True)
+    image_model_id = fields.Many2one(
+        "psc.media.model", string="图片生成模型",
+        domain="[('media_type', '=', 'image'), ('active', '=', True)]",
+        default=lambda self: self.env.ref(
+            "product_social_content_bridge.media_model_openai_gpt_image_2", raise_if_not_found=False
+        ),
+    )
+    video_model_id = fields.Many2one(
+        "psc.media.model", string="视频生成模型",
+        domain="[('media_type', '=', 'video'), ('active', '=', True)]",
+        default=lambda self: self.env.ref(
+            "product_social_content_bridge.media_model_ffmpeg_default", raise_if_not_found=False
+        ),
+    )
     template_asset_ids = fields.Many2many(
         "psc.media.asset", "psc_channel_template_asset_rel", "channel_id", "asset_id",
         string="默认模板与素材",
@@ -239,6 +278,12 @@ class ContentVariant(models.Model):
     ], string="图片生成状态", default="pending", required=True, readonly=True)
     image_ai_model = fields.Char(string="图片模型", readonly=True)
     image_generated_at = fields.Datetime(string="图片生成时间", readonly=True)
+    video_ai_state = fields.Selection([
+        ("pending", "待生成"), ("processing", "生成中"),
+        ("done", "已生成"), ("failed", "生成失败"),
+    ], string="视频生成状态", default="pending", required=True, readonly=True)
+    video_ai_model = fields.Char(string="视频模型", readonly=True)
+    video_generated_at = fields.Datetime(string="视频生成时间", readonly=True)
 
     _variant_unique = models.Constraint(
         "UNIQUE(project_id, product_id, market_id, channel_id)",
@@ -251,6 +296,55 @@ class ContentVariant(models.Model):
         if not key:
             raise UserError(_("尚未配置 OpenAI API Key，请先在系统参数 ai.openai_key 中配置。"))
         return key
+
+    @api.model
+    def _media_api_key(self, media_model):
+        parameter = media_model.api_key_parameter or {
+            "openai": "ai.openai_key", "fal": "ai.fal_key",
+            "bfl": "ai.bfl_key", "runway": "ai.runway_key",
+        }.get(media_model.provider)
+        key = parameter and self.env["ir.config_parameter"].sudo().get_param(parameter)
+        if not key:
+            raise UserError(_("尚未配置 %(provider)s API Key，请在系统参数 %(parameter)s 中配置。",
+                              provider=media_model.provider, parameter=parameter or "API Key"))
+        return key
+
+    def _fal_submit_and_wait(self, media_model, payload, timeout=600):
+        self.ensure_one()
+        api_key = self._media_api_key(media_model)
+        endpoint = (media_model.api_base_url or "https://queue.fal.run").rstrip("/")
+        submit = requests.post(
+            "%s/%s" % (endpoint, media_model.model_code.lstrip("/")),
+            headers={"Authorization": "Key %s" % api_key, "Content-Type": "application/json"},
+            json=payload, timeout=60,
+        )
+        submit.raise_for_status()
+        job = submit.json()
+        response_url, status_url = job.get("response_url"), job.get("status_url")
+        if not response_url:
+            return job
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if status_url:
+                status = requests.get(status_url, headers={"Authorization": "Key %s" % api_key}, timeout=30)
+                status.raise_for_status()
+                state = (status.json().get("status") or "").upper()
+                if state in ("FAILED", "CANCELLED"):
+                    raise ValueError(status.text)
+                if state not in ("COMPLETED", "OK"):
+                    time.sleep(4)
+                    continue
+            result = requests.get(response_url, headers={"Authorization": "Key %s" % api_key}, timeout=60)
+            if result.status_code in (202, 404):
+                time.sleep(4)
+                continue
+            result.raise_for_status()
+            return result.json()
+        raise ValueError("fal.ai generation timed out")
+
+    def _source_image_data_url(self):
+        raw, _filename, mimetype = self._source_product_image()
+        return "data:%s;base64,%s" % (mimetype, base64.b64encode(raw).decode())
 
     @api.model
     def _response_output_text(self, response_data):
@@ -437,11 +531,14 @@ class ContentVariant(models.Model):
             return output.getvalue()
 
     def action_generate_social_image(self):
-        api_key = self._openai_api_key()
         for variant in self:
             if variant.ai_state != "done":
                 raise UserError(_("请先生成并确认文字内容，再生成图片素材。"))
             source_image, filename, mimetype = variant._source_product_image()
+            image_model = variant.channel_id.image_model_id
+            image_model_code = image_model.model_code if image_model else DEFAULT_OPENAI_IMAGE_MODEL
+            if image_model and image_model.deprecated:
+                raise UserError(_("所选图片模型已被标记为弃用，请在发布渠道中更换模型。"))
             selected_images = variant._selected_image_inputs()
             asset_roles = "; ".join(
                 "%s: %s%s" % (index + 2, asset.name, (" — " + asset.usage_instructions) if asset.usage_instructions else "")
@@ -460,35 +557,52 @@ class ContentVariant(models.Model):
                 "Use templates as layout guidance and logos only when explicitly supplied as a logo asset.",
             ]))
             try:
-                files = [("image[]", (filename, source_image, mimetype))]
-                files.extend(
-                    ("image[]", (asset_filename, raw, asset_mimetype))
-                    for _asset, raw, asset_filename, asset_mimetype in selected_images
-                )
-                response = requests.post(
-                    OPENAI_IMAGES_EDIT_URL,
-                    headers={"Authorization": "Bearer %s" % api_key},
-                    data={
-                        "model": DEFAULT_OPENAI_IMAGE_MODEL,
+                if image_model and image_model.provider == "fal":
+                    response_data = variant._fal_submit_and_wait(image_model, {
                         "prompt": prompt,
-                        "size": variant._image_size(),
-                        "quality": variant.channel_id.image_quality,
-                        "output_format": "png",
-                    },
-                    files=files,
-                    timeout=180,
-                )
-                response.raise_for_status()
-                response_data = response.json()
-                result = (response_data.get("data") or [{}])[0]
-                if result.get("b64_json"):
-                    generated = base64.b64decode(result["b64_json"])
-                elif result.get("url"):
-                    download = requests.get(result["url"], timeout=90)
+                        "image_url": variant._source_image_data_url(),
+                        "aspect_ratio": variant.channel_id.image_ratio.replace("_", ":"),
+                    })
+                    output = (response_data.get("images") or [{}])[0]
+                    output_url = output.get("url") or (response_data.get("image") or {}).get("url")
+                    if not output_url:
+                        raise ValueError("fal.ai image response did not contain an image URL")
+                    download = requests.get(output_url, timeout=90)
                     download.raise_for_status()
                     generated = download.content
+                elif not image_model or image_model.provider == "openai":
+                    api_key = variant._openai_api_key()
+                    files = [("image[]", (filename, source_image, mimetype))]
+                    files.extend(
+                        ("image[]", (asset_filename, raw, asset_mimetype))
+                        for _asset, raw, asset_filename, asset_mimetype in selected_images
+                    )
+                    response = requests.post(
+                        OPENAI_IMAGES_EDIT_URL,
+                        headers={"Authorization": "Bearer %s" % api_key},
+                        data={
+                            "model": image_model_code,
+                            "prompt": prompt,
+                            "size": variant._image_size(),
+                            "quality": variant.channel_id.image_quality,
+                            "output_format": "png",
+                        },
+                        files=files,
+                        timeout=180,
+                    )
+                    response.raise_for_status()
+                    response_data = response.json()
+                    result = (response_data.get("data") or [{}])[0]
+                    if result.get("b64_json"):
+                        generated = base64.b64decode(result["b64_json"])
+                    elif result.get("url"):
+                        download = requests.get(result["url"], timeout=90)
+                        download.raise_for_status()
+                        generated = download.content
+                    else:
+                        raise ValueError("OpenAI image response did not contain image data")
                 else:
-                    raise ValueError("OpenAI image response did not contain image data")
+                    raise UserError(_("所选图片服务商尚未接入自动生成。"))
                 final_image = variant._finalize_social_image(generated)
                 attachment = self.env["ir.attachment"].create({
                     "name": "social-%s-%s-%s.jpg" % (variant.product_id.id, variant.market_id.id, variant.channel_id.id),
@@ -502,7 +616,7 @@ class ContentVariant(models.Model):
                 variant.write({
                     "image_attachment_id": attachment.id,
                     "image_ai_state": "done",
-                    "image_ai_model": DEFAULT_OPENAI_IMAGE_MODEL,
+                    "image_ai_model": image_model_code,
                     "image_generated_at": fields.Datetime.now(),
                     "error_message": False,
                 })
@@ -518,7 +632,7 @@ class ContentVariant(models.Model):
                 _logger.exception("OpenAI image generation failed for variant %s", variant.id)
                 variant.write({
                     "image_ai_state": "failed",
-                    "image_ai_model": DEFAULT_OPENAI_IMAGE_MODEL,
+                    "image_ai_model": image_model_code,
                     "error_message": detail[:2000],
                 })
         return True
@@ -538,6 +652,55 @@ class ContentVariant(models.Model):
                 values["image_ids"] = [(6, 0, variant.image_attachment_id.ids)]
             post = self.env["social.post"].create(values)
             variant.write({"social_post_id": post.id, "state": "ready", "error_message": False})
+        return True
+
+    def action_generate_social_video(self):
+        for variant in self:
+            media_model = variant.channel_id.video_model_id
+            if not media_model or media_model.provider != "fal":
+                raise UserError(_("请选择已接入的 fal.ai 视频模型。"))
+            if media_model.deprecated:
+                raise UserError(_("所选视频模型已停用，请更换模型。"))
+            variant.write({"video_ai_state": "processing", "video_ai_model": media_model.model_code})
+            try:
+                prompt = "\n".join(filter(None, [
+                    variant.video_script, variant.caption,
+                    "Preserve the real product identity, shape, colors, materials and proportions.",
+                ]))
+                result = variant._fal_submit_and_wait(media_model, {
+                    "prompt": prompt,
+                    "image_url": variant._source_image_data_url(),
+                    "duration": "5",
+                    "aspect_ratio": variant.channel_id.image_ratio.replace("_", ":"),
+                })
+                video = result.get("video") or (result.get("videos") or [{}])[0]
+                video_url = video.get("url") if isinstance(video, dict) else video
+                if not video_url:
+                    raise ValueError("fal.ai response did not contain a video URL")
+                download = requests.get(video_url, timeout=180)
+                download.raise_for_status()
+                attachment = self.env["ir.attachment"].create({
+                    "name": "social-%s-%s-%s.mp4" % (
+                        variant.product_id.id, variant.market_id.id, variant.channel_id.id,
+                    ),
+                    "type": "binary",
+                    "datas": base64.b64encode(download.content),
+                    "mimetype": "video/mp4",
+                    "res_model": variant._name,
+                    "res_id": variant.id,
+                })
+                previous = variant.video_attachment_id
+                variant.write({
+                    "video_attachment_id": attachment.id,
+                    "video_ai_state": "done",
+                    "video_generated_at": fields.Datetime.now(),
+                    "error_message": False,
+                })
+                if previous and previous != attachment:
+                    previous.unlink()
+            except (requests.RequestException, ValueError, OSError) as error:
+                _logger.exception("Video generation failed for variant %s", variant.id)
+                variant.write({"video_ai_state": "failed", "error_message": str(error)[:2000]})
         return True
 
     def action_open_social_post(self):

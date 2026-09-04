@@ -5,3 +5,4 @@ access_psc_publishing_channel_user,psc.publishing.channel user,model_psc_publish
 access_psc_publishing_project_user,psc.publishing.project user,model_psc_publishing_project,base.group_user,1,1,1,1
 access_psc_content_variant_user,psc.content.variant user,model_psc_content_variant,base.group_user,1,1,1,1
 access_psc_media_asset_user,psc.media.asset user,model_psc_media_asset,base.group_user,1,1,1,1
+access_psc_media_model_user,psc.media.model user,model_psc_media_model,base.group_user,1,1,1,1

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="media_model_openai_gpt_image_2" model="psc.media.model">
+        <field name="name">OpenAI GPT Image 2</field>
+        <field name="media_type">image</field>
+        <field name="provider">openai</field>
+        <field name="model_code">gpt-image-2</field>
+        <field name="sequence">10</field>
+        <field name="notes">当前默认图片生成模型。</field>
+    </record>
+    <record id="media_model_ffmpeg_default" model="psc.media.model">
+        <field name="name">自建 FFmpeg 素材合成</field>
+        <field name="media_type">video</field>
+        <field name="provider">ffmpeg</field>
+        <field name="model_code">ffmpeg-template-v1</field>
+        <field name="sequence">10</field>
+        <field name="notes">用于后续独立渲染服务合成图片、视频、字幕、配音和音乐。</field>
+    </record>
+    <record id="media_model_fal_flux_2_pro" model="psc.media.model">
+        <field name="name">FLUX.2 Pro（fal.ai）</field>
+        <field name="media_type">image</field>
+        <field name="provider">fal</field>
+        <field name="model_code">fal-ai/flux-2-pro/edit</field>
+        <field name="api_key_parameter">ai.fal_key</field>
+        <field name="sequence">20</field>
+        <field name="notes">低成本图片生成备用模型；使用前配置系统参数 ai.fal_key。</field>
+    </record>
+    <record id="media_model_fal_kling_25_turbo" model="psc.media.model">
+        <field name="name">Kling 2.5 Turbo Pro（fal.ai）</field>
+        <field name="media_type">video</field>
+        <field name="provider">fal</field>
+        <field name="model_code">fal-ai/kling-video/v2.5-turbo/pro/image-to-video</field>
+        <field name="api_key_parameter">ai.fal_key</field>
+        <field name="sequence">20</field>
+        <field name="notes">默认商品图生视频模型；使用前配置系统参数 ai.fal_key。</field>
+    </record>
+    <record id="media_model_fal_veo_31" model="psc.media.model">
+        <field name="name">Google Veo 3.1（fal.ai）</field>
+        <field name="media_type">video</field>
+        <field name="provider">fal</field>
+        <field name="model_code">fal-ai/veo3.1/image-to-video</field>
+        <field name="api_key_parameter">ai.fal_key</field>
+        <field name="sequence">30</field>
+        <field name="notes">高质量商品视频备用模型；成本较高。</field>
+    </record>
+    <record id="media_model_openai_sora_2_legacy" model="psc.media.model">
+        <field name="name">OpenAI Sora 2（即将停用）</field>
+        <field name="media_type">video</field>
+        <field name="provider">openai</field>
+        <field name="model_code">sora-2</field>
+        <field name="deprecated" eval="True"/>
+        <field name="active" eval="False"/>
+        <field name="sequence">90</field>
+        <field name="notes">OpenAI 官方已公告该视频 API 将于 2026-09-24 停用，不用于新项目。</field>
+    </record>
+</odoo>

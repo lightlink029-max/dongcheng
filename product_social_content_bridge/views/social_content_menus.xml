@@ -8,4 +8,5 @@
     <menuitem id="menu_psc_product_lines" name="品牌/产品线" parent="menu_psc_config" action="action_psc_product_line" sequence="10"/>
     <menuitem id="menu_psc_markets" name="目标市场" parent="menu_psc_config" action="action_psc_market" sequence="20"/>
     <menuitem id="menu_psc_channels" name="发布渠道" parent="menu_psc_config" action="action_psc_channel" sequence="30"/>
+    <menuitem id="menu_psc_media_models" name="图片/视频模型" parent="menu_psc_config" action="action_psc_media_model" sequence="40"/>
 </odoo>
