@@ -273,6 +273,16 @@ class ContentVariant(models.Model):
     image_attachment_id = fields.Many2one("ir.attachment", string="发布图片")
     generated_image = fields.Binary(related="image_attachment_id.datas", string="图片预览", readonly=True)
     video_attachment_id = fields.Many2one("ir.attachment", string="发布视频")
+    image_model_id = fields.Many2one(
+        "psc.media.model", string="本次图片生成模型",
+        domain="[('media_type', '=', 'image'), ('active', '=', True), ('deprecated', '=', False)]",
+        help="留空时使用发布渠道配置的默认图片模型。",
+    )
+    video_model_id = fields.Many2one(
+        "psc.media.model", string="本次视频生成模型",
+        domain="[('media_type', '=', 'video'), ('active', '=', True), ('deprecated', '=', False)]",
+        help="留空时使用发布渠道配置的默认视频模型。",
+    )
     material_asset_ids = fields.Many2many(
         "psc.media.asset", "psc_content_material_asset_rel", "content_id", "asset_id",
         string="本次使用的模板与素材",
@@ -308,6 +318,33 @@ class ContentVariant(models.Model):
         "UNIQUE(project_id, product_id, market_id, channel_id)",
         "同一项目中产品、市场和渠道组合不能重复。",
     )
+
+    @api.onchange("channel_id")
+    def _onchange_channel_media_models(self):
+        for variant in self:
+            if variant.channel_id:
+                variant.image_model_id = variant.channel_id.image_model_id
+                variant.video_model_id = variant.channel_id.video_model_id
+
+    def action_open_generated_image(self):
+        self.ensure_one()
+        if not self.image_attachment_id:
+            raise UserError(_("当前记录没有可预览的图片素材。"))
+        return {
+            "type": "ir.actions.act_url",
+            "url": "/web/content/%s?download=false" % self.image_attachment_id.id,
+            "target": "new",
+        }
+
+    def action_open_generated_video(self):
+        self.ensure_one()
+        if not self.video_attachment_id:
+            raise UserError(_("当前记录没有可播放的视频素材。"))
+        return {
+            "type": "ir.actions.act_url",
+            "url": "/web/content/%s?download=false" % self.video_attachment_id.id,
+            "target": "new",
+        }
 
     @api.model
     def _openai_api_key(self):
@@ -764,7 +801,14 @@ class ContentVariant(models.Model):
             if variant.ai_state != "done":
                 raise UserError(_("请先生成并确认文字内容，再生成图片素材。"))
             source_image, filename, mimetype = variant._source_product_image()
-            image_model = variant.channel_id.image_model_id
+            image_model = (
+                variant.image_model_id
+                or variant.channel_id.image_model_id
+                or self.env.ref(
+                    "product_social_content_bridge.media_model_openai_gpt_image_2",
+                    raise_if_not_found=False,
+                )
+            )
             image_model_code = image_model.model_code if image_model else DEFAULT_OPENAI_IMAGE_MODEL
             if image_model and image_model.deprecated:
                 raise UserError(_("所选图片模型已被标记为弃用，请在发布渠道中更换模型。"))
@@ -843,6 +887,7 @@ class ContentVariant(models.Model):
                 })
                 previous = variant.image_attachment_id
                 variant.write({
+                    "image_model_id": image_model.id if image_model else False,
                     "image_attachment_id": attachment.id,
                     "image_ai_state": "done",
                     "image_ai_model": image_model_code,
@@ -885,7 +930,14 @@ class ContentVariant(models.Model):
 
     def action_generate_social_video(self):
         for variant in self:
-            media_model = variant.channel_id.video_model_id
+            media_model = (
+                variant.video_model_id
+                or variant.channel_id.video_model_id
+                or self.env.ref(
+                    "product_social_content_bridge.media_model_fal_kling_25_turbo",
+                    raise_if_not_found=False,
+                )
+            )
             if not media_model or media_model.provider not in ("fal", "dashscope", "tencent", "vidu", "qianfan"):
                 raise UserError(_("请选择已经接入的视频生成模型。"))
             if media_model.deprecated:
@@ -947,6 +999,7 @@ class ContentVariant(models.Model):
                 })
                 previous = variant.video_attachment_id
                 variant.write({
+                    "video_model_id": media_model.id,
                     "video_attachment_id": attachment.id,
                     "video_ai_state": "done",
                     "video_generated_at": fields.Datetime.now(),
