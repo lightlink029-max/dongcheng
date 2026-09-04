@@ -288,6 +288,12 @@ class ProductSupplierInfo(models.Model):
         compute="_compute_pi_sourcing_offer_id",
         compute_sudo=True,
     )
+    pi_source_platform = fields.Selection(related="pi_sourcing_offer_id.platform", string="数据来源")
+    pi_supplier_url = fields.Char(related="pi_sourcing_offer_id.supplier_url", string="商家网站")
+    pi_product_url = fields.Char(related="pi_sourcing_offer_id.product_url", string="货源商品链接")
+    pi_contact_enrichment_state = fields.Selection(
+        related="pi_sourcing_offer_id.contact_enrichment_state", string="联系方式状态",
+    )
 
     def _compute_pi_sourcing_offer_id(self):
         for supplierinfo in self:
@@ -315,6 +321,60 @@ class ProductSupplierInfo(models.Model):
             "res_id": self.pi_sourcing_offer_id.id,
             "target": "current",
         }
+
+    def action_queue_pi_supplier_contact(self):
+        offers = self.mapped("pi_sourcing_offer_id").filtered(
+            lambda item: item.platform == "yiwugo" and item.supplier_url
+        )
+        offers.write({"contact_enrichment_state": "queued"})
+        return True
+
+
+class ResPartner(models.Model):
+    _inherit = "res.partner"
+
+    pi_sourcing_offer_id = fields.Many2one(
+        "product.intelligence.sourcing.offer", string="货源记录",
+        compute="_compute_pi_sourcing_offer_id", compute_sudo=True,
+    )
+    pi_source_platform = fields.Selection(related="pi_sourcing_offer_id.platform", string="数据来源")
+    pi_supplier_homepage = fields.Char(related="pi_sourcing_offer_id.supplier_url", string="商家主页")
+    pi_source_product_url = fields.Char(related="pi_sourcing_offer_id.product_url", string="货源商品链接")
+    pi_contact_name = fields.Char(related="pi_sourcing_offer_id.contact_name", string="来源联系人")
+    pi_contact_landline = fields.Char(related="pi_sourcing_offer_id.contact_landline", string="来源座机")
+    pi_contact_qq = fields.Char(related="pi_sourcing_offer_id.contact_qq", string="来源QQ")
+    pi_contact_enrichment_state = fields.Selection(
+        related="pi_sourcing_offer_id.contact_enrichment_state", string="联系方式状态",
+    )
+
+    def _compute_pi_sourcing_offer_id(self):
+        for partner in self:
+            partner.pi_sourcing_offer_id = False
+        offers = self.env["product.intelligence.sourcing.offer"].sudo().search([
+            ("supplier_partner_id", "in", self.ids),
+        ], order="is_preferred desc, captured_at desc, id desc") if self.ids else self.env["product.intelligence.sourcing.offer"]
+        by_partner = {}
+        for offer in offers:
+            by_partner.setdefault(offer.supplier_partner_id.id, offer)
+        for partner in self:
+            partner.pi_sourcing_offer_id = by_partner.get(partner.id)
+
+    def action_open_pi_sourcing_offer(self):
+        self.ensure_one()
+        if not self.pi_sourcing_offer_id:
+            raise UserError(_("该供应商没有关联的货源记录。"))
+        return {
+            "type": "ir.actions.act_window", "name": self.pi_sourcing_offer_id.display_name,
+            "res_model": "product.intelligence.sourcing.offer", "view_mode": "form",
+            "res_id": self.pi_sourcing_offer_id.id, "target": "current",
+        }
+
+    def action_queue_pi_supplier_contact(self):
+        offers = self.mapped("pi_sourcing_offer_id").filtered(
+            lambda item: item.platform == "yiwugo" and item.supplier_url
+        )
+        offers.write({"contact_enrichment_state": "queued"})
+        return True
 
 class ProductIntelligenceCandidateSourcing(models.Model):
     _inherit = "product.intelligence.candidate"
@@ -433,7 +493,7 @@ class ProductIntelligenceCandidateSourcing(models.Model):
                 "name": offer.supplier_name or offer.name,
                 "company_type": "company",
                 "supplier_rank": 1,
-                "website": offer.supplier_url or offer.product_url,
+                "website": offer.supplier_url or False,
                 "phone": offer.contact_phone or offer.contact_landline,
                 "email": offer.contact_email,
                 "comment": _("%(platform)s货源商品：%(name)s\n%(url)s\n%(details)s") % {
