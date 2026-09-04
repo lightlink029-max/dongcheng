@@ -380,8 +380,8 @@ class ProductIntelligenceCandidateSourcing(models.Model):
         if not self.sourcing_image_url:
             self.sourcing_image_url = image_url
         url = (
-            "https://www.yiwugo.com/search/imgsearch.html?imageRetrievalMethod=fg_clip2_new"
-            "&pih_candidate_id=%s&pih_search_mode=image" % self.id
+            "https://www.yiwugo.com/search/imgsearch.html?"
+            "pih_candidate_id=%s&pih_search_mode=image" % self.id
         )
         return {"type": "ir.actions.act_url", "url": url, "target": "new"}
 
