@@ -8,6 +8,9 @@
   "ffmpeg": "ffmpeg",
   "ffprobe": "ffprobe",
   "yt_dlp": "yt-dlp",
+  "online_downloader_enabled": true,
+  "online_downloader_url": "https://paste2vid.com",
+  "download_proxy": "",
   "font_file": "C:/Windows/Fonts/msyh.ttc",
   "local_ai": {
     "ollama_url": "http://127.0.0.1:11434",

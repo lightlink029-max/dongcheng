@@ -59,6 +59,8 @@ class MediaWorkerApp(tk.Tk):
             ("worker_id", "工作节点名称", os.environ.get("COMPUTERNAME", "media-pc-01")),
             ("work_dir", "工作目录", str(app_dir() / "jobs")),
             ("poll_seconds", "轮询间隔（秒）", "10"),
+            ("online_downloader_url", "免费视频下载网站", "https://paste2vid.com"),
+            ("download_proxy", "下载代理（可选）", ""),
             ("ollama_url", "Ollama地址", "http://127.0.0.1:11434"),
             ("translation_model", "本地翻译模型", "qwen3:8b"),
             ("font_file", "字幕字体", "C:/Windows/Fonts/msyh.ttc"),
@@ -107,6 +109,9 @@ class MediaWorkerApp(tk.Tk):
             "worker_id": self.vars["worker_id"].get().strip(),
             "work_dir": self.vars["work_dir"].get().strip(),
             "poll_seconds": int(self.vars["poll_seconds"].get() or 10),
+            "online_downloader_enabled": True,
+            "online_downloader_url": self.vars["online_downloader_url"].get().strip(),
+            "download_proxy": self.vars["download_proxy"].get().strip(),
             "font_file": self.vars["font_file"].get().strip(),
             "local_ai": {"ollama_url": self.vars["ollama_url"].get().strip(),
                          "translation_model": self.vars["translation_model"].get().strip()},
@@ -117,6 +122,8 @@ class MediaWorkerApp(tk.Tk):
             data = self.config()
             if not data["odoo_url"].startswith("https://"):
                 raise ValueError("Odoo地址必须使用 https://")
+            if not data["online_downloader_url"].startswith("https://"):
+                raise ValueError("免费视频下载网站必须使用 https://")
             CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
             self._set_autostart(self.autostart.get())
             if not quiet: messagebox.showinfo(APP_TITLE, "配置已保存")

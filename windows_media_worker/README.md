@@ -2,6 +2,8 @@
 
 该工作节点主动领取 Odoo 的媒体任务，在 Windows 本地完成素材下载、图片排版、字幕翻译和 FFmpeg 混剪，然后把成品回传 Odoo。Odoo 不再直接调用图片或视频生成云 API。
 
+视频网址默认先交给配置中的免费网页下载服务解析，失败后自动回退到本机 `yt-dlp`。当前默认服务为 Paste2Vid；这是第三方网页服务，接口或额度可能变化，因此地址可在配置界面替换。若本机访问该网站需要代理，可填写例如 `http://127.0.0.1:10808`。仅下载自有或已获授权的公开视频。
+
 ## 图形版安装
 
 解压 `LightLinkMediaWorker-Windows.zip`，运行 `LightLinkMediaWorker.exe`。在“连接与配置”中填写 Odoo 地址和工作节点令牌，可勾选开机自启。配置和日志保存在 `%LOCALAPPDATA%\\LightLinkMediaWorker`。
