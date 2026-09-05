@@ -25,6 +25,8 @@ class LocalProductionTask(models.Model):
     priority = fields.Integer(default=10)
     worker_id = fields.Char(string="工作节点", readonly=True, index=True)
     claimed_at = fields.Datetime(readonly=True)
+    lease_expires_at = fields.Datetime(string="任务租约到期", readonly=True, index=True)
+    attempt_count = fields.Integer(string="领取次数", readonly=True, default=0)
     finished_at = fields.Datetime(readonly=True)
     target_language = fields.Char(required=True)
     source_mode = fields.Selection([
@@ -59,11 +61,14 @@ class LocalProductionTask(models.Model):
         return token
 
     def action_cancel(self):
-        self.filtered(lambda task: task.state in ("queued", "claimed", "processing")).write({"state": "cancelled"})
+        self.filtered(lambda task: task.state in ("queued", "claimed", "processing")).write({
+            "state": "cancelled", "lease_expires_at": False,
+        })
 
     def action_retry(self):
         self.write({
             "state": "queued", "worker_id": False, "claimed_at": False,
+            "lease_expires_at": False,
             "finished_at": False, "progress": 0, "status_message": False,
             "error_message": False,
         })

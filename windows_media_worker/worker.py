@@ -2,6 +2,7 @@ import mimetypes
 import os
 import shutil
 import subprocess
+import threading
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -23,7 +24,11 @@ class Worker:
     def __init__(self, config, event_callback=None):
         self.config = config
         self.base = config["odoo_url"].rstrip("/")
-        self.headers = {"Authorization": "Bearer " + config["worker_token"]}
+        self.worker_id = config.get("worker_id") or os.environ.get("COMPUTERNAME", "windows-worker")
+        self.headers = {
+            "Authorization": "Bearer " + config["worker_token"],
+            "X-LightLink-Worker-ID": self.worker_id,
+        }
         self.root = Path(config.get("work_dir", "jobs")).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.event_callback = event_callback or (lambda event, data: None)
@@ -46,7 +51,7 @@ class Worker:
 
     def claim(self):
         return self.api("POST", "/psc/local-worker/claim", json={
-            "worker_id": self.config.get("worker_id", os.environ.get("COMPUTERNAME", "windows-worker"))
+            "worker_id": self.worker_id,
         }).json().get("task")
 
     def health(self):
@@ -55,6 +60,17 @@ class Worker:
     def progress(self, task_id, progress, message):
         self.api("POST", f"/psc/local-worker/tasks/{task_id}/progress",
                  json={"progress": progress, "message": message})
+
+    def heartbeat(self, task_id):
+        self.api("POST", f"/psc/local-worker/tasks/{task_id}/heartbeat")
+
+    def heartbeat_loop(self, task_id, stop_event):
+        interval = max(15, min(120, int(self.config.get("heartbeat_seconds", 30))))
+        while not stop_event.wait(interval):
+            try:
+                self.heartbeat(task_id)
+            except Exception as exc:
+                self.emit("log", message=f"任务 {task_id} 心跳失败：{exc}")
 
     def attachment(self, attachment_id, target):
         response = self.api("GET", f"/psc/local-worker/attachments/{attachment_id}")
@@ -169,6 +185,11 @@ class Worker:
         if job_dir.exists():
             shutil.rmtree(job_dir)
         job_dir.mkdir(parents=True)
+        heartbeat_stop = threading.Event()
+        heartbeat_thread = threading.Thread(
+            target=self.heartbeat_loop, args=(task["id"], heartbeat_stop), daemon=True,
+        )
+        heartbeat_thread.start()
         try:
             self.emit("task_started", task=task)
             self.progress(task["id"], 5, "准备素材")
@@ -177,6 +198,12 @@ class Worker:
             self.complete(task, output, subtitle)
             self.emit("task_done", task=task, output=str(output))
         except Exception as exc:
-            self.api("POST", f"/psc/local-worker/tasks/{task['id']}/fail", json={"error": str(exc)})
+            try:
+                self.api("POST", f"/psc/local-worker/tasks/{task['id']}/fail", json={"error": str(exc)})
+            except Exception as report_error:
+                self.emit("log", message=f"任务 {task['id']} 失败状态回传失败：{report_error}")
             self.emit("task_failed", task=task, error=str(exc))
             raise
+        finally:
+            heartbeat_stop.set()
+            heartbeat_thread.join(timeout=2)
