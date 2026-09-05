@@ -17,6 +17,7 @@ class LocalProductionTask(models.Model):
     task_type = fields.Selection([
         ("image", "生成图片"), ("video", "生成视频"),
         ("translate_mix", "翻译并混剪视频"),
+        ("douyin_select", "抖音图片选片"),
     ], required=True, default="video", index=True)
     state = fields.Selection([
         ("queued", "等待本地工具"), ("claimed", "已领取"),
@@ -123,7 +124,7 @@ class ContentVariant(models.Model):
             task_model.create(values)
             if task_type == "image":
                 variant.write({"image_ai_state": "pending", "image_ai_model": "Windows本地工具", "error_message": False})
-            else:
+            elif task_type != "douyin_select":
                 variant.write({"video_ai_state": "pending", "video_ai_model": "Windows本地工具", "error_message": False})
         return True
 
@@ -147,7 +148,13 @@ class ContentVariant(models.Model):
         return self._douyin_search_action("text")
 
     def action_open_douyin_image_search(self):
-        return self._douyin_search_action("image")
+        self.ensure_one()
+        active_task = self.local_task_ids.filtered(
+            lambda task: task.task_type == "douyin_select" and task.state in ("queued", "claimed", "processing")
+        )
+        if not active_task:
+            self._queue_local_task("douyin_select")
+        return self.action_open_local_tasks()
 
     def action_open_local_tasks(self):
         self.ensure_one()

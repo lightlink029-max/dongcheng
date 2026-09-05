@@ -1,11 +1,13 @@
 import sys
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from worker import Worker
+from mumu_adapter import MumuBridge
 
 
 class StopAfterFirstHeartbeat:
@@ -88,6 +90,20 @@ class WorkerLeaseTests(unittest.TestCase):
         }
         srt = worker.make_srt(task, Path(self.work_dir.name))
         self.assertIn("Ready-to-use English subtitle", srt.read_text(encoding="utf-8"))
+
+    def test_mumu_bridge_uses_configured_serial(self):
+        calls = []
+        def runner(command, **_kwargs):
+            calls.append(command)
+            output = "connected to 127.0.0.1:7555" if command[1] == "connect" else "device"
+            return SimpleNamespace(returncode=0, stdout=output, stderr="")
+        with TemporaryDirectory() as folder:
+            adb = Path(folder) / "adb.exe"
+            adb.write_bytes(b"")
+            result = MumuBridge(str(adb), "127.0.0.1:7555", runner=runner).connect()
+        self.assertEqual(result["state"], "device")
+        self.assertEqual(calls[0][1:], ["connect", "127.0.0.1:7555"])
+        self.assertEqual(calls[1][1:], ["-s", "127.0.0.1:7555", "get-state"])
 
 
 if __name__ == "__main__":

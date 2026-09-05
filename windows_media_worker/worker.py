@@ -10,6 +10,7 @@ import requests
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from douyin_adapter import download_video
+from mumu_adapter import MumuBridge
 
 try:
     import imageio_ffmpeg
@@ -184,6 +185,37 @@ class Worker:
                 if subtitle_stream:
                     subtitle_stream.close()
 
+    def prepare_douyin_selection(self, task):
+        if not task.get("source_image_id"):
+            raise ValueError("抖音图片选片任务缺少产品参考图")
+        job_dir = self.root / str(task["id"])
+        job_dir.mkdir(parents=True, exist_ok=True)
+        image_path = job_dir / "douyin-search-reference.jpg"
+        self.attachment(task["source_image_id"], image_path)
+        with Image.open(image_path) as source:
+            source.convert("RGB").save(image_path, format="JPEG", quality=95)
+        bridge = MumuBridge(
+            self.config.get("mumu_adb", ""), self.config.get("mumu_serial", "127.0.0.1:7555"),
+            self.config.get("mumu_player", ""),
+        )
+        remote_path = bridge.prepare_image_search(image_path, task["id"])
+        self.api("POST", f"/psc/local-worker/tasks/{task['id']}/selection-ready")
+        self.emit("selection_pending", task=task, output=remote_path)
+        return remote_path
+
+    def complete_douyin_selection(self, task_id, urls):
+        return self.api(
+            "POST", f"/psc/local-worker/tasks/{task_id}/selection-complete",
+            json={"urls": urls},
+        ).json()
+
+    def fail_task(self, task, error):
+        try:
+            self.api("POST", f"/psc/local-worker/tasks/{task['id']}/fail", json={"error": str(error)})
+        except Exception as report_error:
+            self.emit("log", message=f"任务 {task['id']} 失败状态回传失败：{report_error}")
+        self.emit("task_failed", task=task, error=str(error))
+
     def process(self, task):
         job_dir = self.root / str(task["id"])
         if job_dir.exists():
@@ -202,11 +234,7 @@ class Worker:
             self.complete(task, output, subtitle)
             self.emit("task_done", task=task, output=str(output))
         except Exception as exc:
-            try:
-                self.api("POST", f"/psc/local-worker/tasks/{task['id']}/fail", json={"error": str(exc)})
-            except Exception as report_error:
-                self.emit("log", message=f"任务 {task['id']} 失败状态回传失败：{report_error}")
-            self.emit("task_failed", task=task, error=str(exc))
+            self.fail_task(task, exc)
             raise
         finally:
             heartbeat_stop.set()

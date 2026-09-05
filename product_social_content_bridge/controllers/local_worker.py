@@ -1,4 +1,6 @@
 from datetime import timedelta
+import re
+from urllib.parse import urlparse
 
 from odoo import fields, http
 from odoo.http import request
@@ -124,6 +126,49 @@ class LocalWorkerController(http.Controller):
             return request.make_json_response({"ok": False}, status=409)
         task.write({"lease_expires_at": self._lease_expiry()})
         return request.make_json_response({"ok": True})
+
+    @http.route("/psc/local-worker/tasks/<int:task_id>/selection-ready", type="http", auth="none", methods=["POST"], csrf=False)
+    def selection_ready(self, task_id, **kwargs):
+        self._authorize()
+        task = self._owned_task(task_id)
+        if task.task_type != "douyin_select" or task.state in ("done", "failed", "cancelled"):
+            return request.make_json_response({"error": "task is not an active selection"}, status=409)
+        task.write({
+            "state": "processing", "progress": 40,
+            "status_message": "图片已传入 MuMu，等待人工选片",
+            "lease_expires_at": self._lease_expiry(),
+        })
+        return request.make_json_response({"ok": True})
+
+    @http.route("/psc/local-worker/tasks/<int:task_id>/selection-complete", type="http", auth="none", methods=["POST"], csrf=False)
+    def selection_complete(self, task_id, **kwargs):
+        self._authorize()
+        task = self._owned_task(task_id)
+        if task.task_type != "douyin_select" or task.state not in ("claimed", "processing"):
+            return request.make_json_response({"error": "task is not an active selection"}, status=409)
+        payload = request.httprequest.get_json(silent=True) or {}
+        text = str(payload.get("urls") or "")[:20000]
+        urls, seen = [], set()
+        for raw in re.findall(r"https?://[^\s<>\"']+", text):
+            url = raw.rstrip(".,;，。；!！?？)]}")
+            try:
+                host = (urlparse(url).hostname or "").lower()
+            except ValueError:
+                continue
+            if host not in ("douyin.com", "www.douyin.com", "v.douyin.com", "v.iesdouyin.com") or url in seen:
+                continue
+            seen.add(url)
+            urls.append(url)
+            if len(urls) >= 100:
+                break
+        if not urls:
+            return request.make_json_response({"error": "no_valid_douyin_urls"}, status=400)
+        task.content_id.sudo().write({"source_video_urls": "\n".join(urls)})
+        task.write({
+            "state": "done", "progress": 100, "finished_at": fields.Datetime.now(),
+            "status_message": "已同步 %s 条抖音视频链接" % len(urls), "lease_expires_at": False,
+        })
+        return request.make_json_response({"ok": True, "saved": len(urls)})
 
     @http.route("/psc/local-worker/tasks/<int:task_id>/complete", type="http", auth="none", methods=["POST"], csrf=False)
     def complete(self, task_id, **kwargs):

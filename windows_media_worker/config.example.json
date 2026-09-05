@@ -8,6 +8,9 @@
   "ffmpeg": "ffmpeg",
   "ffprobe": "ffprobe",
   "download_proxy": "",
+  "mumu_adb": "",
+  "mumu_player": "",
+  "mumu_serial": "127.0.0.1:7555",
   "font_file": "C:/Windows/Fonts/msyh.ttc",
   "local_ai": {
     "ollama_url": "http://127.0.0.1:11434",

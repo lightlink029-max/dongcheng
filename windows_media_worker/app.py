@@ -16,6 +16,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from douyin_adapter import capture_login, has_login, self_test
+from mumu_adapter import check_mumu
 from worker import Worker
 
 
@@ -41,6 +42,8 @@ class MediaWorkerApp(tk.Tk):
         self.events = queue.Queue()
         self.stop_event = threading.Event()
         self.worker_thread = None
+        self.worker = None
+        self.pending_selections = {}
         self.vars = {}
         self._build()
         self._load()
@@ -64,6 +67,9 @@ class MediaWorkerApp(tk.Tk):
             ("ollama_url", "Ollama地址", "http://127.0.0.1:11434"),
             ("translation_model", "本地翻译模型", "qwen3:8b"),
             ("font_file", "字幕字体", "C:/Windows/Fonts/msyh.ttc"),
+            ("mumu_adb", "MuMu ADB（可自动检测）", ""),
+            ("mumu_player", "MuMu 主程序（可自动检测）", ""),
+            ("mumu_serial", "MuMu ADB 地址", "127.0.0.1:7555"),
         ]
         form = ttk.Frame(config_tab, padding=20)
         form.pack(fill="x")
@@ -74,6 +80,8 @@ class MediaWorkerApp(tk.Tk):
             ttk.Entry(form, textvariable=var, show=show).grid(row=row, column=1, sticky="ew", pady=7)
             if key == "work_dir":
                 ttk.Button(form, text="选择", command=self._choose_dir).grid(row=row, column=2, padx=8)
+            elif key in ("mumu_adb", "mumu_player"):
+                ttk.Button(form, text="选择", command=lambda name=key: self._choose_exe(name)).grid(row=row, column=2, padx=8)
         form.columnconfigure(1, weight=1)
         self.autostart = tk.BooleanVar(value=False)
         ttk.Checkbutton(form, text="登录Windows后自动启动并开始工作", variable=self.autostart).grid(
@@ -90,6 +98,7 @@ class MediaWorkerApp(tk.Tk):
         controls.pack(fill="x")
         ttk.Button(controls, text="保存配置", command=self.save).pack(side="left", padx=4)
         ttk.Button(controls, text="测试Odoo连接", command=self.test_connection).pack(side="left", padx=4)
+        ttk.Button(controls, text="检测MuMu", command=self.test_mumu).pack(side="left", padx=4)
         self.start_button = ttk.Button(controls, text="启动工作节点", command=self.start)
         self.start_button.pack(side="left", padx=4)
         self.stop_button = ttk.Button(controls, text="停止", command=self.stop, state="disabled")
@@ -102,6 +111,10 @@ class MediaWorkerApp(tk.Tk):
         for col, title, width in zip(columns, ("任务ID", "类型", "语种", "状态", "结果/错误"), (80, 130, 140, 120, 480)):
             self.task_tree.heading(col, text=title); self.task_tree.column(col, width=width, anchor="w")
         self.task_tree.pack(fill="both", expand=True, padx=10, pady=10)
+        task_controls = ttk.Frame(tasks_tab, padding=(10, 0, 10, 10))
+        task_controls.pack(fill="x")
+        ttk.Button(task_controls, text="提交所选任务的视频链接", command=self.submit_selection).pack(side="left")
+        ttk.Label(task_controls, text="在 MuMu 抖音中选择视频并复制分享链接，可一次粘贴多条。", foreground="#666").pack(side="left", padx=12)
 
         self.log = tk.Text(log_tab, wrap="word", state="disabled", font=("Consolas", 10))
         self.log.pack(fill="both", expand=True, padx=10, pady=10)
@@ -109,6 +122,10 @@ class MediaWorkerApp(tk.Tk):
     def _choose_dir(self):
         value = filedialog.askdirectory(initialdir=self.vars["work_dir"].get())
         if value: self.vars["work_dir"].set(value)
+
+    def _choose_exe(self, key):
+        value = filedialog.askopenfilename(filetypes=[("Windows 程序", "*.exe"), ("所有文件", "*.*")])
+        if value: self.vars[key].set(value)
 
     def config(self):
         return {
@@ -120,6 +137,9 @@ class MediaWorkerApp(tk.Tk):
             "download_proxy": self.vars["download_proxy"].get().strip(),
             "douyin_cookie_store": str(app_dir() / "secrets.json"),
             "font_file": self.vars["font_file"].get().strip(),
+            "mumu_adb": self.vars["mumu_adb"].get().strip(),
+            "mumu_player": self.vars["mumu_player"].get().strip(),
+            "mumu_serial": self.vars["mumu_serial"].get().strip() or "127.0.0.1:7555",
             "local_ai": {"ollama_url": self.vars["ollama_url"].get().strip(),
                          "translation_model": self.vars["translation_model"].get().strip()},
         }
@@ -199,6 +219,16 @@ class MediaWorkerApp(tk.Tk):
             except Exception as exc: self.events.put(("connection", {"ok": False, "error": str(exc)}))
         threading.Thread(target=run, daemon=True).start()
 
+    def test_mumu(self):
+        if not self.save(quiet=True): return
+        def run():
+            try:
+                result = check_mumu(self.config())
+                self.events.put(("mumu", {"ok": True, "result": result}))
+            except Exception as exc:
+                self.events.put(("mumu", {"ok": False, "error": str(exc)}))
+        threading.Thread(target=run, daemon=True).start()
+
     def start(self):
         if self.worker_thread and self.worker_thread.is_alive(): return
         if not self.save(quiet=True): return
@@ -213,12 +243,28 @@ class MediaWorkerApp(tk.Tk):
 
     def _work_loop(self):
         worker = Worker(self.config(), lambda event, data: self.events.put((event, data)))
+        self.worker = worker
         delay = max(3, int(self.config().get("poll_seconds", 10)))
         self.events.put(("log", {"message": "工作节点已启动"}))
         while not self.stop_event.is_set():
             try:
+                for task_id in list(self.pending_selections):
+                    try:
+                        worker.heartbeat(task_id)
+                    except Exception as exc:
+                        self.pending_selections.pop(task_id, None)
+                        self.events.put(("log", {"message": f"选片任务 {task_id} 已失效：{exc}"}))
+                if self.pending_selections:
+                    self.stop_event.wait(delay)
+                    continue
                 task = worker.claim()
-                if task: worker.process(task)
+                if task and task["type"] == "douyin_select":
+                    try:
+                        worker.prepare_douyin_selection(task)
+                        self.pending_selections[task["id"]] = task
+                    except Exception as exc:
+                        worker.fail_task(task, exc)
+                elif task: worker.process(task)
                 else: self.stop_event.wait(delay)
             except Exception as exc:
                 self.events.put(("log", {"message": "任务错误：" + str(exc)})); self.stop_event.wait(delay)
@@ -238,7 +284,20 @@ class MediaWorkerApp(tk.Tk):
                         messagebox.showinfo(APP_TITLE, "抖音登录成功，登录信息已在本机加密保存")
                     else:
                         messagebox.showerror(APP_TITLE, data.get("error") or "抖音登录失败")
+                elif event == "mumu":
+                    if data["ok"]:
+                        result = data["result"]
+                        messagebox.showinfo(APP_TITLE, "MuMu连接成功\nADB：%s\n设备：%s" % (result["adb"], result["serial"]))
+                    else:
+                        messagebox.showerror(APP_TITLE, data.get("error") or "MuMu连接失败")
+                elif event == "selection_complete":
+                    task = data["task"]
+                    self.pending_selections.pop(task["id"], None)
+                    self._task_event("task_done", {"task": task, "output": "已同步 %s 条视频链接" % data["saved"]})
+                elif event == "selection_submit_error":
+                    messagebox.showerror(APP_TITLE, data.get("error") or "选片链接同步失败")
                 elif event.startswith("task_"): self._task_event(event, data)
+                elif event == "selection_pending": self._task_event(event, data)
                 elif event == "stopped":
                     self.status.set("已停止"); self.start_button.config(state="normal"); self.stop_button.config(state="disabled")
         except queue.Empty: pass
@@ -246,12 +305,45 @@ class MediaWorkerApp(tk.Tk):
 
     def _task_event(self, event, data):
         task = data["task"]; iid = str(task["id"])
-        status = {"task_started": "处理中", "task_done": "已完成", "task_failed": "失败"}[event]
+        status = {"task_started": "处理中", "task_done": "已完成", "task_failed": "失败", "selection_pending": "等待人工选片"}[event]
         result = data.get("output") or data.get("error") or ""
         values = (task["id"], task["type"], task["target_language"], status, result)
         if self.task_tree.exists(iid): self.task_tree.item(iid, values=values)
         else: self.task_tree.insert("", 0, iid=iid, values=values)
         self.write_log(f"任务 {task['id']}：{status} {result}")
+
+    def submit_selection(self):
+        selected = self.task_tree.selection()
+        if len(selected) != 1:
+            messagebox.showerror(APP_TITLE, "请在任务列表选择一个等待人工选片的任务")
+            return
+        task_id = int(selected[0])
+        task = self.pending_selections.get(task_id)
+        if not task:
+            messagebox.showerror(APP_TITLE, "所选任务不是当前等待选片的任务")
+            return
+        dialog = tk.Toplevel(self)
+        dialog.title("提交抖音视频链接")
+        dialog.geometry("720x420")
+        ttk.Label(dialog, text="粘贴抖音“分享 → 复制链接”的内容，每条一行：").pack(anchor="w", padx=15, pady=(15, 5))
+        text = tk.Text(dialog, wrap="word")
+        text.pack(fill="both", expand=True, padx=15, pady=5)
+        def submit():
+            value = text.get("1.0", "end").strip()
+            if not value:
+                messagebox.showerror(APP_TITLE, "请先粘贴至少一个抖音视频链接", parent=dialog)
+                return
+            dialog.destroy()
+            def run():
+                try:
+                    result = self.worker.complete_douyin_selection(task_id, value)
+                    self.events.put(("selection_complete", {"task": task, "saved": result.get("saved", 0)}))
+                except Exception as exc:
+                    self.events.put(("log", {"message": "选片链接同步失败：" + str(exc)}))
+                    self.events.put(("selection_submit_error", {"error": str(exc)}))
+            threading.Thread(target=run, daemon=True).start()
+        ttk.Button(dialog, text="同步到 Odoo", command=submit).pack(pady=(5, 15))
+        text.focus_set()
 
     def write_log(self, message):
         line = time.strftime("%Y-%m-%d %H:%M:%S ") + message + "\n"
