@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_psc_local_task_list" model="ir.ui.view">
+        <field name="name">psc.local.production.task.list</field>
+        <field name="model">psc.local.production.task</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state == 'done'" decoration-danger="state == 'failed'" decoration-muted="state == 'cancelled'">
+                <field name="priority" widget="handle"/>
+                <field name="name"/>
+                <field name="task_type"/>
+                <field name="project_id"/>
+                <field name="product_id"/>
+                <field name="target_language"/>
+                <field name="state" widget="badge"/>
+                <field name="progress" widget="progressbar"/>
+                <field name="worker_id"/>
+                <field name="create_date"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_psc_local_task_form" model="ir.ui.view">
+        <field name="name">psc.local.production.task.form</field>
+        <field name="model">psc.local.production.task</field>
+        <field name="arch" type="xml">
+            <form create="false">
+                <header>
+                    <button name="action_retry" type="object" string="重新排队" class="btn-primary" invisible="state not in ('failed', 'cancelled')"/>
+                    <button name="action_cancel" type="object" string="取消" invisible="state not in ('queued', 'claimed', 'processing')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="queued,claimed,processing,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group><field name="content_id"/><field name="project_id"/><field name="product_id"/><field name="task_type"/><field name="target_language"/><field name="source_mode"/></group>
+                        <group><field name="worker_id"/><field name="progress" widget="progressbar"/><field name="status_message"/><field name="claimed_at"/><field name="finished_at"/></group>
+                    </group>
+                    <notebook>
+                        <page string="输入参数"><group><field name="keywords"/><field name="source_urls"/><field name="prompt"/><field name="video_script"/><field name="aspect_ratio"/><field name="duration_seconds"/></group></page>
+                        <page string="输入素材"><group><field name="source_image_attachment_id"/><field name="source_media_attachment_ids" widget="many2many_tags"/></group></page>
+                        <page string="输出"><group><field name="output_attachment_id"/><field name="output_subtitle_attachment_id"/><field name="error_message"/></group></page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_psc_local_tasks" model="ir.actions.act_window">
+        <field name="name">本地生产任务</field><field name="res_model">psc.local.production.task</field><field name="view_mode">list,form</field>
+    </record>
+    <menuitem id="menu_psc_local_tasks" name="本地生产任务" parent="menu_psc_root" action="action_psc_local_tasks" sequence="25"/>
+
+    <record id="view_psc_content_form_local_production" model="ir.ui.view">
+        <field name="name">psc.content.variant.form.local.production</field>
+        <field name="model">psc.content.variant</field>
+        <field name="inherit_id" ref="view_psc_content_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header/button[@name='action_generate_social_image'][1]" position="attributes"><attribute name="string">提交本地图片任务</attribute></xpath>
+            <xpath expr="//header/button[@name='action_generate_social_image'][2]" position="attributes"><attribute name="string">重新提交本地图片任务</attribute></xpath>
+            <xpath expr="//header/button[@name='action_generate_social_video'][1]" position="attributes"><attribute name="string">提交本地视频任务</attribute></xpath>
+            <xpath expr="//header/button[@name='action_generate_social_video'][2]" position="attributes"><attribute name="string">重新提交本地视频任务</attribute></xpath>
+            <xpath expr="//header" position="inside"><button name="action_open_local_tasks" type="object" string="本地任务" invisible="not local_task_count"/><field name="local_task_count" invisible="1"/></xpath>
+            <xpath expr="//field[@name='image_model_id']" position="attributes"><attribute name="invisible">1</attribute></xpath>
+            <xpath expr="//field[@name='video_model_id']" position="attributes"><attribute name="invisible">1</attribute></xpath>
+            <xpath expr="//separator[@string='本次生成模型（留空则使用渠道默认）']" position="attributes"><attribute name="invisible">1</attribute></xpath>
+            <xpath expr="//field[@name='video_script']" position="after"><field name="source_video_urls" placeholder="每行一个已获授权的视频链接"/><field name="local_source_mode"/><field name="requested_duration"/></xpath>
+        </field>
+    </record>
+
+    <record id="view_psc_channel_form_local_production" model="ir.ui.view">
+        <field name="name">psc.publishing.channel.form.local.production</field>
+        <field name="model">psc.publishing.channel</field>
+        <field name="inherit_id" ref="view_psc_channel_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='image_model_id']" position="attributes"><attribute name="invisible">1</attribute></xpath>
+            <xpath expr="//field[@name='video_model_id']" position="attributes"><attribute name="invisible">1</attribute></xpath>
+        </field>
+    </record>
+
+    <record id="menu_psc_media_models" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+</odoo>

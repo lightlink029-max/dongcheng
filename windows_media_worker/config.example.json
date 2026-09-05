@@ -1,0 +1,16 @@
+{
+  "odoo_url": "https://your-company.odoo.com",
+  "worker_token": "从Odoo系统参数 psc.local_worker_token 复制",
+  "worker_id": "media-pc-01",
+  "poll_seconds": 10,
+  "work_dir": "C:/LightLinkMediaWorker/jobs",
+  "ffmpeg": "ffmpeg",
+  "ffprobe": "ffprobe",
+  "yt_dlp": "yt-dlp",
+  "font_file": "C:/Windows/Fonts/msyh.ttc",
+  "local_ai": {
+    "ollama_url": "http://127.0.0.1:11434",
+    "translation_model": "qwen3:8b",
+    "whisper_command": ""
+  }
+}

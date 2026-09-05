@@ -1,0 +1,5 @@
+.venv/
+config.json
+jobs/
+__pycache__/
+_smoke/
