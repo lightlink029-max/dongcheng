@@ -1,4 +1,5 @@
 import secrets
+from urllib.parse import quote
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -80,6 +81,7 @@ class ContentVariant(models.Model):
     local_task_ids = fields.One2many("psc.local.production.task", "content_id", string="本地生产任务")
     local_task_count = fields.Integer(compute="_compute_local_task_count")
     source_video_urls = fields.Text(string="原视频网址（每行一个）")
+    douyin_search_keyword = fields.Char(string="抖音素材关键词")
     local_source_mode = fields.Selection([
         ("project_script", "按项目生成脚本"),
         ("translate_original", "翻译原视频"),
@@ -130,6 +132,22 @@ class ContentVariant(models.Model):
 
     def action_generate_social_video(self):
         return self._queue_local_task("translate_mix")
+
+    def _douyin_search_action(self, search_mode):
+        self.ensure_one()
+        keyword = (self.douyin_search_keyword or self.title or self.product_id.name or "").strip()
+        if not keyword:
+            raise UserError(_("请先填写抖音素材关键词。"))
+        url = "https://www.douyin.com/search/%s?type=video&pih_content_id=%s&pih_search_mode=%s" % (
+            quote(keyword), self.id, search_mode,
+        )
+        return {"type": "ir.actions.act_url", "url": url, "target": "new"}
+
+    def action_open_douyin_keyword_search(self):
+        return self._douyin_search_action("text")
+
+    def action_open_douyin_image_search(self):
+        return self._douyin_search_action("image")
 
     def action_open_local_tasks(self):
         self.ensure_one()

@@ -507,12 +507,111 @@ async function uploadSourcingReferenceImage(){
     console.warn('LightLink: sourcing reference image upload failed',error);
   }
 }
+function canonicalDouyinVideoUrl(raw){
+  const match=absoluteUrl(raw).match(/^https:\/\/(?:www\.)?douyin\.com\/video\/(\d+)/i);
+  return match?`https://www.douyin.com/video/${match[1]}`:'';
+}
+let douyinContentId=0;
+let douyinSelected=new Set();
+function douyinSelectionKey(){return `pihDouyinSelected:${douyinContentId}`;}
+async function rememberDouyinContext(){
+  if(!location.hostname.endsWith('douyin.com')) return;
+  const params=new URL(location.href).searchParams;
+  const incoming=Number(params.get('pih_content_id')||0);
+  if(incoming) await chrome.storage.local.set({lastDouyinContentId:incoming});
+  const saved=await chrome.storage.local.get(['lastDouyinContentId']);
+  douyinContentId=incoming||Number(saved.lastDouyinContentId||0);
+  if(!douyinContentId) return;
+  const selected=await chrome.storage.local.get([douyinSelectionKey()]);
+  douyinSelected=new Set((selected[douyinSelectionKey()]||[]).map(canonicalDouyinVideoUrl).filter(Boolean));
+  installDouyinPicker();
+  if(params.get('pih_search_mode')==='image') uploadDouyinReferenceImage();
+}
+function installDouyinPicker(){
+  if(document.getElementById('pih-douyin-toolbar')) return;
+  const style=document.createElement('style');
+  style.textContent=`#pih-douyin-toolbar{position:fixed;right:24px;top:90px;z-index:2147483647;background:#fff;color:#222;padding:12px;border-radius:9px;box-shadow:0 3px 18px #0004;font:14px system-ui}#pih-douyin-toolbar button,.pih-douyin-pick{border:0;border-radius:5px;padding:7px 10px;cursor:pointer}.pih-douyin-pick{position:absolute;right:8px;top:8px;z-index:2147483646;background:#fff;color:#222}.pih-douyin-pick[data-selected="1"]{background:#714b67;color:#fff}#pih-douyin-sync{background:#714b67;color:#fff;margin-right:6px}`;
+  document.documentElement.appendChild(style);
+  const toolbar=document.createElement('div');
+  toolbar.id='pih-douyin-toolbar';
+  toolbar.innerHTML='<div style="font-weight:700;margin-bottom:8px">LightLink 抖音选片 <span id="pih-douyin-count">0</span></div><button id="pih-douyin-sync">同步到 Odoo</button><button id="pih-douyin-clear">清空</button><div id="pih-douyin-status" style="max-width:260px;margin-top:7px;color:#666"></div>';
+  document.documentElement.appendChild(toolbar);
+  toolbar.querySelector('#pih-douyin-sync').addEventListener('click',syncDouyinSelection);
+  toolbar.querySelector('#pih-douyin-clear').addEventListener('click',async()=>{
+    douyinSelected.clear(); await persistDouyinSelection(); refreshDouyinPicker();
+  });
+  refreshDouyinPicker();
+  new MutationObserver(refreshDouyinPicker).observe(document.documentElement,{childList:true,subtree:true});
+}
+async function persistDouyinSelection(){
+  await chrome.storage.local.set({[douyinSelectionKey()]:[...douyinSelected]});
+}
+function refreshDouyinPicker(){
+  const count=document.getElementById('pih-douyin-count');
+  if(count) count.textContent=String(douyinSelected.size);
+  for(const anchor of document.querySelectorAll('a[href*="/video/"]')){
+    const url=canonicalDouyinVideoUrl(anchor.href);
+    if(!url||anchor.querySelector(':scope > .pih-douyin-pick')) continue;
+    if(getComputedStyle(anchor).position==='static') anchor.style.position='relative';
+    const button=document.createElement('button');
+    button.type='button'; button.className='pih-douyin-pick'; button.dataset.url=url;
+    button.addEventListener('click',async event=>{
+      event.preventDefault();event.stopPropagation();
+      if(douyinSelected.has(url)) douyinSelected.delete(url); else douyinSelected.add(url);
+      await persistDouyinSelection(); refreshDouyinPicker();
+    });
+    anchor.appendChild(button);
+  }
+  for(const button of document.querySelectorAll('.pih-douyin-pick')){
+    const selected=douyinSelected.has(button.dataset.url);
+    button.dataset.selected=selected?'1':'0'; button.textContent=selected?'已选':'选择素材';
+  }
+}
+async function syncDouyinSelection(){
+  const status=document.getElementById('pih-douyin-status');
+  try{
+    const saved=await chrome.storage.local.get(['endpoint','token']);
+    if(!saved.endpoint||!saved.token) throw new Error('请先在插件中配置 Odoo 接收地址和 Token');
+    if(!douyinSelected.size) throw new Error('请先选择视频');
+    status.textContent='正在同步…';
+    const result=await chrome.runtime.sendMessage({
+      type:'PIH_DOUYIN_SYNC',endpoint:saved.endpoint,token:saved.token,
+      contentId:douyinContentId,urls:[...douyinSelected],
+    });
+    if(!result?.ok) throw new Error(result?.error||'同步失败');
+    status.textContent=`已同步 ${result.saved||0} 条，可返回 Odoo 提交视频任务`;
+  }catch(error){status.textContent=`同步失败：${error.message}`;}
+}
+async function uploadDouyinReferenceImage(){
+  const saved=await chrome.storage.local.get(['endpoint','token']);
+  const match=(saved.endpoint||'').match(/^(.*\/product-intelligence\/v1\/)ingest\/(\d+)\/?$/);
+  if(!match||!saved.token||!douyinContentId) return;
+  let input=null;
+  for(let i=0;i<20&&!input;i++){
+    input=document.querySelector('input[type="file"][accept*="image"],input[type="file"]');
+    if(!input){
+      const camera=[...document.querySelectorAll('button,[role="button"],a,span,i')].find(node=>/(图片搜索|以图搜|搜图|camera|image-search)/i.test(node.getAttribute('aria-label')||node.getAttribute('title')||node.className||''));
+      camera?.click(); await new Promise(resolve=>setTimeout(resolve,250));
+    }
+  }
+  if(!input){document.getElementById('pih-douyin-status').textContent='未识别到抖音图片上传入口，请点击相机后重试';return;}
+  try{
+    const response=await fetch(`${match[1]}douyin-image/${match[2]}/${douyinContentId}`,{headers:{'Authorization':`Bearer ${saved.token}`}});
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob=await response.blob(),bytes=new Uint8Array(await blob.arrayBuffer());
+    let binary=''; for(let offset=0;offset<bytes.length;offset+=32768) binary+=String.fromCharCode(...bytes.subarray(offset,offset+32768));
+    const result=await chrome.runtime.sendMessage({type:'PIH_SOURCING_MAIN_WORLD_UPLOAD',data:btoa(binary),mimeType:blob.type||'image/jpeg',platform:'douyin'});
+    if(!result?.ok) throw new Error(result?.error||'图片上传失败');
+  }catch(error){document.getElementById('pih-douyin-status').textContent=`图片搜索准备失败：${error.message}`;}
+}
 uploadSourcingReferenceImage();
 rememberCandidateContext();
+rememberDouyinContext();
 chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
   if(message?.type==='PIH_CAPTURE_V108') sendResponse({items:captureAlibaba()});
   if(message?.type==='PIH_DETAIL_V110') sendResponse(captureAlibabaDetail());
   if(message?.type==='PIH_1688_CAPTURE_V109') sendResponse(capture1688());
   if(message?.type==='PIH_YIWUGO_CAPTURE_V100') sendResponse(captureYiwugo());
   if(message?.type==='PIH_YIWUGO_SUPPLIER_CONTACT_V100') sendResponse(captureYiwugoSupplierContact());
+  if(message?.type==='PIH_DOUYIN_SELECTION_V100') sendResponse({content_id:douyinContentId,urls:[...douyinSelected]});
 });

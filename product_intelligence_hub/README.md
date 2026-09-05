@@ -73,9 +73,10 @@ to the configured source endpoint. Alibaba search pages do not expose reliable
 7/30/180-day sales figures; those fields remain empty unless another authorized
 provider supplies them.
 
-Version 1.0.2 selects Alibaba's visible product image element before applying
-the generic CDN fallback, preventing badges and placeholder images from being
-stored as the product's main image.
+Version 1.7.0 also supports manual Douyin material selection. Open Douyin from
+an Odoo channel-content record, select the visible video cards with the injected
+LightLink controls, and synchronize the canonical video URLs back to Odoo before
+submitting the local video task.
 
 ## Installation
 

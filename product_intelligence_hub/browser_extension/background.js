@@ -124,6 +124,25 @@ async function runDetailQueue(endpoint, token) {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === 'PIH_DOUYIN_SYNC') {
+    try {
+      const match = (message.endpoint || '').match(/^(.*\/product-intelligence\/v1\/)ingest\/(\d+)\/?$/);
+      if (!match) throw new Error('接收地址格式不正确');
+      const url = `${match[1]}douyin-selection/${match[2]}/${Number(message.contentId || 0)}`;
+      fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${message.token || ''}`},
+        body: JSON.stringify({urls: Array.isArray(message.urls) ? message.urls : []}),
+      }).then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        sendResponse(data);
+      }).catch(error => sendResponse({ok: false, error: error.message}));
+    } catch (error) {
+      sendResponse({ok: false, error: error.message});
+    }
+    return true;
+  }
   if (message?.type === 'PIH_ENRICH_YIWUGO_CONTACTS') {
     enrichYiwugoContacts(message.items).then(items => sendResponse({ok: true, items}))
       .catch(error => sendResponse({ok: false, error: error.message, items: message.items || []}));
@@ -163,7 +182,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         input.files = transfer.files;
         input.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
         input.dispatchEvent(new Event('change', {bubbles: true, composed: true}));
-        if (platform === 'yiwugo') {
+        if (platform === 'yiwugo' || platform === 'douyin') {
           // YiwuGo's upload component starts image retrieval from the file
           // input change event. Its top orange button is only for URL input.
           await new Promise(resolve => setTimeout(resolve, 1800));

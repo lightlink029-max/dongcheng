@@ -63,7 +63,16 @@
             <xpath expr="//field[@name='image_model_id']" position="attributes"><attribute name="invisible">1</attribute></xpath>
             <xpath expr="//field[@name='video_model_id']" position="attributes"><attribute name="invisible">1</attribute></xpath>
             <xpath expr="//field[@name='ai_output_tokens']/following-sibling::separator[1]" position="attributes"><attribute name="invisible">1</attribute></xpath>
-            <xpath expr="//field[@name='video_script']" position="after"><field name="source_video_urls" placeholder="每行一个已获授权的视频链接"/><field name="local_source_mode"/><field name="requested_duration"/></xpath>
+            <xpath expr="//field[@name='video_script']" position="after">
+                <separator string="抖音人工选片"/>
+                <field name="douyin_search_keyword" placeholder="默认使用当前标题或产品名称"/>
+                <div class="o_row">
+                    <button name="action_open_douyin_keyword_search" type="object" string="打开抖音文字搜索" class="btn-secondary"/>
+                    <button name="action_open_douyin_image_search" type="object" string="打开抖音图片搜索" class="btn-secondary"/>
+                </div>
+                <field name="source_video_urls" placeholder="在抖音结果页人工选择后，由 LightLink 插件同步；也可每行手工填写一个链接"/>
+                <field name="local_source_mode"/><field name="requested_duration"/>
+            </xpath>
         </field>
     </record>
 

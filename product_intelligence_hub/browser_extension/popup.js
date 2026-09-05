@@ -5,6 +5,7 @@ const CAPTURE_MESSAGE = 'PIH_CAPTURE_V108';
 const DETAIL_MESSAGE = 'PIH_DETAIL_V110';
 const SOURCING_MESSAGE = 'PIH_1688_CAPTURE_V109';
 const YIWUGO_MESSAGE = 'PIH_YIWUGO_CAPTURE_V100';
+const DOUYIN_MESSAGE = 'PIH_DOUYIN_SELECTION_V100';
 chrome.storage.local.get(['endpoint','token','detailProgress'], v => {
   endpoint.value=v.endpoint||''; token.value=v.token||'';
   if(v.detailProgress?.message) status.textContent=v.detailProgress.message;
@@ -61,6 +62,32 @@ document.querySelector('#push').addEventListener('click', async () => {
     if(!response.ok || !data.ok) throw new Error(data.error||`HTTP ${response.status}`);
     status.textContent=`完成：新增 ${data.created||0}，更新 ${data.updated||0}，跳过 ${data.skipped||0}`;
   } catch(e) { status.textContent=`失败：${e.message}`; }
+});
+document.querySelector('#douyinSync').addEventListener('click',async()=>{
+  try{
+    const ep=endpoint.value.trim(),tk=token.value.trim();
+    if(!ep||!tk) throw new Error('请先填写接收地址和 Token');
+    await chrome.storage.local.set({endpoint:ep,token:tk});
+    const [tab]=await chrome.tabs.query({active:true,currentWindow:true});
+    if(!/^https:\/\/([a-z0-9-]+\.)*douyin\.com\//i.test(tab.url||'')) throw new Error('请在抖音搜索结果页使用此功能');
+    let result;
+    try{result=await chrome.tabs.sendMessage(tab.id,{type:DOUYIN_MESSAGE});}
+    catch(_error){
+      await chrome.scripting.executeScript({target:{tabId:tab.id},files:['content.js']});
+      result=await chrome.tabs.sendMessage(tab.id,{type:DOUYIN_MESSAGE});
+    }
+    if(!result?.content_id) throw new Error('请从 Odoo 渠道内容的抖音搜索按钮进入');
+    if(!result.urls?.length) throw new Error('请先在页面上选择视频');
+    const match=ep.match(/^(.*\/product-intelligence\/v1\/)ingest\/(\d+)\/?$/);
+    if(!match) throw new Error('接收地址格式不正确');
+    const response=await fetch(`${match[1]}douyin-selection/${match[2]}/${result.content_id}`,{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${tk}`},
+      body:JSON.stringify({urls:result.urls}),
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok) throw new Error(data.error||`HTTP ${response.status}`);
+    status.textContent=`完成：已同步 ${data.saved||0} 条抖音视频`;
+  }catch(error){status.textContent=`抖音同步失败：${error.message}`;}
 });
 function apiUrl(ep, action){
   const match=ep.match(/^(.*\/product-intelligence\/v1\/)ingest\/(\d+)\/?$/);
