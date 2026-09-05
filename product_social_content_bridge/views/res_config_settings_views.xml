@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_psc_local_worker_settings" model="ir.actions.act_window">
+        <field name="name">本地工具设置</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="context">{'module': 'product_social_content_bridge'}</field>
+    </record>
+
+    <record id="res_config_settings_view_form_psc_local_worker" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.psc.local.worker</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app string="社媒与本地生产" name="product_social_content_bridge" groups="base.group_system">
+                    <block title="Windows 本地媒体工具" help="本地工具主动领取任务；Odoo 不需要访问你的电脑。">
+                        <setting string="工作节点令牌" help="复制到 LightLink 本地媒体生产工具的“工作节点令牌”字段。请按密码保护。">
+                            <field name="psc_local_worker_token"/>
+                        </setting>
+                        <setting string="任务租约" help="工作节点断线超过该时间后，任务会自动重新排队。允许 60 到 3600 秒。">
+                            <field name="psc_local_worker_lease_seconds"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <menuitem id="menu_psc_local_worker_settings" name="本地工具设置"
+              parent="menu_psc_root" action="action_psc_local_worker_settings"
+              groups="base.group_system" sequence="90"/>
+</odoo>
