@@ -15,6 +15,7 @@ if getattr(sys, "frozen", False):
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
+from douyin_adapter import capture_login, has_login, self_test
 from worker import Worker
 
 
@@ -59,7 +60,6 @@ class MediaWorkerApp(tk.Tk):
             ("worker_id", "工作节点名称", os.environ.get("COMPUTERNAME", "media-pc-01")),
             ("work_dir", "工作目录", str(app_dir() / "jobs")),
             ("poll_seconds", "轮询间隔（秒）", "10"),
-            ("online_downloader_url", "免费视频下载网站", "https://paste2vid.com"),
             ("download_proxy", "下载代理（可选）", ""),
             ("ollama_url", "Ollama地址", "http://127.0.0.1:11434"),
             ("translation_model", "本地翻译模型", "qwen3:8b"),
@@ -78,6 +78,14 @@ class MediaWorkerApp(tk.Tk):
         self.autostart = tk.BooleanVar(value=False)
         ttk.Checkbutton(form, text="登录Windows后自动启动并开始工作", variable=self.autostart).grid(
             row=len(fields), column=1, sticky="w", pady=8)
+        login_row = len(fields) + 1
+        ttk.Label(form, text="抖音登录", width=20).grid(row=login_row, column=0, sticky="w", pady=7)
+        self.douyin_status = tk.StringVar(value="未登录")
+        ttk.Label(form, textvariable=self.douyin_status).grid(row=login_row, column=1, sticky="w", pady=7)
+        self.douyin_login_button = ttk.Button(
+            form, text="登录/更新抖音登录", command=self.login_douyin,
+        )
+        self.douyin_login_button.grid(row=login_row, column=2, padx=8)
         controls = ttk.Frame(config_tab, padding=(20, 5))
         controls.pack(fill="x")
         ttk.Button(controls, text="保存配置", command=self.save).pack(side="left", padx=4)
@@ -109,9 +117,8 @@ class MediaWorkerApp(tk.Tk):
             "worker_id": self.vars["worker_id"].get().strip(),
             "work_dir": self.vars["work_dir"].get().strip(),
             "poll_seconds": int(self.vars["poll_seconds"].get() or 10),
-            "online_downloader_enabled": True,
-            "online_downloader_url": self.vars["online_downloader_url"].get().strip(),
             "download_proxy": self.vars["download_proxy"].get().strip(),
+            "douyin_cookie_store": str(app_dir() / "secrets.json"),
             "font_file": self.vars["font_file"].get().strip(),
             "local_ai": {"ollama_url": self.vars["ollama_url"].get().strip(),
                          "translation_model": self.vars["translation_model"].get().strip()},
@@ -122,8 +129,6 @@ class MediaWorkerApp(tk.Tk):
             data = self.config()
             if not data["odoo_url"].startswith("https://"):
                 raise ValueError("Odoo地址必须使用 https://")
-            if not data["online_downloader_url"].startswith("https://"):
-                raise ValueError("免费视频下载网站必须使用 https://")
             CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
             self._set_autostart(self.autostart.get())
             if not quiet: messagebox.showinfo(APP_TITLE, "配置已保存")
@@ -140,8 +145,29 @@ class MediaWorkerApp(tk.Tk):
                     if key in flat: var.set(str(flat[key]))
             except Exception as exc: self.write_log("配置读取失败：" + str(exc))
         self.autostart.set(self._autostart_enabled())
+        self._refresh_douyin_status()
         if "--autostart" in sys.argv:
             self.after(1000, self.start)
+
+    def _refresh_douyin_status(self):
+        self.douyin_status.set("已登录" if has_login(app_dir() / "secrets.json") else "未登录")
+
+    def login_douyin(self):
+        self.douyin_login_button.config(state="disabled")
+        self.douyin_status.set("等待登录…")
+
+        def run():
+            try:
+                count = capture_login(
+                    app_dir() / "secrets.json",
+                    self.vars["download_proxy"].get().strip(),
+                    status_callback=lambda message: self.events.put(("log", {"message": message})),
+                )
+                self.events.put(("douyin_login", {"ok": True, "count": count}))
+            except Exception as exc:
+                self.events.put(("douyin_login", {"ok": False, "error": str(exc)}))
+
+        threading.Thread(target=run, daemon=True).start()
 
     def _command(self):
         if getattr(sys, "frozen", False):
@@ -205,6 +231,13 @@ class MediaWorkerApp(tk.Tk):
                 if event == "log": self.write_log(data["message"])
                 elif event == "connection":
                     messagebox.showinfo(APP_TITLE, "Odoo连接成功") if data["ok"] else messagebox.showerror(APP_TITLE, data.get("error") or "Odoo连接失败")
+                elif event == "douyin_login":
+                    self.douyin_login_button.config(state="normal")
+                    self._refresh_douyin_status()
+                    if data["ok"]:
+                        messagebox.showinfo(APP_TITLE, "抖音登录成功，登录信息已在本机加密保存")
+                    else:
+                        messagebox.showerror(APP_TITLE, data.get("error") or "抖音登录失败")
                 elif event.startswith("task_"): self._task_event(event, data)
                 elif event == "stopped":
                     self.status.set("已停止"); self.start_button.config(state="normal"); self.stop_button.config(state="disabled")
@@ -227,4 +260,6 @@ class MediaWorkerApp(tk.Tk):
 
 
 if __name__ == "__main__":
+    if "--self-test" in sys.argv:
+        raise SystemExit(self_test())
     MediaWorkerApp().mainloop()

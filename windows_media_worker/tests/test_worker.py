@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from worker import DownloadLinkParser, Worker
+from worker import Worker
 
 
 class StopAfterFirstHeartbeat:
@@ -27,22 +27,13 @@ class RecordingWorker(Worker):
 
 
 class DownloadWorker(Worker):
-    def __init__(self, config, online_error=None):
+    def __init__(self, config):
         super().__init__(config)
-        self.online_error = online_error
         self.calls = []
 
-    def download_via_online_service(self, _url, target):
-        self.calls.append("online")
-        if self.online_error:
-            raise self.online_error
+    def download_via_douyin(self, _url, target):
+        self.calls.append("douyin")
         target.write_bytes(b"video")
-        return target
-
-    def download_via_ytdlp(self, _url, target_dir, index):
-        self.calls.append("yt-dlp")
-        target = target_dir / f"source-{index}.mp4"
-        target.write_bytes(b"fallback")
         return target
 
 
@@ -72,31 +63,17 @@ class WorkerLeaseTests(unittest.TestCase):
         worker.heartbeat_loop(42, StopAfterFirstHeartbeat())
         self.assertEqual(worker.heartbeats, [42])
 
-    def test_online_download_link_parser_only_accepts_proxy_routes(self):
-        parser = DownloadLinkParser()
-        parser.feed('<a href="https://unsafe.example/video.mp4">x</a>'
-                    '<a href="/api/proxy?url=https%3A%2F%2Fvideo.example">download</a>')
-        self.assertEqual(parser.links, ["/api/proxy?url=https%3A%2F%2Fvideo.example"])
-
-    def test_download_proxy_is_optional(self):
-        worker = Worker(self.config())
-        self.assertIsNone(worker.download_proxies())
-        worker.config["download_proxy"] = "http://127.0.0.1:10808"
-        self.assertEqual(worker.download_proxies(), {
-            "http": "http://127.0.0.1:10808", "https": "http://127.0.0.1:10808",
-        })
-
-    def test_online_downloader_is_preferred(self):
+    def test_douyin_downloader_is_used(self):
         worker = DownloadWorker(self.config())
-        target = worker.download_url("https://example.com/video", Path(self.work_dir.name), 1)
-        self.assertEqual(worker.calls, ["online"])
+        target = worker.download_url("https://v.douyin.com/example/", Path(self.work_dir.name), 1)
+        self.assertEqual(worker.calls, ["douyin"])
         self.assertEqual(target.read_bytes(), b"video")
 
-    def test_ytdlp_is_used_after_online_failure(self):
-        worker = DownloadWorker(self.config(), RuntimeError("offline"))
-        target = worker.download_url("https://example.com/video", Path(self.work_dir.name), 1)
-        self.assertEqual(worker.calls, ["online", "yt-dlp"])
-        self.assertEqual(target.read_bytes(), b"fallback")
+    def test_non_douyin_url_is_rejected(self):
+        worker = DownloadWorker(self.config())
+        with self.assertRaisesRegex(ValueError, "仅接受抖音链接"):
+            worker.download_url("https://example.com/video", Path(self.work_dir.name), 1)
+        self.assertEqual(worker.calls, [])
 
 
 if __name__ == "__main__":

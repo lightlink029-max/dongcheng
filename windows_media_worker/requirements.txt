@@ -1,4 +1,10 @@
 requests>=2.32,<3
 Pillow>=10,<12
-yt-dlp>=2025.8
 imageio-ffmpeg>=0.6
+aiohttp>=3.9
+aiofiles>=23.2.1
+aiosqlite>=0.19
+pyyaml>=6.0.1
+python-dateutil>=2.8.2
+gmssl>=3.2.2
+playwright>=1.40,<2

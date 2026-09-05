@@ -7,9 +7,6 @@
   "work_dir": "C:/LightLinkMediaWorker/jobs",
   "ffmpeg": "ffmpeg",
   "ffprobe": "ffprobe",
-  "yt_dlp": "yt-dlp",
-  "online_downloader_enabled": true,
-  "online_downloader_url": "https://paste2vid.com",
   "download_proxy": "",
   "font_file": "C:/Windows/Fonts/msyh.ttc",
   "local_ai": {

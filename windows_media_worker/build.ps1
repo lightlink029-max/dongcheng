@@ -11,7 +11,15 @@ if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed with exit code 
 & $Python -m PyInstaller --noconfirm --clean --windowed --onedir `
     --name LightLinkMediaWorker `
     --collect-all imageio_ffmpeg `
-    --collect-all yt_dlp `
+    --collect-all playwright `
+    --paths "vendor\douyin" `
+    --collect-submodules auth `
+    --collect-submodules config `
+    --collect-submodules control `
+    --collect-submodules core `
+    --collect-submodules storage `
+    --collect-submodules utils `
+    --add-data "vendor\douyin;vendor\douyin" `
     app.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed with exit code $LASTEXITCODE" }
 

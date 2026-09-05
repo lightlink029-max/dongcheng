@@ -2,7 +2,7 @@
 
 该工作节点主动领取 Odoo 的媒体任务，在 Windows 本地完成素材下载、图片排版、字幕翻译和 FFmpeg 混剪，然后把成品回传 Odoo。Odoo 不再直接调用图片或视频生成云 API。
 
-视频网址默认先交给配置中的免费网页下载服务解析，失败后自动回退到本机 `yt-dlp`。当前默认服务为 Paste2Vid；这是第三方网页服务，接口或额度可能变化，因此地址可在配置界面替换。若本机访问该网站需要代理，可填写例如 `http://127.0.0.1:10808`。仅下载自有或已获授权的公开视频。
+抖音视频下载由内置的开源 [cmsjin/douyin](https://github.com/cmsjin/douyin) 完成，不调用 Paste2Vid 或其他在线解析网站。首次使用请在配置页点击“登录/更新抖音登录”，在自动打开的 Edge 窗口完成登录；Cookie 使用 Windows DPAPI 加密，只保存在本机 `%LOCALAPPDATA%\\LightLinkMediaWorker\\secrets.json`，不会上传 Odoo、写入配置或日志。仅下载自有或已获授权的公开视频。
 
 ## 图形版安装
 
@@ -14,13 +14,15 @@
 
 ## 源码版安装
 
-1. 安装 Python 3.11+、FFmpeg、yt-dlp；仅下载自有或已获授权的公开视频。
+1. 安装 Python 3.11+ 和 Microsoft Edge；FFmpeg 由安装包内置。仅下载自有或已获授权的公开视频。
 2. `python -m venv .venv`
 3. `.venv\\Scripts\\pip install -r requirements.txt`
 4. 复制 `config.example.json` 为 `config.json`。
 5. 从 Odoo 系统参数复制 `psc.local_worker_token`，填写 Odoo 地址和工作目录。
 6. 可选：安装 Ollama 与本地翻译模型，并在配置中填写模型名。
-7. 启动桌面程序，保存配置后点击“启动工作节点”。
+7. 启动桌面程序，先点击“登录/更新抖音登录”，再保存配置并点击“启动工作节点”。
+
+`vendor/douyin` 是 `cmsjin/douyin` 2.0.0 的固定源码快照，按其 MIT 许可证分发；原许可证保存在该目录中。
 
 工作节点不接收入站公网连接；它主动访问 Odoo，因此适用于 Odoo.sh。验证码、登录失效或无权下载时任务会失败并留在 Odoo 中等待处理。
 

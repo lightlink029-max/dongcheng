@@ -3,36 +3,18 @@ import os
 import shutil
 import subprocess
 import threading
-from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 
 import requests
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+
+from douyin_adapter import download_video
 
 try:
     import imageio_ffmpeg
 except ImportError:
     imageio_ffmpeg = None
-
-try:
-    from yt_dlp import YoutubeDL
-except ImportError:
-    YoutubeDL = None
-
-
-class DownloadLinkParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.links = []
-
-    def handle_starttag(self, tag, attrs):
-        if tag != "a":
-            return
-        href = dict(attrs).get("href", "")
-        if href.startswith(("/api/proxy?", "/api/fetch?")):
-            self.links.append(href)
-
 
 class Worker:
     def __init__(self, config, event_callback=None):
@@ -90,82 +72,24 @@ class Worker:
         response = self.api("GET", f"/psc/local-worker/attachments/{attachment_id}")
         target.write_bytes(response.content)
 
-    def download_proxies(self):
-        proxy = (self.config.get("download_proxy") or "").strip()
-        return {"http": proxy, "https": proxy} if proxy else None
-
-    def download_via_online_service(self, url, target):
-        service = (self.config.get("online_downloader_url") or "https://paste2vid.com").rstrip("/")
-        if urlparse(service).scheme != "https":
-            raise ValueError("在线视频下载服务必须使用 https://")
-        session = requests.Session()
-        request_options = {"timeout": 60, "proxies": self.download_proxies()}
-        home = session.get(service + "/", **request_options)
-        home.raise_for_status()
-        response = session.post(
-            service + "/api/parse2?lang=zh",
-            json={"url": url},
-            headers={"Origin": service, "Referer": service + "/"},
-            **request_options,
+    def download_via_douyin(self, url, target):
+        cookie_store = self.config.get("douyin_cookie_store") or str(
+            Path(os.environ.get("LOCALAPPDATA", Path.home()))
+            / "LightLinkMediaWorker" / "secrets.json"
         )
-        response.raise_for_status()
-        payload = response.json()
-        if payload.get("code") != 0:
-            raise RuntimeError(payload.get("message") or "在线视频解析失败")
-        parser = DownloadLinkParser()
-        parser.feed((payload.get("data") or {}).get("html") or "")
-        if not parser.links:
-            raise RuntimeError("在线视频解析结果中没有下载地址")
-        media = session.get(urljoin(service + "/", parser.links[0]), stream=True, **request_options)
-        media.raise_for_status()
-        content_type = (media.headers.get("Content-Type") or "").lower()
-        if content_type and not any(value in content_type for value in ("video/", "octet-stream")):
-            raise RuntimeError("在线视频下载服务返回的不是视频文件")
-        with target.open("wb") as stream:
-            for chunk in media.iter_content(1024 * 1024):
-                if chunk:
-                    stream.write(chunk)
-        if not target.exists() or target.stat().st_size == 0:
-            raise RuntimeError("在线视频下载服务返回了空文件")
-        return target
-
-    def download_via_ytdlp(self, url, target_dir, index):
-        output = target_dir / f"source-{index}.%(ext)s"
-        proxy = (self.config.get("download_proxy") or "").strip()
-        options = {
-            "noplaylist": True, "restrictfilenames": True,
-            "format": "bv*+ba/b", "merge_output_format": "mp4",
-            "outtmpl": str(output), "ffmpeg_location": self.ffmpeg(),
-            "quiet": True, "no_warnings": True,
-        }
-        if proxy:
-            options["proxy"] = proxy
-        if YoutubeDL:
-            with YoutubeDL(options) as downloader:
-                downloader.download([url])
-        else:
-            command = [self.config.get("yt_dlp", "yt-dlp"), "--no-playlist", "--restrict-filenames",
-                       "-f", "bv*+ba/b", "--merge-output-format", "mp4", "-o", str(output)]
-            if proxy:
-                command.extend(["--proxy", proxy])
-            subprocess.run(command + [url], check=True)
-        matches = sorted(target_dir.glob(f"source-{index}.*"))
-        if not matches:
-            raise RuntimeError("Downloader produced no file")
-        return matches[0]
+        return download_video(
+            url, target, cookie_store,
+            (self.config.get("download_proxy") or "").strip(),
+        )
 
     def download_url(self, url, target_dir, index):
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https"):
             raise ValueError("Only HTTP(S) source URLs are accepted")
-        online_target = target_dir / f"source-{index}.mp4"
-        if self.config.get("online_downloader_enabled", True):
-            try:
-                return self.download_via_online_service(url, online_target)
-            except Exception as exc:
-                online_target.unlink(missing_ok=True)
-                self.emit("log", message=f"免费网页下载失败，改用本地下载器：{exc}")
-        return self.download_via_ytdlp(url, target_dir, index)
+        host = (parsed.hostname or "").lower()
+        if host != "douyin.com" and not host.endswith(".douyin.com") and host != "v.iesdouyin.com":
+            raise ValueError("当前本地下载器仅接受抖音链接")
+        return self.download_via_douyin(url, target_dir / f"source-{index}.mp4")
 
     def translate(self, text, language):
         if not text.strip():
