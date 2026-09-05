@@ -4,9 +4,15 @@ import queue
 import sys
 import threading
 import time
-import tkinter as tk
 import winreg
 from pathlib import Path
+
+if getattr(sys, "frozen", False):
+    runtime = Path(sys.executable).parent / "_internal"
+    os.environ["TCL_LIBRARY"] = str(runtime / "_tcl_data")
+    os.environ["TK_LIBRARY"] = str(runtime / "_tk_data")
+
+import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from worker import Worker
@@ -155,8 +161,8 @@ class MediaWorkerApp(tk.Tk):
         if not self.save(quiet=True): return
         def run():
             try:
-                task = Worker(self.config()).claim()
-                self.events.put(("connection", {"ok": True, "task": task}))
+                result = Worker(self.config()).health()
+                self.events.put(("connection", {"ok": bool(result.get("ok"))}))
             except Exception as exc: self.events.put(("connection", {"ok": False, "error": str(exc)}))
         threading.Thread(target=run, daemon=True).start()
 
@@ -191,7 +197,7 @@ class MediaWorkerApp(tk.Tk):
                 event, data = self.events.get_nowait()
                 if event == "log": self.write_log(data["message"])
                 elif event == "connection":
-                    messagebox.showinfo(APP_TITLE, "连接成功" + ("，已领取一个待处理任务" if data.get("task") else "，当前没有待处理任务")) if data["ok"] else messagebox.showerror(APP_TITLE, data["error"])
+                    messagebox.showinfo(APP_TITLE, "Odoo连接成功") if data["ok"] else messagebox.showerror(APP_TITLE, data.get("error") or "Odoo连接失败")
                 elif event.startswith("task_"): self._task_event(event, data)
                 elif event == "stopped":
                     self.status.set("已停止"); self.start_button.config(state="normal"); self.stop_button.config(state="disabled")

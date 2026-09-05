@@ -10,6 +10,11 @@ class LocalWorkerController(http.Controller):
         if not expected or not supplied or supplied != expected:
             raise Forbidden()
 
+    @http.route("/psc/local-worker/ping", type="http", auth="none", methods=["GET"], csrf=False)
+    def ping(self, **kwargs):
+        self._authorize()
+        return request.make_json_response({"ok": True})
+
     @http.route("/psc/local-worker/claim", type="http", auth="none", methods=["POST"], csrf=False)
     def claim(self, **kwargs):
         self._authorize()

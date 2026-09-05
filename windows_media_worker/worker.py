@@ -49,6 +49,9 @@ class Worker:
             "worker_id": self.config.get("worker_id", os.environ.get("COMPUTERNAME", "windows-worker"))
         }).json().get("task")
 
+    def health(self):
+        return self.api("GET", "/psc/local-worker/ping").json()
+
     def progress(self, task_id, progress, message):
         self.api("POST", f"/psc/local-worker/tasks/{task_id}/progress",
                  json={"progress": progress, "message": message})

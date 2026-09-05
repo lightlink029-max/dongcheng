@@ -2,17 +2,18 @@ $ErrorActionPreference = "Stop"
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Here
 
-$BundledPython = "C:\Users\Admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
-$Python = if (Test-Path $BundledPython) { $BundledPython } else { "python" }
-if (-not (Test-Path ".venv-build\Scripts\python.exe")) {
-    & $Python -m venv .venv-build
+$Python = ".venv\Scripts\python.exe"
+if (-not (Test-Path $Python)) {
+    py -m venv .venv
 }
-& .\.venv-build\Scripts\python.exe -m pip install --timeout 600 --retries 10 -r requirements.txt pyinstaller
-& .\.venv-build\Scripts\pyinstaller.exe --noconfirm --clean --windowed --onedir `
+& $Python -m pip install --timeout 600 --retries 10 -r requirements.txt pyinstaller
+if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed with exit code $LASTEXITCODE" }
+& $Python -m PyInstaller --noconfirm --clean --windowed --onedir `
     --name LightLinkMediaWorker `
     --collect-all imageio_ffmpeg `
     --collect-all yt_dlp `
     app.py
+if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed with exit code $LASTEXITCODE" }
 
 $Package = Join-Path $Here "dist\LightLinkMediaWorker-Windows.zip"
 if (Test-Path $Package) { Remove-Item -LiteralPath $Package }

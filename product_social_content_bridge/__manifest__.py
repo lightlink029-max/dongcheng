@@ -1,6 +1,6 @@
 {
     "name": "产品线社媒发布中心",
-    "version": "19.0.2.0.0",
+    "version": "19.0.2.0.1",
     "summary": "按产品线、市场和渠道批量生成并管理社媒内容",
     "category": "Marketing/Social Marketing",
     "author": "LightLink",
