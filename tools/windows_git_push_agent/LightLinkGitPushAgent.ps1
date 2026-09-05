@@ -14,6 +14,7 @@ $RequestDirectory = Join-Path $QueueRoot "requests"
 $ResultDirectory = Join-Path $QueueRoot "results"
 $ArchiveDirectory = Join-Path $QueueRoot "archive"
 $LogPath = Join-Path $QueueRoot "agent.log"
+$GitSshWrapper = $SshWrapper.Replace("\", "/")
 
 function Write-AgentLog([string]$Message) {
     $line = "{0} {1}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Message
@@ -90,7 +91,7 @@ function Process-Request([System.IO.FileInfo]$RequestFile) {
 
         $push = Invoke-Git @(
             "-C", $RepoPath,
-            "-c", ("core.sshCommand=" + $SshWrapper),
+            "-c", ("core.sshCommand=" + $GitSshWrapper),
             "-c", "core.hooksPath=NUL",
             "push", "--porcelain", "origin", "HEAD:refs/heads/production"
         )
@@ -99,7 +100,7 @@ function Process-Request([System.IO.FileInfo]$RequestFile) {
         }
         $remoteHead = Invoke-Git @(
             "-C", $RepoPath,
-            "-c", ("core.sshCommand=" + $SshWrapper),
+            "-c", ("core.sshCommand=" + $GitSshWrapper),
             "-c", "core.hooksPath=NUL",
             "ls-remote", "origin", "refs/heads/production"
         )
