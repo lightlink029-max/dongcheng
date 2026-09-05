@@ -37,6 +37,11 @@ class DownloadWorker(Worker):
         return target
 
 
+class NoTranslationWorker(Worker):
+    def translate(self, _text, _language):
+        raise AssertionError("已有目标语种脚本时不应调用翻译模型")
+
+
 class WorkerLeaseTests(unittest.TestCase):
     def setUp(self):
         self.work_dir = TemporaryDirectory()
@@ -74,6 +79,15 @@ class WorkerLeaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "仅接受抖音链接"):
             worker.download_url("https://example.com/video", Path(self.work_dir.name), 1)
         self.assertEqual(worker.calls, [])
+
+    def test_target_language_video_script_skips_ollama(self):
+        worker = NoTranslationWorker(self.config())
+        task = {
+            "video_script": "Ready-to-use English subtitle",
+            "source_mode": "auto", "target_language": "English", "duration_seconds": 15,
+        }
+        srt = worker.make_srt(task, Path(self.work_dir.name))
+        self.assertIn("Ready-to-use English subtitle", srt.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

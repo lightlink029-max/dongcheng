@@ -99,16 +99,27 @@ class Worker:
         model = ai.get("translation_model")
         if not endpoint or not model:
             return text
-        response = requests.post(endpoint + "/api/generate", json={
-            "model": model, "stream": False,
-            "prompt": f"Translate the following subtitle into {language}. Return only the translation:\n{text}",
-        }, timeout=300)
+        try:
+            response = requests.post(endpoint + "/api/generate", json={
+                "model": model, "stream": False,
+                "prompt": f"Translate the following subtitle into {language}. Return only the translation:\n{text}",
+            }, timeout=300)
+        except requests.ConnectionError as exc:
+            raise RuntimeError(
+                "需要翻译字幕，但本机 Ollama 未启动；请安装并启动 Ollama，"
+                "或改用已经按目标语种生成的视频脚本"
+            ) from exc
         response.raise_for_status()
         return response.json().get("response", text).strip()
 
     def make_srt(self, task, job_dir):
-        text = task.get("video_script") or task.get("prompt") or task.get("keywords") or ""
-        translated = self.translate(text, task["target_language"])
+        script = (task.get("video_script") or "").strip()
+        source_mode = task.get("source_mode") or "auto"
+        if script and source_mode in ("auto", "project_script"):
+            translated = script
+        else:
+            text = script or task.get("prompt") or task.get("keywords") or ""
+            translated = self.translate(text, task["target_language"])
         duration = max(3, int(task.get("duration_seconds") or 15))
         srt = job_dir / "subtitle.srt"
         srt.write_text(f"1\n00:00:00,000 --> 00:00:{duration:02d},000\n{translated}\n", encoding="utf-8")
