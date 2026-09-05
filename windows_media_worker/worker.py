@@ -195,7 +195,7 @@ class Worker:
         with Image.open(image_path) as source:
             source.convert("RGB").save(image_path, format="JPEG", quality=95)
         bridge = MumuBridge(
-            self.config.get("mumu_adb", ""), self.config.get("mumu_serial", "127.0.0.1:7555"),
+            self.config.get("mumu_adb", ""), self.config.get("mumu_serial", ""),
             self.config.get("mumu_player", ""),
         )
         remote_path = bridge.prepare_image_search(image_path, task["id"])

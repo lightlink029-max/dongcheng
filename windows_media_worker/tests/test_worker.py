@@ -3,11 +3,12 @@ import unittest
 from types import SimpleNamespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from worker import Worker
-from mumu_adapter import MumuBridge
+from mumu_adapter import MumuBridge, discover_serial
 
 
 class StopAfterFirstHeartbeat:
@@ -104,6 +105,17 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertEqual(result["state"], "device")
         self.assertEqual(calls[0][1:], ["connect", "127.0.0.1:7555"])
         self.assertEqual(calls[1][1:], ["-s", "127.0.0.1:7555", "get-state"])
+
+    def test_mumu_serial_discovery_reads_running_android_instance(self):
+        def runner(_command, **_kwargs):
+            return SimpleNamespace(
+                returncode=0,
+                stdout='{"0":{"adb_host_ip":"127.0.0.1","adb_port":16384,"is_android_started":true}}',
+                stderr="",
+            )
+        with mock.patch("mumu_adapter._candidate_roots", return_value=[Path("D:/MuMu")]), \
+                mock.patch.object(Path, "is_file", return_value=True):
+            self.assertEqual(discover_serial(runner), "127.0.0.1:16384")
 
 
 if __name__ == "__main__":

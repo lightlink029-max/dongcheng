@@ -69,7 +69,7 @@ class MediaWorkerApp(tk.Tk):
             ("font_file", "字幕字体", "C:/Windows/Fonts/msyh.ttc"),
             ("mumu_adb", "MuMu ADB（可自动检测）", ""),
             ("mumu_player", "MuMu 主程序（可自动检测）", ""),
-            ("mumu_serial", "MuMu ADB 地址", "127.0.0.1:7555"),
+            ("mumu_serial", "MuMu ADB 地址（留空自动检测）", ""),
         ]
         form = ttk.Frame(config_tab, padding=20)
         form.pack(fill="x")
@@ -139,7 +139,7 @@ class MediaWorkerApp(tk.Tk):
             "font_file": self.vars["font_file"].get().strip(),
             "mumu_adb": self.vars["mumu_adb"].get().strip(),
             "mumu_player": self.vars["mumu_player"].get().strip(),
-            "mumu_serial": self.vars["mumu_serial"].get().strip() or "127.0.0.1:7555",
+            "mumu_serial": self.vars["mumu_serial"].get().strip(),
             "local_ai": {"ollama_url": self.vars["ollama_url"].get().strip(),
                          "translation_model": self.vars["translation_model"].get().strip()},
         }
