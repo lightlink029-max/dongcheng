@@ -60,7 +60,7 @@
             <xpath expr="//header" position="inside"><button name="action_open_local_tasks" type="object" string="本地任务" invisible="not local_task_count"/><field name="local_task_count" invisible="1"/></xpath>
             <xpath expr="//field[@name='image_model_id']" position="attributes"><attribute name="invisible">1</attribute></xpath>
             <xpath expr="//field[@name='video_model_id']" position="attributes"><attribute name="invisible">1</attribute></xpath>
-            <xpath expr="//separator[@string='本次生成模型（留空则使用渠道默认）']" position="attributes"><attribute name="invisible">1</attribute></xpath>
+            <xpath expr="//field[@name='ai_output_tokens']/following-sibling::separator[1]" position="attributes"><attribute name="invisible">1</attribute></xpath>
             <xpath expr="//field[@name='video_script']" position="after"><field name="source_video_urls" placeholder="每行一个已获授权的视频链接"/><field name="local_source_mode"/><field name="requested_duration"/></xpath>
         </field>
     </record>
