@@ -1,24 +1,41 @@
-import json
 import mimetypes
 import os
 import shutil
 import subprocess
-import sys
-import time
 from pathlib import Path
 from urllib.parse import urlparse
 
 import requests
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+try:
+    import imageio_ffmpeg
+except ImportError:
+    imageio_ffmpeg = None
+
+try:
+    from yt_dlp import YoutubeDL
+except ImportError:
+    YoutubeDL = None
+
 
 class Worker:
-    def __init__(self, config):
+    def __init__(self, config, event_callback=None):
         self.config = config
         self.base = config["odoo_url"].rstrip("/")
         self.headers = {"Authorization": "Bearer " + config["worker_token"]}
         self.root = Path(config.get("work_dir", "jobs")).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
+        self.event_callback = event_callback or (lambda event, data: None)
+
+    def emit(self, event, **data):
+        self.event_callback(event, data)
+
+    def ffmpeg(self):
+        configured = self.config.get("ffmpeg")
+        if configured and configured != "ffmpeg":
+            return configured
+        return imageio_ffmpeg.get_ffmpeg_exe() if imageio_ffmpeg else "ffmpeg"
 
     def api(self, method, path, **kwargs):
         headers = dict(self.headers)
@@ -45,9 +62,18 @@ class Worker:
         if parsed.scheme not in ("http", "https"):
             raise ValueError("Only HTTP(S) source URLs are accepted")
         output = target_dir / f"source-{index}.%(ext)s"
-        command = [self.config.get("yt_dlp", "yt-dlp"), "--no-playlist", "--restrict-filenames",
-                   "-f", "bv*+ba/b", "--merge-output-format", "mp4", "-o", str(output), url]
-        subprocess.run(command, check=True)
+        if YoutubeDL:
+            with YoutubeDL({
+                "noplaylist": True, "restrictfilenames": True,
+                "format": "bv*+ba/b", "merge_output_format": "mp4",
+                "outtmpl": str(output), "ffmpeg_location": self.ffmpeg(),
+                "quiet": True, "no_warnings": True,
+            }) as downloader:
+                downloader.download([url])
+        else:
+            command = [self.config.get("yt_dlp", "yt-dlp"), "--no-playlist", "--restrict-filenames",
+                       "-f", "bv*+ba/b", "--merge-output-format", "mp4", "-o", str(output), url]
+            subprocess.run(command, check=True)
         matches = sorted(target_dir.glob(f"source-{index}.*"))
         if not matches:
             raise RuntimeError("Downloader produced no file")
@@ -78,9 +104,8 @@ class Worker:
 
     def image(self, task, job_dir):
         source = job_dir / "reference.jpg"
-        if task.get("source_image_url"):
-            source_id = int(task["source_image_url"].split("/web/content/")[1].split("?")[0])
-            self.attachment(source_id, source)
+        if task.get("source_image_id"):
+            self.attachment(task["source_image_id"], source)
         else:
             Image.new("RGB", (1080, 1350), "white").save(source)
         ratio = task.get("aspect_ratio", "1:1")
@@ -118,7 +143,7 @@ class Worker:
         vf = (f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
               f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black,"
               f"subtitles='{subtitle_path}'")
-        command = [self.config.get("ffmpeg", "ffmpeg"), "-y", "-f", "concat", "-safe", "0", "-i", str(concat),
+        command = [self.ffmpeg(), "-y", "-f", "concat", "-safe", "0", "-i", str(concat),
                    "-t", str(duration), "-vf", vf, "-c:v", "libx264", "-preset", "medium", "-crf", "22",
                    "-c:a", "aac", "-movflags", "+faststart", str(output)]
         subprocess.run(command, check=True)
@@ -142,30 +167,13 @@ class Worker:
             shutil.rmtree(job_dir)
         job_dir.mkdir(parents=True)
         try:
+            self.emit("task_started", task=task)
             self.progress(task["id"], 5, "准备素材")
             output, subtitle = self.image(task, job_dir) if task["type"] == "image" else self.video(task, job_dir)
             self.progress(task["id"], 90, "上传成品")
             self.complete(task, output, subtitle)
+            self.emit("task_done", task=task, output=str(output))
         except Exception as exc:
             self.api("POST", f"/psc/local-worker/tasks/{task['id']}/fail", json={"error": str(exc)})
+            self.emit("task_failed", task=task, error=str(exc))
             raise
-
-    def run(self):
-        delay = max(3, int(self.config.get("poll_seconds", 10)))
-        while True:
-            try:
-                task = self.claim()
-                if task:
-                    self.process(task)
-                else:
-                    time.sleep(delay)
-            except KeyboardInterrupt:
-                return
-            except Exception as exc:
-                print(time.strftime("%Y-%m-%d %H:%M:%S"), exc, file=sys.stderr)
-                time.sleep(delay)
-
-
-if __name__ == "__main__":
-    config_path = Path(sys.argv[1] if len(sys.argv) > 1 else "config.json")
-    Worker(json.loads(config_path.read_text(encoding="utf-8"))).run()

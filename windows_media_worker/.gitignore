@@ -1,4 +1,8 @@
 .venv/
+.venv-build/
+build/
+dist/
+*.spec
 config.json
 jobs/
 __pycache__/

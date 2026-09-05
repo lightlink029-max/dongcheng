@@ -22,7 +22,6 @@ class LocalWorkerController(http.Controller):
             return request.make_json_response({"task": None})
         task.write({"state": "claimed", "worker_id": worker_id, "claimed_at": fields.Datetime.now(),
                     "status_message": "本地工具已领取"})
-        base = request.httprequest.url_root.rstrip("/")
         attachments = task.source_media_attachment_ids
         return request.make_json_response({"task": {
             "id": task.id, "type": task.task_type, "target_language": task.target_language,
@@ -30,10 +29,8 @@ class LocalWorkerController(http.Controller):
             "source_urls": [x.strip() for x in (task.source_urls or "").splitlines() if x.strip()],
             "prompt": task.prompt or "", "video_script": task.video_script or "",
             "aspect_ratio": task.aspect_ratio, "duration_seconds": task.duration_seconds,
-            "source_image_url": "%s/web/content/%s?download=true" % (base, task.source_image_attachment_id.id)
-                if task.source_image_attachment_id else None,
-            "source_media": [{"id": item.id, "name": item.name,
-                              "url": "%s/web/content/%s?download=true" % (base, item.id)} for item in attachments],
+            "source_image_id": task.source_image_attachment_id.id or None,
+            "source_media": [{"id": item.id, "name": item.name} for item in attachments],
         }})
 
     @http.route("/psc/local-worker/attachments/<int:attachment_id>", type="http", auth="none", methods=["GET"], csrf=False)
