@@ -220,7 +220,10 @@ async def _download(url, output_dir, cookies, proxy):
             raise RuntimeError("Douyin Downloader 不支持该链接类型")
         result = await downloader.download(parsed)
     if not result or result.success != 1:
-        raise RuntimeError("Douyin Downloader 未能下载该视频，请更新抖音登录后重试")
+        raise RuntimeError(
+            "Douyin Downloader 未能下载该视频：抖音详情接口暂未返回有效数据，"
+            "可能是临时反爬、作品不可访问或登录确已失效"
+        )
     return str(parsed.get("aweme_id") or parsed.get("item_id") or parsed.get("id") or "")
 
 
@@ -229,10 +232,21 @@ def download_video(url, target, cookie_store, proxy="", return_video_id=False):
     if not cookies:
         raise RuntimeError("尚未登录抖音，请先在工具中点击“登录/更新抖音登录”")
     output_dir = Path(target).parent / "douyin-download"
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-    output_dir.mkdir(parents=True)
-    video_id = asyncio.run(_download(url, output_dir, cookies, proxy))
+    last_error = None
+    for attempt in range(3):
+        if output_dir.exists():
+            shutil.rmtree(output_dir)
+        output_dir.mkdir(parents=True)
+        try:
+            video_id = asyncio.run(_download(url, output_dir, cookies, proxy))
+            break
+        except RuntimeError as exc:
+            last_error = exc
+            if "未能下载该视频" not in str(exc) or attempt == 2:
+                raise
+            time.sleep(2 * (attempt + 1))
+    else:  # pragma: no cover - the final failed attempt raises above
+        raise last_error
     videos = sorted(output_dir.rglob("*.mp4"), key=lambda item: item.stat().st_mtime, reverse=True)
     if len(videos) != 1:
         raise RuntimeError(f"Douyin Downloader 返回了 {len(videos)} 个视频，无法确定目标文件")
