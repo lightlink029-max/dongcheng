@@ -177,6 +177,17 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertIn("00:00:12,500", content)
         self.assertNotIn("\n" + script + "\n", content)
 
+    def test_overlong_voiceover_is_fitted_to_requested_duration(self):
+        worker = Worker(self.config())
+        folder = Path(self.work_dir.name)
+        voiceover = folder / "voiceover.wav"
+        voiceover.write_bytes(b"audio")
+        with mock.patch.object(worker, "probe_duration", return_value=34.2), \
+                mock.patch("worker.subprocess.run") as run:
+            result = worker.fit_voiceover_duration(voiceover, 30, folder)
+        self.assertEqual(result, folder / "voiceover-fitted.wav")
+        self.assertIn("atempo=1.140000", run.call_args.args[0])
+
     def test_clip_order_can_be_reversed(self):
         worker = Worker(self.config())
         clips = [Path("one.mp4"), Path("two.mp4")]
