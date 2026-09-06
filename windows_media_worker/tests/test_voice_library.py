@@ -24,6 +24,7 @@ class VoiceLibraryTests(unittest.TestCase):
         self.assertEqual(by_provider["sherpa"][0]["voice_id"], "0")
         self.assertEqual(by_provider["sherpa"][0]["source"], "Sherpa 本地模型")
         self.assertEqual(by_provider["volcengine"][0]["voice_id"], "BV001_streaming")
+        self.assertTrue(all(item["source_url"] for item in profiles))
         self.assertTrue(all(not item["editable"] for item in profiles))
 
     def test_profiles_round_trip_with_source(self):
@@ -32,6 +33,7 @@ class VoiceLibraryTests(unittest.TestCase):
             profiles = [{
                 "id": "voice-1", "name": "English Female", "provider": "volcengine",
                 "voice_id": "BV001", "source": "Volcengine account",
+                "source_url": "https://example.com/voices",
             }]
             save_voice_profiles(path, profiles)
             self.assertEqual(load_voice_profiles(path), profiles)

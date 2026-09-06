@@ -1173,6 +1173,10 @@ class MediaWorkerApp(tk.Tk):
             tree.heading(column, text=headings[column])
             tree.column(column, width=widths[column], anchor="w")
         tree.pack(fill="both", expand=True)
+        help_text = tk.StringVar(value="选择音色后可打开官方来源，查看或添加可用音色。")
+        ttk.Label(body, textvariable=help_text, foreground="#666", wraplength=820).pack(
+            fill="x", pady=(8, 0),
+        )
         profile_map = {}
 
         def refresh(select_id=None):
@@ -1191,10 +1195,36 @@ class MediaWorkerApp(tk.Tk):
                 if profile["id"] == select_id:
                     tree.selection_set(iid)
                     tree.focus(iid)
+            if not tree.selection() and tree.get_children():
+                first = tree.get_children()[0]
+                tree.selection_set(first)
+                tree.focus(first)
 
         def selected_profile():
             selected = tree.selection()
             return profile_map.get(selected[0]) if selected else None
+
+        def update_help(_event=None):
+            selected = selected_profile()
+            if not selected:
+                return
+            instructions = {
+                "windows": "Windows 音色 ID 就是系统音色名称；点击‘打开音色来源’可安装新的语言和文本转语音包。",
+                "sherpa": "Sherpa 音色 ID 是当前 TTS 模型的 speaker ID 整数；单音色模型用 0，多音色模型按官方模型说明选择。",
+                "volcengine": "火山引擎音色 ID 是账号已开通音色的 voice_type；请从音色列表复制，并以您账号实际权限为准。",
+            }
+            help_text.set(instructions.get(selected["provider"], "请从该音色的来源页面获取音色 ID。"))
+
+        def open_source():
+            selected = selected_profile()
+            source_url = (selected or {}).get("source_url", "").strip()
+            if not source_url:
+                messagebox.showinfo(APP_TITLE, "该音色未填写来源网址，请先编辑音色。", parent=dialog)
+                return
+            try:
+                os.startfile(source_url)
+            except OSError as exc:
+                messagebox.showerror(APP_TITLE, f"无法打开音色来源：{exc}", parent=dialog)
 
         def edit_profile(create=False):
             selected = selected_profile()
@@ -1218,11 +1248,13 @@ class MediaWorkerApp(tk.Tk):
             ])
             voice_id = tk.StringVar(value="" if create else selected["voice_id"])
             source = tk.StringVar(value="" if create else selected["source"])
+            source_url = tk.StringVar(value="" if create else selected.get("source_url", ""))
             fields = (
                 ("音色名称", name, None),
                 ("配音服务", provider, tuple(providers.values())),
                 ("音色 ID", voice_id, None),
                 ("音色来源", source, ("Windows 系统", "Sherpa 本地模型", "火山引擎", "自定义")),
+                ("来源网址", source_url, None),
             )
             for row, (label, variable, choices) in enumerate(fields):
                 ttk.Label(form, text=label, width=14).grid(row=row, column=0, sticky="w", pady=7)
@@ -1237,6 +1269,7 @@ class MediaWorkerApp(tk.Tk):
                         "id": (selected or {}).get("id") or secrets.token_hex(8),
                         "name": name.get().strip(), "provider": provider_key,
                         "voice_id": voice_id.get().strip(), "source": source.get().strip(),
+                        "source_url": source_url.get().strip(),
                     }
                     if not values["name"] or not values["voice_id"] or not values["source"]:
                         raise ValueError("音色名称、音色 ID 和音色来源不能为空")
@@ -1252,7 +1285,7 @@ class MediaWorkerApp(tk.Tk):
                     messagebox.showerror(APP_TITLE, str(exc), parent=editor)
 
             actions = ttk.Frame(form)
-            actions.grid(row=4, column=0, columnspan=2, sticky="e", pady=(10, 0))
+            actions.grid(row=5, column=0, columnspan=2, sticky="e", pady=(10, 0))
             ttk.Button(actions, text="保存", command=save_profile).pack(side="left", padx=4)
             ttk.Button(actions, text="取消", command=editor.destroy).pack(side="left", padx=4)
 
@@ -1284,12 +1317,16 @@ class MediaWorkerApp(tk.Tk):
 
         actions = ttk.Frame(body)
         actions.pack(fill="x", pady=(10, 0))
+        ttk.Button(actions, text="打开音色来源", command=open_source).pack(side="left", padx=3)
         ttk.Button(actions, text="新增", command=lambda: edit_profile(True)).pack(side="left", padx=3)
         ttk.Button(actions, text="编辑", command=edit_profile).pack(side="left", padx=3)
         ttk.Button(actions, text="删除", command=delete_profile).pack(side="left", padx=3)
         ttk.Button(actions, text="应用到当前项目", command=apply_to_project).pack(side="left", padx=12)
         ttk.Button(actions, text="关闭", command=dialog.destroy).pack(side="right", padx=3)
         refresh()
+        update_help()
+        tree.bind("<<TreeviewSelect>>", update_help)
+        tree.bind("<Double-1>", lambda _event: open_source())
 
     def upload_result(self):
         task = self._active_selection_task()

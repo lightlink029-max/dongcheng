@@ -3,6 +3,7 @@ from pathlib import Path
 
 
 REQUIRED_FIELDS = ("id", "name", "provider", "voice_id", "source")
+OPTIONAL_FIELDS = ("source_url",)
 
 
 def default_voice_profiles(windows_voice_names, sherpa_model=""):
@@ -12,6 +13,7 @@ def default_voice_profiles(windows_voice_names, sherpa_model=""):
         "provider": "windows",
         "voice_id": voice,
         "source": "Windows 系统",
+        "source_url": "ms-settings:speech",
         "editable": False,
     } for voice in windows_voice_names]
     profiles.extend(({
@@ -20,6 +22,7 @@ def default_voice_profiles(windows_voice_names, sherpa_model=""):
         "provider": "sherpa",
         "voice_id": "0",
         "source": "Sherpa 本地模型",
+        "source_url": "https://k2-fsa.github.io/sherpa/onnx/tts/pretrained_models/index.html",
         "editable": False,
     }, {
         "id": "system:volcengine:default",
@@ -27,6 +30,7 @@ def default_voice_profiles(windows_voice_names, sherpa_model=""):
         "provider": "volcengine",
         "voice_id": "BV001_streaming",
         "source": "火山引擎",
+        "source_url": "https://www.volcengine.com/docs/6561/1354862",
         "editable": False,
     }))
     return profiles
@@ -43,7 +47,10 @@ def load_voice_profiles(path):
     if not isinstance(values, list):
         return []
     return [
-        {field: str(item.get(field) or "").strip() for field in REQUIRED_FIELDS}
+        {
+            field: str(item.get(field) or "").strip()
+            for field in REQUIRED_FIELDS + OPTIONAL_FIELDS
+        }
         for item in values
         if isinstance(item, dict) and all(str(item.get(field) or "").strip() for field in REQUIRED_FIELDS)
     ]
@@ -53,7 +60,10 @@ def save_voice_profiles(path, profiles):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     values = [
-        {field: str(item.get(field) or "").strip() for field in REQUIRED_FIELDS}
+        {
+            field: str(item.get(field) or "").strip()
+            for field in REQUIRED_FIELDS + OPTIONAL_FIELDS
+        }
         for item in profiles
     ]
     path.write_text(json.dumps(values, ensure_ascii=False, indent=2), encoding="utf-8")
