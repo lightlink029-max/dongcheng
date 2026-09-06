@@ -287,24 +287,6 @@ class Worker:
         Path(srt).write_text("\n".join(cues), encoding="utf-8")
         return srt
 
-    def fit_voiceover_duration(self, voiceover, maximum_duration, job_dir):
-        """Speed up overlong narration just enough to fit the requested video length."""
-        audio_duration = self.probe_duration(voiceover)
-        if audio_duration <= maximum_duration + 0.05:
-            return voiceover
-        speed = audio_duration / maximum_duration
-        factors = []
-        while speed > 2:
-            factors.append(2.0)
-            speed /= 2
-        factors.append(speed)
-        output = Path(job_dir) / "voiceover-fitted.wav"
-        subprocess.run([
-            self.ffmpeg(), "-y", "-i", str(voiceover), "-filter:a",
-            ",".join(f"atempo={factor:.6f}" for factor in factors), str(output),
-        ], check=True, capture_output=True)
-        return output
-
     def arrange_clips(self, task, clips, job_dir):
         clips = list(clips)
         mode = task.get("edit_mode") or "sequence"
@@ -392,7 +374,7 @@ class Worker:
         srt = self.make_srt(task, job_dir, speech_source)
         voiceover = self.make_voiceover(task, srt, job_dir)
         if srt and voiceover:
-            voiceover = self.fit_voiceover_duration(voiceover, duration, job_dir)
+            duration = max(duration, self.probe_duration(voiceover))
             srt = self.sync_voiceover_subtitles(srt, voiceover)
         ratio = task.get("aspect_ratio", "9:16")
         width, height = {"9:16": (1080, 1920), "4:5": (1080, 1350), "1:1": (1080, 1080)}.get(ratio, (1080, 1920))

@@ -177,16 +177,30 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertIn("00:00:12,500", content)
         self.assertNotIn("\n" + script + "\n", content)
 
-    def test_overlong_voiceover_is_fitted_to_requested_duration(self):
-        worker = Worker(self.config())
-        folder = Path(self.work_dir.name)
+    def test_overlong_voiceover_extends_video_without_speed_change(self):
+        config = self.config()
+        config["ffmpeg"] = "C:/test/ffmpeg.exe"
+        worker = Worker(config)
+        folder = Path(self.work_dir.name) / "render"
+        folder.mkdir()
+        srt = folder / "subtitle.srt"
+        srt.write_text(
+            "1\n00:00:00,000 --> 00:00:30,000\nKeep the original narration speed.\n",
+            encoding="utf-8",
+        )
         voiceover = folder / "voiceover.wav"
         voiceover.write_bytes(b"audio")
-        with mock.patch.object(worker, "probe_duration", return_value=34.2), \
+        with mock.patch.object(worker, "make_srt", return_value=srt), \
+                mock.patch.object(worker, "make_voiceover", return_value=voiceover), \
+                mock.patch.object(worker, "probe_duration", return_value=34.2), \
                 mock.patch("worker.subprocess.run") as run:
-            result = worker.fit_voiceover_duration(voiceover, 30, folder)
-        self.assertEqual(result, folder / "voiceover-fitted.wav")
-        self.assertIn("atempo=1.140000", run.call_args.args[0])
+            worker.compose_video(
+                {"duration_seconds": 30, "audio_mode": "mute"},
+                [{"path": Path("relative.mp4")}], folder,
+            )
+        command = run.call_args.args[0]
+        self.assertEqual(command[command.index("-t") + 1], "34.2")
+        self.assertNotIn("atempo", " ".join(command))
 
     def test_clip_order_can_be_reversed(self):
         worker = Worker(self.config())
