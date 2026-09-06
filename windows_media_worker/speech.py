@@ -1,7 +1,6 @@
 import base64
 import importlib.util
 import json
-import os
 import subprocess
 import uuid
 from pathlib import Path
@@ -70,48 +69,6 @@ def transcribe(config, source_video, output_srt, language="Chinese"):
     return Path(output_srt)
 
 
-def windows_voices():
-    if os.name != "nt":
-        return []
-    script = "$s=New-Object -ComObject SAPI.SpVoice; $s.GetVoices() | ForEach-Object {$_.GetDescription()}"
-    result = subprocess.run(
-        ["powershell.exe", "-NoProfile", "-Command", script],
-        capture_output=True, text=True, encoding="utf-8", errors="replace",
-    )
-    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
-
-
-def _windows_tts(text, output, voice="", speed=1.0, volume=1.0):
-    if os.name != "nt":
-        raise RuntimeError("Windows 本地音色仅能在 Windows 上使用")
-    text_file = Path(output).with_suffix(".txt")
-    text_file.write_text(text, encoding="utf-8-sig")
-    rate = max(-10, min(10, int(round((float(speed) - 1) * 5))))
-    volume_value = max(0, min(100, int(float(volume) * 100)))
-    escaped_voice = voice.replace("'", "''")
-    output_value = str(Path(output)).replace("'", "''")
-    text_value = str(text_file).replace("'", "''")
-    script = (
-        "$s=New-Object -ComObject SAPI.SpVoice; "
-        f"$s.Rate={rate}; $s.Volume={volume_value}; "
-        + (
-            f"$selected=$s.GetVoices() | Where-Object {{$_.GetDescription() -eq '{escaped_voice}'}} | Select-Object -First 1; "
-            "$s.Voice=$selected; " if voice else ""
-        )
-        + "$f=New-Object -ComObject SAPI.SpFileStream; "
-        + f"$f.Open('{output_value}',3,$false); $s.AudioOutputStream=$f; "
-        + f"[void]$s.Speak([IO.File]::ReadAllText('{text_value}')); $f.Close()"
-    )
-    try:
-        subprocess.run(["powershell.exe", "-NoProfile", "-Command", script], check=True)
-    finally:
-        text_file.unlink(missing_ok=True)
-    if not Path(output).is_file() or Path(output).stat().st_size < 128:
-        Path(output).unlink(missing_ok=True)
-        raise RuntimeError("Windows 本地音色合成失败，请选择已安装的系统音色或配置 sherpa-onnx")
-    return Path(output)
-
-
 def _sherpa_tts(config, text, output, voice="", speed=1.0, _volume=1.0):
     values = [
         config.get("sherpa_command"), config.get("sherpa_model"),
@@ -141,42 +98,65 @@ def _sherpa_tts(config, text, output, voice="", speed=1.0, _volume=1.0):
 
 
 def _volcengine_tts(config, text, output, voice="", speed=1.0, volume=1.0):
-    app_id = (config.get("volc_app_id") or "").strip()
-    token = (config.get("volc_token") or "").strip()
-    cluster = (config.get("volc_cluster") or "volcano_tts").strip()
-    if not app_id or not token:
-        raise RuntimeError("火山引擎配音需要配置 App ID 和 Access Token")
+    api_key = (config.get("volc_api_key") or "").strip()
+    resource_id = (config.get("volc_resource_id") or "seed-tts-2.0").strip()
+    if not api_key:
+        raise RuntimeError("火山引擎配音需要配置新版 API Key")
+    speaker = voice or config.get("volc_default_voice") or "zh_female_vv_uranus_bigtts"
+    speech_rate = max(-50, min(100, int(round((float(speed) - 1) * 100))))
+    loudness_rate = max(-50, min(100, int(round((float(volume) - 1) * 100))))
     payload = {
-        "app": {"appid": app_id, "token": token, "cluster": cluster},
         "user": {"uid": config.get("volc_uid") or "lightlink-worker"},
-        "audio": {
-            "voice_type": voice or config.get("volc_default_voice") or "BV001_streaming",
-            "encoding": "wav", "speed_ratio": float(speed), "volume_ratio": float(volume),
-        },
-        "request": {
-            "reqid": str(uuid.uuid4()), "text": text, "text_type": "plain",
-            "operation": "query",
+        "req_params": {
+            "text": text,
+            "speaker": speaker,
+            "sample_rate": 24000,
+            "audio_params": {
+                "format": "mp3",
+                "speech_rate": speech_rate,
+                "loudness_rate": loudness_rate,
+                "bit_rate": 64000,
+            },
         },
     }
     response = requests.post(
-        config.get("volc_tts_url") or "https://openspeech.bytedance.com/api/v1/tts",
-        headers={"Authorization": "Bearer; " + token, "Content-Type": "application/json"},
-        json=payload, timeout=300,
+        config.get("volc_tts_url") or "https://openspeech.bytedance.com/api/v3/tts/unidirectional/sse",
+        headers={
+            "Content-Type": "application/json",
+            "X-Api-Key": api_key,
+            "X-Api-Resource-Id": resource_id,
+            "X-Api-Request-Id": str(uuid.uuid4()),
+        },
+        json=payload, timeout=300, stream=True,
     )
-    response.raise_for_status()
-    result = response.json()
-    if result.get("code") not in (0, 3000):
-        raise RuntimeError("火山引擎配音失败：" + str(result.get("message") or result))
-    audio = result.get("data")
-    if not audio:
-        raise RuntimeError("火山引擎没有返回音频数据")
-    Path(output).write_bytes(base64.b64decode(audio))
-    return Path(output)
+    chunks = []
+    try:
+        if response.status_code >= 400:
+            detail = (response.text or "").strip()[:500]
+            raise RuntimeError(
+                f"火山引擎配音请求失败（HTTP {response.status_code}）："
+                + (detail or "请检查 API Key、Resource ID、音色权限和账户余额")
+            )
+        for line in response.iter_lines(decode_unicode=True):
+            if isinstance(line, bytes):
+                line = line.decode("utf-8", errors="replace")
+            if not line or not line.startswith("data:"):
+                continue
+            result = json.loads(line[5:].strip())
+            if result.get("code") not in (None, 0, 20000000):
+                raise RuntimeError("火山引擎配音失败：" + str(result.get("message") or result))
+            if result.get("data"):
+                chunks.append(base64.b64decode(result["data"]))
+    finally:
+        response.close()
+    if not chunks:
+        raise RuntimeError("火山引擎没有返回音频数据，请检查 Resource ID 和音色 ID 是否匹配")
+    output = Path(output).with_suffix(".mp3")
+    output.write_bytes(b"".join(chunks))
+    return output
 
 
 def synthesize(config, provider, text, output, voice="", speed=1.0, volume=1.0):
-    if provider == "windows":
-        return _windows_tts(text, output, voice, speed, volume)
     if provider == "sherpa":
         return _sherpa_tts(config, text, output, voice, speed, volume)
     if provider == "volcengine":

@@ -10,20 +10,15 @@ from voice_library import default_voice_profiles, load_voice_profiles, save_voic
 
 class VoiceLibraryTests(unittest.TestCase):
     def test_each_provider_default_voice_is_available(self):
-        profiles = default_voice_profiles(
-            ["Microsoft Huihui", "Microsoft David"], r"D:\models\vits-zh.onnx",
-        )
+        profiles = default_voice_profiles(r"D:\models\vits-zh.onnx")
         by_provider = {}
         for profile in profiles:
             by_provider.setdefault(profile["provider"], []).append(profile)
 
-        self.assertEqual(
-            [item["voice_id"] for item in by_provider["windows"]],
-            ["Microsoft Huihui", "Microsoft David"],
-        )
+        self.assertNotIn("windows", by_provider)
         self.assertEqual(by_provider["sherpa"][0]["voice_id"], "0")
         self.assertEqual(by_provider["sherpa"][0]["source"], "Sherpa 本地模型")
-        self.assertEqual(by_provider["volcengine"][0]["voice_id"], "BV001_streaming")
+        self.assertEqual(by_provider["volcengine"][0]["voice_id"], "zh_female_vv_uranus_bigtts")
         self.assertTrue(all(item["source_url"] for item in profiles))
         self.assertTrue(all(not item["editable"] for item in profiles))
 

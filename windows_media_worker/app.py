@@ -24,7 +24,6 @@ from douyin_adapter import _dpapi, capture_login, has_login, open_keyword_search
 from mumu_adapter import MumuBridge, check_mumu, install_selector_apk
 from selection_store import SelectionStore
 from selector_bridge import SelectorBridge
-from speech import windows_voices
 from voice_library import default_voice_profiles, load_voice_profiles, save_voice_profiles
 from worker import Worker, create_version_directory
 
@@ -101,9 +100,8 @@ class MediaWorkerApp(tk.Tk):
             ("sherpa_model", "sherpa音色模型", ""),
             ("sherpa_tokens", "sherpa Tokens", ""),
             ("sherpa_data_dir", "sherpa数据目录", ""),
-            ("volc_app_id", "火山引擎 App ID", ""),
-            ("volc_token", "火山引擎 Access Token", ""),
-            ("volc_cluster", "火山引擎 Cluster", "volcano_tts"),
+            ("volc_api_key", "火山引擎 API Key", ""),
+            ("volc_resource_id", "火山 Resource ID", "seed-tts-2.0"),
             ("font_file", "字幕字体", "C:/Windows/Fonts/msyh.ttc"),
             ("mumu_adb", "MuMu ADB（可自动检测）", ""),
             ("mumu_player", "MuMu 主程序（可自动检测）", ""),
@@ -116,7 +114,7 @@ class MediaWorkerApp(tk.Tk):
             row, base_column = index % half, (index // half) * 3
             ttk.Label(form, text=label, width=20).grid(row=row, column=base_column, sticky="w", pady=7)
             var = tk.StringVar(value=default); self.vars[key] = var
-            show = "*" if key in ("worker_token", "volc_token") else ""
+            show = "*" if key in ("worker_token", "volc_api_key") else ""
             ttk.Entry(form, textvariable=var, show=show).grid(row=row, column=base_column + 1, sticky="ew", pady=7)
             if key == "work_dir":
                 ttk.Button(form, text="选择", command=self._choose_dir).grid(row=row, column=base_column + 2, padx=8)
@@ -249,9 +247,8 @@ class MediaWorkerApp(tk.Tk):
                 "sherpa_model": self.vars["sherpa_model"].get().strip(),
                 "sherpa_tokens": self.vars["sherpa_tokens"].get().strip(),
                 "sherpa_data_dir": self.vars["sherpa_data_dir"].get().strip(),
-                "volc_app_id": self.vars["volc_app_id"].get().strip(),
-                "volc_token": self.vars["volc_token"].get().strip(),
-                "volc_cluster": self.vars["volc_cluster"].get().strip(),
+                "volc_api_key": self.vars["volc_api_key"].get().strip(),
+                "volc_resource_id": self.vars["volc_resource_id"].get().strip(),
             },
         }
 
@@ -264,10 +261,10 @@ class MediaWorkerApp(tk.Tk):
             persisted.pop("selector_port", None)
             persisted.pop("selector_token", None)
             speech = dict(persisted.get("speech", {}))
-            token = speech.pop("volc_token", "")
-            if token:
-                speech["volc_token_dpapi"] = base64.b64encode(
-                    _dpapi(token.encode("utf-8"), True)
+            api_key = speech.pop("volc_api_key", "")
+            if api_key:
+                speech["volc_api_key_dpapi"] = base64.b64encode(
+                    _dpapi(api_key.encode("utf-8"), True)
                 ).decode("ascii")
             persisted["speech"] = speech
             CONFIG_PATH.write_text(json.dumps(persisted, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -282,13 +279,28 @@ class MediaWorkerApp(tk.Tk):
             try:
                 data = json.loads(CONFIG_PATH.read_text(encoding="utf-8-sig"))
                 speech = dict(data.get("speech", {}))
-                encrypted = speech.get("volc_token_dpapi")
+                legacy_keys = {"volc_app_id", "volc_token", "volc_token_dpapi", "volc_cluster"}
+                if legacy_keys.intersection(speech):
+                    for key in legacy_keys:
+                        speech.pop(key, None)
+                    data["speech"] = speech
+                    CONFIG_PATH.write_text(
+                        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8",
+                    )
+                encrypted = speech.get("volc_api_key_dpapi")
                 if encrypted:
-                    speech["volc_token"] = _dpapi(base64.b64decode(encrypted), False).decode("utf-8")
+                    speech["volc_api_key"] = _dpapi(base64.b64decode(encrypted), False).decode("utf-8")
                 flat = dict(data); flat.update(data.get("local_ai", {})); flat.update(speech)
                 for key, var in self.vars.items():
                     if key in flat: var.set(str(flat[key]))
             except Exception as exc: self.write_log("配置读取失败：" + str(exc))
+        saved_voices = load_voice_profiles(VOICE_LIBRARY_PATH)
+        supported_voices = [
+            profile for profile in saved_voices
+            if profile.get("provider") in ("sherpa", "volcengine")
+        ]
+        if len(supported_voices) != len(saved_voices):
+            save_voice_profiles(VOICE_LIBRARY_PATH, supported_voices)
         self.autostart.set(self._autostart_enabled())
         self._refresh_douyin_status()
         self._refresh_selection_tasks()
@@ -540,8 +552,8 @@ class MediaWorkerApp(tk.Tk):
         }
         audio_choices = {"original": "保留原声", "mute": "静音"}
         tts_choices = {
-            "none": "不生成配音", "windows": "Windows 本地音色",
-            "sherpa": "sherpa-onnx 本地音色", "volcengine": "火山引擎音色",
+            "none": "不生成配音", "sherpa": "sherpa-onnx 本地音色",
+            "volcengine": "火山引擎音色",
         }
         preset_choices = {
             "douyin": "抖音 / TikTok 9:16", "reels": "Instagram Reels 9:16",
@@ -597,7 +609,10 @@ class MediaWorkerApp(tk.Tk):
         for row, (label, key, choices) in enumerate(rows):
             ttk.Label(form, text=label, width=18).grid(row=row, column=0, sticky="w", pady=5)
             if key == "tts_voice":
-                widget = ttk.Combobox(form, textvariable=values[key], values=windows_voices())
+                widget = ttk.Combobox(
+                    form, textvariable=values[key],
+                    values=[profile["voice_id"] for profile in self._voice_profiles()],
+                )
             else:
                 widget = ttk.Combobox(form, textvariable=values[key], values=choices, state="readonly") if choices else ttk.Entry(form, textvariable=values[key])
             widget.grid(row=row, column=1, columnspan=2, sticky="ew", pady=5)
@@ -1145,18 +1160,17 @@ class MediaWorkerApp(tk.Tk):
         threading.Thread(target=self._run_downloads, args=(task, rows, True), daemon=True).start()
 
     def _voice_profiles(self):
-        profiles = default_voice_profiles(
-            windows_voices(), self.vars["sherpa_model"].get().strip(),
-        )
+        profiles = default_voice_profiles(self.vars["sherpa_model"].get().strip())
         profiles.extend(
-            dict(profile, editable=True) for profile in load_voice_profiles(VOICE_LIBRARY_PATH)
+            dict(profile, editable=True)
+            for profile in load_voice_profiles(VOICE_LIBRARY_PATH)
+            if profile.get("provider") in ("sherpa", "volcengine")
         )
         return profiles
 
     def open_voice_manager(self):
         providers = {
-            "windows": "Windows 本地音色", "sherpa": "sherpa-onnx 本地音色",
-            "volcengine": "火山引擎音色",
+            "sherpa": "sherpa-onnx 本地音色", "volcengine": "火山引擎音色",
         }
         dialog = tk.Toplevel(self)
         dialog.title("音色管理")
@@ -1211,9 +1225,8 @@ class MediaWorkerApp(tk.Tk):
             if not selected:
                 return
             instructions = {
-                "windows": "Windows 音色 ID 就是系统音色名称；点击‘打开音色来源’可安装新的语言和文本转语音包。",
                 "sherpa": "Sherpa 音色 ID 是当前 TTS 模型的 speaker ID 整数；单音色模型用 0，多音色模型按官方模型说明选择。",
-                "volcengine": "火山引擎音色 ID 是账号已开通音色的 voice_type；请从音色列表复制，并以您账号实际权限为准。",
+                "volcengine": "新版火山引擎音色 ID 是已开通模型支持的 speaker；API Key 与 Resource ID 在连接与配置中填写。",
             }
             help_text.set(instructions.get(selected["provider"], "请从该音色的来源页面获取音色 ID。"))
 
@@ -1255,7 +1268,7 @@ class MediaWorkerApp(tk.Tk):
                 ("音色名称", name, None),
                 ("配音服务", provider, tuple(providers.values())),
                 ("音色 ID", voice_id, None),
-                ("音色来源", source, ("Windows 系统", "Sherpa 本地模型", "火山引擎", "自定义")),
+                ("音色来源", source, ("Sherpa 本地模型", "火山引擎", "自定义")),
                 ("来源网址", source_url, None),
             )
             for row, (label, variable, choices) in enumerate(fields):

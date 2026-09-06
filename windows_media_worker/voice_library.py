@@ -6,17 +6,8 @@ REQUIRED_FIELDS = ("id", "name", "provider", "voice_id", "source")
 OPTIONAL_FIELDS = ("source_url",)
 
 
-def default_voice_profiles(windows_voice_names, sherpa_model=""):
-    profiles = [{
-        "id": "system:" + voice,
-        "name": voice,
-        "provider": "windows",
-        "voice_id": voice,
-        "source": "Windows 系统",
-        "source_url": "ms-settings:speech",
-        "editable": False,
-    } for voice in windows_voice_names]
-    profiles.extend(({
+def default_voice_profiles(sherpa_model=""):
+    return [{
         "id": "system:sherpa:0",
         "name": Path(sherpa_model).stem or "Sherpa 默认音色",
         "provider": "sherpa",
@@ -28,12 +19,11 @@ def default_voice_profiles(windows_voice_names, sherpa_model=""):
         "id": "system:volcengine:default",
         "name": "火山引擎默认音色",
         "provider": "volcengine",
-        "voice_id": "BV001_streaming",
-        "source": "火山引擎",
-        "source_url": "https://www.volcengine.com/docs/6561/1354862",
+        "voice_id": "zh_female_vv_uranus_bigtts",
+        "source": "火山引擎豆包语音合成",
+        "source_url": "https://docs.volcengine.com/docs/6561/2532486?lang=zh",
         "editable": False,
-    }))
-    return profiles
+    }]
 
 
 def load_voice_profiles(path):
