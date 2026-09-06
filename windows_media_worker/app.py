@@ -184,33 +184,46 @@ class MediaWorkerApp(tk.Tk):
         self.selection_title = tk.StringVar(value="请先启动工作节点并领取抖音选片任务")
         ttk.Label(selection_header, textvariable=self.selection_title, font=("Microsoft YaHei UI", 11, "bold")).pack(side="left")
         ttk.Button(selection_header, text="新建本地项目", command=self.create_local_project).pack(side="left", padx=(15, 3))
-        ttk.Button(selection_header, text="编辑处理设置", command=self.edit_active_project).pack(side="left", padx=3)
         self.selection_task_choice = ttk.Combobox(selection_header, state="readonly", width=34)
         self.selection_task_choice.pack(side="left", padx=8)
         self.selection_task_choice.bind("<<ComboboxSelected>>", self._on_selection_task_choice)
+
+        selection_workflow = ttk.Notebook(selection_tab)
+        selection_workflow.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        source_page = ttk.Frame(selection_workflow, padding=10)
+        content_page = ttk.Frame(selection_workflow, padding=18)
+        review_page = ttk.Frame(selection_workflow, padding=18)
+        selection_workflow.add(source_page, text="① 项目与视频素材")
+        selection_workflow.add(content_page, text="② 文案与生成")
+        selection_workflow.add(review_page, text="③ 成片审核与回传")
+        self.selection_workflow = selection_workflow
+        self.selection_review_page = review_page
+
+        source_header = ttk.Frame(source_page)
+        source_header.pack(fill="x", pady=(0, 8))
         self.clipboard_listening = tk.BooleanVar(value=True)
         ttk.Checkbutton(
-            selection_header, text="自动收集剪贴板中的抖音链接", variable=self.clipboard_listening,
+            source_header, text="自动收集剪贴板中的抖音链接", variable=self.clipboard_listening,
         ).pack(side="right")
         ttk.Label(
-            selection_tab,
-            text="可独立新建项目，也可领取 Odoo 任务。先下载并预览素材，再生成审核稿；确认满意后才回传 Odoo。",
-        ).pack(fill="x", padx=10, pady=(0, 8))
+            source_header,
+            text="添加或选择视频后执行下载；下载成功会自动识别并保存原视频中文。",
+        ).pack(side="left")
 
         selection_columns = ("video_id", "selected_at", "status", "trim", "copyright", "url", "error")
         self.selection_tree = ttk.Treeview(
-            selection_tab, columns=selection_columns, show="headings", selectmode="extended",
+            source_page, columns=selection_columns, show="headings", selectmode="extended",
         )
         titles = ("视频ID", "选择时间", "处理状态", "入点-出点", "版权", "分享链接", "错误")
         widths = (140, 160, 100, 110, 100, 360, 220)
         for column, title, width in zip(selection_columns, titles, widths):
             self.selection_tree.heading(column, text=title)
             self.selection_tree.column(column, width=width, anchor="w")
-        self.selection_tree.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        self.selection_tree.pack(fill="both", expand=True, pady=(0, 10))
         self.selection_tree.bind("<<TreeviewSelect>>", lambda _event: self._refresh_selection_summary())
         self.selection_tree.bind("<Double-1>", lambda _event: self.preview_selected_video())
 
-        selection_controls = ttk.Frame(selection_tab, padding=(10, 0, 10, 10))
+        selection_controls = ttk.LabelFrame(source_page, text="视频素材管理", padding=10)
         selection_controls.pack(fill="x")
         ttk.Button(selection_controls, text="全选", command=self.select_all_videos).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="从剪贴板添加", command=self.add_selection_from_clipboard).pack(side="left", padx=3)
@@ -218,22 +231,48 @@ class MediaWorkerApp(tk.Tk):
         ttk.Button(selection_controls, text="添加本地视频", command=self.add_local_videos).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="时间轴/版权", command=self.edit_selected_clip).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="删除所选", command=self.delete_selected_videos).pack(side="left", padx=3)
-        ttk.Button(selection_controls, text="① 下载/重新下载", command=self.redownload_selected_videos).pack(side="left", padx=3)
+        ttk.Button(selection_controls, text="下载/重新下载", command=self.redownload_selected_videos).pack(side="left", padx=3)
+        ttk.Button(selection_controls, text="预览所选素材", command=self.preview_selected_video).pack(side="left", padx=3)
         self.selection_summary = tk.StringVar(value="0 条")
         ttk.Label(selection_controls, textvariable=self.selection_summary).pack(side="right")
-        workflow_controls = ttk.Frame(selection_tab, padding=(10, 0, 10, 5))
-        workflow_controls.pack(fill="x")
-        ttk.Button(workflow_controls, text="② 预览素材", command=self.preview_selected_video).pack(side="left", padx=3)
-        ttk.Button(workflow_controls, text="③ 文案翻译与校验", command=self.edit_active_project).pack(side="left", padx=3)
-        ttk.Button(workflow_controls, text="④ 预览成片", command=self.preview_result).pack(side="left", padx=3)
-        ttk.Button(workflow_controls, text="⑤ 确认回传 Odoo", command=self.upload_result).pack(side="left", padx=3)
-        utility_controls = ttk.Frame(selection_tab, padding=(10, 0, 10, 10))
-        utility_controls.pack(fill="x")
-        ttk.Button(utility_controls, text="音色管理", command=self.open_voice_manager).pack(side="left", padx=3)
-        ttk.Button(utility_controls, text="历史版本", command=self.show_versions).pack(side="left", padx=3)
-        ttk.Button(utility_controls, text="打开项目目录", command=self.open_project_folder).pack(side="left", padx=3)
-        ttk.Button(utility_controls, text="删除本地项目", command=self.delete_local_project).pack(side="left", padx=3)
-        ttk.Label(utility_controls, text="独立本地项目只保存在本机，不会自动上传。", foreground="#666").pack(side="right")
+
+        ttk.Label(
+            content_page, text="文案翻译与人工校验", font=("Microsoft YaHei UI", 14, "bold"),
+        ).pack(anchor="w", pady=(5, 8))
+        ttk.Label(
+            content_page,
+            text="查看自动识别的原视频中文，一键翻译到目标语言，并人工修改译文。\n"
+                 "确认最终文案来源、字幕和音色后，在编辑窗口直接生成审核稿。",
+            foreground="#555", justify="left",
+        ).pack(anchor="w", pady=(0, 18))
+        content_actions = ttk.LabelFrame(content_page, text="文案与配音", padding=18)
+        content_actions.pack(fill="x")
+        ttk.Button(
+            content_actions, text="打开文案翻译与校验", command=self.edit_active_project,
+        ).pack(side="left", padx=5)
+        ttk.Button(content_actions, text="管理和试听音色", command=self.open_voice_manager).pack(side="left", padx=5)
+        ttk.Label(
+            content_actions, text="生成审核稿按钮位于文案校验窗口底部。", foreground="#666",
+        ).pack(side="left", padx=18)
+
+        ttk.Label(
+            review_page, text="成片审核与回传", font=("Microsoft YaHei UI", 14, "bold"),
+        ).pack(anchor="w", pady=(5, 8))
+        ttk.Label(
+            review_page,
+            text="先预览审核稿；不满意可返回文案与生成模块修改并生成新版本，满意后再回传 Odoo。",
+            foreground="#555",
+        ).pack(anchor="w", pady=(0, 18))
+        review_actions = ttk.LabelFrame(review_page, text="审核与版本", padding=18)
+        review_actions.pack(fill="x")
+        ttk.Button(review_actions, text="预览成片", command=self.preview_result).pack(side="left", padx=5)
+        ttk.Button(review_actions, text="历史版本", command=self.show_versions).pack(side="left", padx=5)
+        ttk.Button(review_actions, text="确认回传 Odoo", command=self.upload_result).pack(side="left", padx=5)
+        project_actions = ttk.LabelFrame(review_page, text="本地项目文件", padding=18)
+        project_actions.pack(fill="x", pady=(16, 0))
+        ttk.Button(project_actions, text="打开项目目录", command=self.open_project_folder).pack(side="left", padx=5)
+        ttk.Button(project_actions, text="删除本地项目", command=self.delete_local_project).pack(side="left", padx=5)
+        ttk.Label(project_actions, text="独立本地项目只保存在本机，不会自动上传。", foreground="#666").pack(side="left", padx=18)
 
         self.log = tk.Text(log_tab, wrap="word", state="disabled", font=("Consolas", 10))
         self.log.pack(fill="both", expand=True, padx=10, pady=10)
@@ -483,6 +522,7 @@ class MediaWorkerApp(tk.Tk):
                     self.selection_busy = False
                     self._refresh_selection_tasks()
                     self.write_log("已自动识别并保存 %s 个视频的中文" % data["count"])
+                    self.selection_workflow.select(1)
                     self._project_dialog(task)
                 elif event == "project_translation":
                     button = data["button"]
@@ -510,6 +550,7 @@ class MediaWorkerApp(tk.Tk):
                     self.selection_busy = False
                     self._refresh_selection_tasks()
                     self._refresh_selection_tree()
+                    self.selection_workflow.select(self.selection_review_page)
                     messagebox.showinfo(APP_TITLE, "审核稿已生成。请先预览成片，确认满意后再回传 Odoo。")
                 elif event == "selection_upload_done":
                     task = data["task"]
