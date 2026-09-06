@@ -1147,6 +1147,18 @@ class MediaWorkerApp(tk.Tk):
                         "trim_end": row.get("trim_end") or 0,
                     })
                 except Exception as exc:
+                    fallback = existing if existing and existing.is_file() else target
+                    if fallback.is_file() and worker.probe_duration(fallback) > 0:
+                        self.selection_store.update(
+                            row["id"], status="downloaded", local_path=str(fallback),
+                            error="重新下载暂时失败，已保留并复用原有完整视频：%s" % exc,
+                        )
+                        clips.append({
+                            "path": fallback, "trim_start": row.get("trim_start") or 0,
+                            "trim_end": row.get("trim_end") or 0,
+                        })
+                        self.events.put(("log", {"message": "视频 %s 重新下载失败，已复用原有完整文件" % row["id"]}))
+                        continue
                     self.selection_store.update(row["id"], status="failed", error=str(exc))
                     raise
             if mix_after:
