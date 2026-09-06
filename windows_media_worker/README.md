@@ -45,3 +45,5 @@
 字幕支持直接使用项目文本，或先识别全部所选视频的原声再翻译为目标语种。工具优先使用已配置的 `whisper_command`，否则自动使用当前运行环境中的 `faster-whisper`；两者均不可用时会回退到项目文本，不再使整个任务失败。外部识别程序仍按“输入视频、输出 SRT、原视频语种”接收三个参数。
 
 配音可选择 Windows 本地音色、sherpa-onnx 本地音色或火山引擎。Windows 音色无需额外安装；sherpa-onnx 需配置程序、VITS 模型、tokens 和 data-dir；火山引擎需配置 App ID、Access Token、Cluster 及控制台提供的音色 ID。生成的视频始终可烧录目标语言字幕，配音和背景音乐会随成片一并输出。`ai_edit_command` 是可选的本地 AI 剪辑程序路径，程序接收输入 JSON 和输出 JSON 两个参数，输出 `{"order": [0, 1]}` 形式且必须包含全部素材索引。
+
+在 Windows PowerShell 中运行 `Install-LocalAI-To-D.ps1`，可把 Ollama、`qwen3:8b`、Faster Whisper `small`、sherpa-onnx 及英文音色统一安装到 `D:\odooAiwoker\AI`，自动写入工具配置并执行翻译和配音自检。如需经过本机代理，可追加 `-Proxy http://127.0.0.1:10808`。
