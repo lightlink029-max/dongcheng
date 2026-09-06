@@ -164,10 +164,13 @@ class MumuBridge:
             "task_id": int(task_id), "port": self.selector_port,
             "token": self.selector_token,
         })
+        # `adb shell` joins arguments into a device-side shell command; escape
+        # query separators so Android receives the complete deep link.
+        configure_url = configure_url.replace("&", r"\&")
         self._run(
             "-s", self.serial, "shell", "am", "start", "-W",
             "-a", "android.intent.action.VIEW", "-d", configure_url,
-            SELECTOR_PACKAGE,
+            "-n", SELECTOR_PACKAGE + "/.MainActivity",
         )
         self._run("-s", self.serial, "shell", "am", "force-stop", DOUYIN_PACKAGE)
         self._run(
