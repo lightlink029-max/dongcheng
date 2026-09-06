@@ -8,7 +8,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from worker import Worker
+from worker import Worker, create_version_directory
 from mumu_adapter import MumuBridge, discover_serial
 from selection_store import SelectionStore, extract_douyin_urls, extract_video_id
 from selector_bridge import SelectorBridge
@@ -23,6 +23,19 @@ class StopAfterFirstHeartbeat:
     def wait(self, _seconds):
         self.calls += 1
         return self.calls > 1
+
+
+class VersionDirectoryTests(unittest.TestCase):
+    def test_existing_render_directory_uses_next_available_version(self):
+        with TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "mix-output-v1").mkdir()
+            (root / "mix-output-v2").mkdir()
+            version, target = create_version_directory(root, 1)
+
+            self.assertEqual(version, 3)
+            self.assertEqual(target, root / "mix-output-v3")
+            self.assertTrue(target.is_dir())
 
 
 class RecordingWorker(Worker):
@@ -374,6 +387,10 @@ class WorkerLeaseTests(unittest.TestCase):
         store.set_task_result(task_id, output.with_name("output-v2.mp4"), status="ready_review")
         versions = store.list_versions(task_id)
         self.assertEqual([item["version_no"] for item in versions], [2, 1])
+        store.set_task_result(
+            task_id, output.with_name("output-v5.mp4"), status="ready_review", version_no=5,
+        )
+        self.assertEqual(store.next_render_version(task_id), 6)
 
     def test_clip_timeline_and_copyright_are_persisted(self):
         store = SelectionStore(Path(self.work_dir.name) / "timeline.db")

@@ -26,7 +26,7 @@ from selection_store import SelectionStore
 from selector_bridge import SelectorBridge
 from speech import windows_voices
 from voice_library import default_voice_profiles, load_voice_profiles, save_voice_profiles
-from worker import Worker
+from worker import Worker, create_version_directory
 
 
 APP_NAME = "LightLinkMediaWorker"
@@ -1095,12 +1095,14 @@ class MediaWorkerApp(tk.Tk):
                 for row in rows:
                     self.selection_store.update(row["id"], status="mixing", error="")
                 self.events.put(("selection_changed", {}))
-                version_no = len(self.selection_store.list_versions(task["id"])) + 1
-                mix_dir = worker.root / str(task["id"]) / ("mix-output-v%s" % version_no)
-                mix_dir.mkdir(parents=True)
+                version_no, mix_dir = create_version_directory(
+                    worker.root / str(task["id"]),
+                    self.selection_store.next_render_version(task["id"]),
+                )
                 output, subtitle = worker.compose_video(task, clips, mix_dir)
                 self.selection_store.set_task_result(
                     task["id"], output, subtitle or "", status="ready_review",
+                    version_no=version_no,
                 )
                 for row in rows:
                     self.selection_store.update(row["id"], status="ready_review", error="")

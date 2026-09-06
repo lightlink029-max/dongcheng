@@ -182,7 +182,9 @@ class SelectionStore:
         current = self.get_task(task["id"])
         self.save_task(task, status=status or (current or {}).get("local_status", "processing"))
 
-    def set_task_result(self, task_id, result_path, subtitle_path="", status="ready_review"):
+    def set_task_result(
+        self, task_id, result_path, subtitle_path="", status="ready_review", version_no=None,
+    ):
         now = datetime.now().astimezone().isoformat(timespec="seconds")
         with self._connect() as connection:
             connection.execute(
@@ -191,17 +193,27 @@ class SelectionStore:
                     WHERE task_id = ?""",
                 (str(result_path or ""), str(subtitle_path or ""), status, now, int(task_id)),
             )
-            row = connection.execute(
-                "SELECT COALESCE(MAX(version_no), 0) + 1 AS next_version "
-                "FROM render_version WHERE task_id = ?", (int(task_id),),
-            ).fetchone()
+            if version_no is None:
+                row = connection.execute(
+                    "SELECT COALESCE(MAX(version_no), 0) + 1 AS next_version "
+                    "FROM render_version WHERE task_id = ?", (int(task_id),),
+                ).fetchone()
+                version_no = row["next_version"]
             connection.execute(
                 """INSERT INTO render_version
                    (task_id, version_no, result_path, subtitle_path, created_at)
                    VALUES (?, ?, ?, ?, ?)""",
-                (int(task_id), row["next_version"], str(result_path or ""),
+                (int(task_id), int(version_no), str(result_path or ""),
                  str(subtitle_path or ""), now),
             )
+
+    def next_render_version(self, task_id):
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT COALESCE(MAX(version_no), 0) + 1 AS next_version "
+                "FROM render_version WHERE task_id = ?", (int(task_id),),
+            ).fetchone()
+        return int(row["next_version"])
 
     def list_versions(self, task_id):
         with self._connect() as connection:

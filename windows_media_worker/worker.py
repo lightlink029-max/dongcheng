@@ -23,6 +23,18 @@ try:
 except ImportError:
     imageio_ffmpeg = None
 
+
+def create_version_directory(task_root, first_version):
+    version = max(1, int(first_version))
+    while True:
+        target = Path(task_root) / ("mix-output-v%s" % version)
+        try:
+            target.mkdir(parents=True)
+            return version, target
+        except FileExistsError:
+            version += 1
+
+
 class Worker:
     def __init__(self, config, event_callback=None):
         self.config = config
