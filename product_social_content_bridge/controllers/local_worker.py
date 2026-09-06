@@ -94,12 +94,8 @@ class LocalWorkerController(http.Controller):
         attachment = request.env["ir.attachment"].sudo().browse(attachment_id).exists()
         if not attachment:
             raise NotFound()
-        return request.make_response(
-            attachment.raw or b"",
-            headers=[
-                ("Content-Type", attachment.mimetype or "application/octet-stream"),
-                ("Content-Disposition", 'attachment; filename="%s"' % (attachment.name or "asset")),
-            ],
+        return request.env["ir.binary"]._get_stream_from(attachment).get_response(
+            as_attachment=True,
         )
 
     @http.route("/psc/local-worker/tasks/<int:task_id>/progress", type="http", auth="none", methods=["POST"], csrf=False)
