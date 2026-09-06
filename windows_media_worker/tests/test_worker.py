@@ -156,6 +156,27 @@ class WorkerLeaseTests(unittest.TestCase):
         srt = worker.make_srt(task, Path(self.work_dir.name))
         self.assertIn("00:01:15,000", srt.read_text(encoding="utf-8"))
 
+    def test_voiceover_subtitles_are_split_and_timed_to_audio(self):
+        worker = Worker(self.config())
+        folder = Path(self.work_dir.name)
+        srt = folder / "subtitle.srt"
+        voiceover = folder / "voiceover.wav"
+        script = (
+            "Warm indoor slippers for boys and girls. Soft fuzzy feel for cozy home wear. "
+            "Non-slip outsole for indoor use. Cotton fabric upper and lining."
+        )
+        srt.write_text(
+            "1\n00:00:00,000 --> 00:00:15,000\n" + script + "\n",
+            encoding="utf-8",
+        )
+        voiceover.write_bytes(b"audio")
+        with mock.patch.object(worker, "probe_duration", return_value=12.5):
+            result = worker.sync_voiceover_subtitles(srt, voiceover)
+        content = result.read_text(encoding="utf-8")
+        self.assertGreater(content.count("-->"), 1)
+        self.assertIn("00:00:12,500", content)
+        self.assertNotIn("\n" + script + "\n", content)
+
     def test_clip_order_can_be_reversed(self):
         worker = Worker(self.config())
         clips = [Path("one.mp4"), Path("two.mp4")]

@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import threading
 import time
+import textwrap
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -168,10 +169,11 @@ class Worker:
 
     @staticmethod
     def _srt_time(seconds):
-        seconds = max(0, int(seconds))
-        hours, remainder = divmod(seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        return f"{hours:02d}:{minutes:02d}:{seconds:02d},000"
+        milliseconds = max(0, int(round(float(seconds) * 1000)))
+        hours, remainder = divmod(milliseconds, 3600000)
+        minutes, remainder = divmod(remainder, 60000)
+        seconds, milliseconds = divmod(remainder, 1000)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
 
     def _translate_srt(self, text, language):
         translated = self.translate(
@@ -248,6 +250,42 @@ class Worker:
             task.get("tts_voice") or "", task.get("tts_speed") or 1.0,
             task.get("tts_volume") or 1.0,
         )
+
+    def sync_voiceover_subtitles(self, srt, voiceover):
+        """Split project text into readable cues timed to the generated narration."""
+        text = re.sub(r"\s+", " ", self.subtitle_text(srt)).strip()
+        duration = self.probe_duration(voiceover)
+        if not text or duration <= 0:
+            return srt
+
+        # Latin subtitles remain readable at about 7 words / 42 characters per cue.
+        # CJK text has no spaces, so use a shorter character width.
+        contains_cjk = bool(re.search(r"[\u3400-\u9fff]", text))
+        width = 18 if contains_cjk and " " not in text else 42
+        segments = re.split(r"(?<=[.!?。！？])\s+|\s*[•·]\s*", text)
+        chunks = []
+        for segment in segments:
+            if segment.strip():
+                chunks.extend(textwrap.wrap(
+                    segment.strip(),
+                    width=width,
+                    break_long_words=contains_cjk,
+                    break_on_hyphens=False,
+                ))
+        chunks = chunks or [text]
+        weights = [max(1, len(re.sub(r"\s+", "", chunk))) for chunk in chunks]
+        total_weight = sum(weights)
+        elapsed_weight = 0
+        cues = []
+        for index, (chunk, weight) in enumerate(zip(chunks, weights), 1):
+            start = duration * elapsed_weight / total_weight
+            elapsed_weight += weight
+            end = duration * elapsed_weight / total_weight
+            cues.append(
+                f"{index}\n{self._srt_time(start)} --> {self._srt_time(end)}\n{chunk}\n"
+            )
+        Path(srt).write_text("\n".join(cues), encoding="utf-8")
+        return srt
 
     def arrange_clips(self, task, clips, job_dir):
         clips = list(clips)
@@ -335,6 +373,8 @@ class Worker:
             ], check=True, capture_output=True)
         srt = self.make_srt(task, job_dir, speech_source)
         voiceover = self.make_voiceover(task, srt, job_dir)
+        if srt and voiceover:
+            srt = self.sync_voiceover_subtitles(srt, voiceover)
         ratio = task.get("aspect_ratio", "9:16")
         width, height = {"9:16": (1080, 1920), "4:5": (1080, 1350), "1:1": (1080, 1080)}.get(ratio, (1080, 1920))
         filters = [
@@ -345,7 +385,11 @@ class Worker:
             filters.extend(["fade=t=in:st=0:d=0.35", f"fade=t=out:st={max(0, duration - 0.35)}:d=0.35"])
         if srt:
             subtitle_path = str(srt).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
-            filters.append(f"subtitles='{subtitle_path}'")
+            filters.append(
+                f"subtitles='{subtitle_path}':"
+                "force_style='FontName=Arial,FontSize=10,Outline=1.5,Shadow=0,"
+                "Alignment=8,MarginV=55'"
+            )
         vf = ",".join(filters)
         command = [self.ffmpeg(), "-y", "-f", "concat", "-safe", "0", "-i", str(concat)]
         if voiceover:
