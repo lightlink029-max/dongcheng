@@ -2,7 +2,7 @@
 
 该工作节点主动领取 Odoo 的媒体任务，在 Windows 本地完成素材下载、图片排版、字幕翻译和 FFmpeg 混剪，然后把成品回传 Odoo。Odoo 不再直接调用图片或视频生成云 API。
 
-抖音视频下载由内置的开源 [cmsjin/douyin](https://github.com/cmsjin/douyin) 完成，不调用 Paste2Vid 或其他在线解析网站。首次使用请在配置页点击“登录/更新抖音登录”，在自动打开的 Edge 窗口完成登录；Cookie 使用 Windows DPAPI 加密，只保存在本机 `%LOCALAPPDATA%\\LightLinkMediaWorker\\secrets.json`，不会上传 Odoo、写入配置或日志。仅下载自有或已获授权的公开视频。
+抖音视频下载由内置的开源 [cmsjin/douyin](https://github.com/cmsjin/douyin) 完成，不调用 Paste2Vid 或其他在线解析网站。首次使用请在配置页点击“登录/更新抖音登录”，在自动打开的 Edge 窗口完成登录；工具使用 `%LOCALAPPDATA%\\LightLinkMediaWorker\\edge-profile\\douyin` 作为固定的专用浏览器配置目录，后续会保留同一账号的登录状态。Cookie 另使用 Windows DPAPI 加密，只保存在本机 `%LOCALAPPDATA%\\LightLinkMediaWorker\\secrets.json`，不会上传 Odoo、写入配置或日志。仅下载自有或已获授权的公开视频。
 
 ## 图形版安装
 

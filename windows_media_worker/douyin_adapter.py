@@ -110,13 +110,34 @@ def capture_login(path, proxy="", timeout_seconds=600, status_callback=None):
     from playwright.sync_api import sync_playwright
 
     notify = status_callback or (lambda _message: None)
-    notify("正在打开 Edge，请在新窗口登录抖音")
+    store = Path(path)
+    profile_dir = store.parent / "edge-profile" / "douyin"
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    notify("正在打开 LightLink 专用 Edge；登录状态会保留，下次无需重复登录")
     with sync_playwright() as playwright:
         options = {"channel": "msedge", "headless": False}
         if proxy:
             options["proxy"] = {"server": proxy}
-        browser = playwright.chromium.launch(**options)
-        context = browser.new_context()
+        context = playwright.chromium.launch_persistent_context(
+            user_data_dir=str(profile_dir), **options
+        )
+        # Migrate a still-valid login captured by older versions into the
+        # persistent profile so upgrading does not force another login.
+        try:
+            saved = load_cookies(store)
+        except Exception:
+            saved = {}
+        if saved:
+            context.add_cookies([
+                {
+                    "name": name,
+                    "value": value,
+                    "domain": ".douyin.com",
+                    "path": "/",
+                    "secure": True,
+                }
+                for name, value in saved.items()
+            ])
         page = context.new_page()
         try:
             page.goto("https://www.douyin.com/", wait_until="domcontentloaded", timeout=120000)
@@ -134,7 +155,7 @@ def capture_login(path, proxy="", timeout_seconds=600, status_callback=None):
                 page.wait_for_timeout(2000)
             raise TimeoutError("等待抖音登录超时，请重新点击“登录/更新抖音登录”")
         finally:
-            browser.close()
+            context.close()
 
 
 async def _download(url, output_dir, cookies, proxy):
