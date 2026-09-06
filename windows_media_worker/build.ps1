@@ -6,8 +6,11 @@ $Python = ".venv\Scripts\python.exe"
 if (-not (Test-Path $Python)) {
     py -m venv .venv
 }
-& $Python -m pip install --timeout 600 --retries 10 -r requirements.txt pyinstaller
-if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed with exit code $LASTEXITCODE" }
+& $Python -c "import PyInstaller, requests, PIL, imageio_ffmpeg, playwright"
+if ($LASTEXITCODE -ne 0) {
+    & $Python -m pip install --timeout 600 --retries 3 -r requirements.txt pyinstaller
+    if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed with exit code $LASTEXITCODE" }
+}
 & $Python -m PyInstaller --noconfirm --clean --windowed --onedir `
     --name LightLinkMediaWorker `
     --collect-all imageio_ffmpeg `

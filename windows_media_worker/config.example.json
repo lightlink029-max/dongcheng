@@ -16,6 +16,16 @@
     "ollama_url": "http://127.0.0.1:11434",
     "translation_model": "qwen3:8b",
     "whisper_command": "",
+    "whisper_model": "small",
     "ai_edit_command": ""
+  },
+  "speech": {
+    "sherpa_command": "",
+    "sherpa_model": "",
+    "sherpa_tokens": "",
+    "sherpa_data_dir": "",
+    "volc_app_id": "",
+    "volc_token": "",
+    "volc_cluster": "volcano_tts"
   }
 }

@@ -135,6 +135,17 @@ class WorkerLeaseTests(unittest.TestCase):
         task = {"subtitle_mode": "none", "target_language": "English"}
         self.assertIsNone(worker.make_srt(task, Path(self.work_dir.name)))
 
+    def test_missing_asr_falls_back_to_project_script(self):
+        worker = NoTranslationWorker(self.config())
+        task = {
+            "video_script": "Ready target-language copy", "subtitle_mode": "transcribe",
+            "translate_subtitles": False, "target_language": "English",
+        }
+        source = Path(self.work_dir.name) / "source.wav"
+        source.write_bytes(b"audio")
+        srt = worker.make_srt(task, Path(self.work_dir.name), source)
+        self.assertIn("Ready target-language copy", srt.read_text(encoding="utf-8"))
+
     def test_srt_timestamp_supports_more_than_one_minute(self):
         worker = NoTranslationWorker(self.config())
         task = {
@@ -152,6 +163,40 @@ class WorkerLeaseTests(unittest.TestCase):
             worker.arrange_clips({"edit_mode": "reverse"}, clips, Path(self.work_dir.name)),
             list(reversed(clips)),
         )
+
+    def test_ai_edit_manifest_keeps_timeline_values(self):
+        command = Path(self.work_dir.name) / "editor.exe"
+        command.write_bytes(b"stub")
+        config = self.config()
+        config["local_ai"] = {"ai_edit_command": str(command)}
+        worker = Worker(config)
+
+        def write_plan(_command, **_kwargs):
+            (Path(self.work_dir.name) / "edit-plan.json").write_text("[0]", encoding="utf-8")
+
+        clips = [{"path": Path("one.mp4"), "trim_start": 1.25, "trim_end": 8.5}]
+        with mock.patch("worker.subprocess.run", side_effect=write_plan):
+            worker.arrange_clips({"edit_mode": "ai"}, clips, Path(self.work_dir.name))
+        manifest = json.loads(
+            (Path(self.work_dir.name) / "edit-input.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            manifest["clips"],
+            [{"path": "one.mp4", "trim_start": 1.25, "trim_end": 8.5}],
+        )
+
+    def test_compose_manifest_uses_absolute_clip_paths(self):
+        config = self.config()
+        config["ffmpeg"] = "C:/test/ffmpeg.exe"
+        worker = Worker(config)
+        with mock.patch.object(worker, "make_srt", return_value=None), \
+                mock.patch("worker.subprocess.run"):
+            worker.compose_video(
+                {"duration_seconds": 3, "audio_mode": "mute"},
+                [{"path": Path("relative.mp4")}], Path(self.work_dir.name) / "render",
+            )
+        manifest = (Path(self.work_dir.name) / "render" / "concat.txt").read_text(encoding="utf-8")
+        self.assertIn(str(Path("relative.mp4").resolve()), manifest)
 
     def test_mumu_bridge_uses_configured_serial(self):
         calls = []
@@ -280,6 +325,22 @@ class WorkerLeaseTests(unittest.TestCase):
         saved = store.get_task(task_id)
         self.assertEqual(saved["local_status"], "ready_review")
         self.assertEqual(saved["result_path"], str(output))
+        store.set_task_result(task_id, output.with_name("output-v2.mp4"), status="ready_review")
+        versions = store.list_versions(task_id)
+        self.assertEqual([item["version_no"] for item in versions], [2, 1])
+
+    def test_clip_timeline_and_copyright_are_persisted(self):
+        store = SelectionStore(Path(self.work_dir.name) / "timeline.db")
+        store.add_text(7, "https://www.douyin.com/video/7531234567890123456")
+        row = store.list(7)[0]
+        store.update(
+            row["id"], trim_start=1.25, trim_end=8.5,
+            copyright_status="authorized", copyright_note="supplier approved",
+        )
+        saved = store.list(7)[0]
+        self.assertEqual(saved["trim_start"], 1.25)
+        self.assertEqual(saved["trim_end"], 8.5)
+        self.assertEqual(saved["copyright_status"], "authorized")
 
     def test_selection_url_parser_accepts_only_douyin(self):
         urls = extract_douyin_urls(

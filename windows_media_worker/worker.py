@@ -2,6 +2,7 @@ import mimetypes
 import json
 import os
 import random
+import re
 import shutil
 import subprocess
 import threading
@@ -14,6 +15,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from douyin_adapter import download_video
 from mumu_adapter import MumuBridge
+from speech import asr_available, synthesize, transcribe
 
 try:
     import imageio_ffmpeg
@@ -41,6 +43,16 @@ class Worker:
         if configured and configured != "ffmpeg":
             return configured
         return imageio_ffmpeg.get_ffmpeg_exe() if imageio_ffmpeg else "ffmpeg"
+
+    def probe_duration(self, path):
+        result = subprocess.run(
+            [self.ffmpeg(), "-i", str(path)], capture_output=True, text=True,
+            encoding="utf-8", errors="replace",
+        )
+        match = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", result.stderr)
+        if not match:
+            return 0.0
+        return int(match.group(1)) * 3600 + int(match.group(2)) * 60 + float(match.group(3))
 
     def api(self, method, path, **kwargs):
         headers = dict(self.headers)
@@ -177,25 +189,22 @@ class Worker:
         if subtitle_mode == "transcribe":
             if not source_video:
                 raise ValueError("语音识别需要至少一个源视频")
-            command = (self.config.get("local_ai", {}).get("whisper_command") or "").strip()
-            executable = Path(command).expanduser() if command else None
-            if not executable or not executable.is_file():
-                raise RuntimeError(
-                    "尚未配置本地语音识别程序。该程序需按顺序接收：输入视频、输出SRT、目标语种"
-                )
             recognized = job_dir / "recognized.srt"
-            subprocess.run([
-                str(executable), str(source_video), str(recognized),
-                str(task.get("source_language") or "Chinese"),
-            ], check=True)
-            if not recognized.is_file():
-                raise RuntimeError("本地语音识别程序没有生成 SRT 文件")
-            text = recognized.read_text(encoding="utf-8-sig")
-            if task.get("translate_subtitles", True):
-                text = self._translate_srt(text, task["target_language"])
-            output = job_dir / "subtitle.srt"
-            output.write_text(text, encoding="utf-8")
-            return output
+            result = transcribe(
+                self.config.get("local_ai", {}), source_video, recognized,
+                task.get("source_language") or "Chinese",
+            )
+            if result:
+                text = recognized.read_text(encoding="utf-8-sig")
+                if task.get("translate_subtitles", True):
+                    text = self._translate_srt(text, task["target_language"])
+                output = job_dir / "subtitle.srt"
+                output.write_text(text, encoding="utf-8")
+                return output
+            if not (task.get("video_script") or task.get("prompt") or task.get("keywords")):
+                self.emit("log", message="未安装 faster-whisper 且没有项目文本，本次成片不添加字幕")
+                return None
+            self.emit("log", message="未安装 faster-whisper，已自动改用项目文本生成字幕")
 
         script = (task.get("video_script") or "").strip()
         source_mode = task.get("source_mode") or "auto"
@@ -215,6 +224,31 @@ class Worker:
         )
         return srt
 
+    @staticmethod
+    def subtitle_text(srt):
+        if not srt:
+            return ""
+        lines = []
+        for line in Path(srt).read_text(encoding="utf-8-sig").splitlines():
+            value = line.strip()
+            if value and "-->" not in value and not value.isdigit():
+                lines.append(value)
+        return " ".join(lines)
+
+    def make_voiceover(self, task, srt, job_dir):
+        provider = task.get("tts_provider") or "none"
+        if provider == "none" or not srt:
+            return None
+        text = self.subtitle_text(srt)
+        if not text:
+            return None
+        output = Path(job_dir) / "voiceover.wav"
+        return synthesize(
+            self.config.get("speech", {}), provider, text, output,
+            task.get("tts_voice") or "", task.get("tts_speed") or 1.0,
+            task.get("tts_volume") or 1.0,
+        )
+
     def arrange_clips(self, task, clips, job_dir):
         clips = list(clips)
         mode = task.get("edit_mode") or "sequence"
@@ -232,7 +266,14 @@ class Worker:
         manifest = job_dir / "edit-input.json"
         plan = job_dir / "edit-plan.json"
         manifest.write_text(json.dumps({
-            "clips": [str(path) for path in clips],
+            "clips": [
+                {
+                    "path": str(item.get("path") or ""),
+                    "trim_start": float(item.get("trim_start") or 0),
+                    "trim_end": float(item.get("trim_end") or 0),
+                } if isinstance(item, dict) else {"path": str(item)}
+                for item in clips
+            ],
             "prompt": task.get("prompt") or "",
             "target_language": task.get("target_language") or "",
             "duration_seconds": int(task.get("duration_seconds") or 15),
@@ -271,26 +312,67 @@ class Worker:
             raise ValueError("任务没有视频URL或视频素材")
         job_dir = Path(job_dir)
         job_dir.mkdir(parents=True, exist_ok=True)
-        clips = self.arrange_clips(task, clips, job_dir)
-        srt = self.make_srt(task, job_dir, clips[0])
+        clip_specs = [item if isinstance(item, dict) else {"path": item} for item in clips]
+        clip_specs = self.arrange_clips(task, clip_specs, job_dir)
         concat = job_dir / "concat.txt"
-        concat.write_text("".join(f"file '{str(path).replace(chr(39), chr(39)*2)}'\n" for path in clips), encoding="utf-8")
+        concat_lines = []
+        for item in clip_specs:
+            path = str(Path(item["path"]).resolve()).replace(chr(39), chr(39) * 2)
+            concat_lines.append(f"file '{path}'\n")
+            if float(item.get("trim_start") or 0) > 0:
+                concat_lines.append(f"inpoint {float(item['trim_start']):.3f}\n")
+            if float(item.get("trim_end") or 0) > 0:
+                concat_lines.append(f"outpoint {float(item['trim_end']):.3f}\n")
+        concat.write_text("".join(concat_lines), encoding="utf-8")
         output = job_dir / "output.mp4"
         duration = max(3, int(task.get("duration_seconds") or 15))
+        speech_source = clip_specs[0]["path"]
+        if task.get("subtitle_mode") == "transcribe" and asr_available(self.config.get("local_ai", {})):
+            speech_source = job_dir / "speech-source.wav"
+            subprocess.run([
+                self.ffmpeg(), "-y", "-f", "concat", "-safe", "0", "-i", str(concat),
+                "-t", str(duration), "-vn", "-ac", "1", "-ar", "16000", str(speech_source),
+            ], check=True, capture_output=True)
+        srt = self.make_srt(task, job_dir, speech_source)
+        voiceover = self.make_voiceover(task, srt, job_dir)
         ratio = task.get("aspect_ratio", "9:16")
         width, height = {"9:16": (1080, 1920), "4:5": (1080, 1350), "1:1": (1080, 1080)}.get(ratio, (1080, 1920))
         filters = [
             f"scale={width}:{height}:force_original_aspect_ratio=decrease",
             f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black",
         ]
+        if task.get("transition") == "fade":
+            filters.extend(["fade=t=in:st=0:d=0.35", f"fade=t=out:st={max(0, duration - 0.35)}:d=0.35"])
         if srt:
             subtitle_path = str(srt).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
             filters.append(f"subtitles='{subtitle_path}'")
         vf = ",".join(filters)
-        command = [self.ffmpeg(), "-y", "-f", "concat", "-safe", "0", "-i", str(concat),
-                   "-t", str(duration), "-vf", vf, "-c:v", "libx264", "-preset", "medium", "-crf", "22",
-                   "-movflags", "+faststart"]
-        command += ["-an"] if task.get("audio_mode") == "mute" else ["-c:a", "aac"]
+        command = [self.ffmpeg(), "-y", "-f", "concat", "-safe", "0", "-i", str(concat)]
+        if voiceover:
+            command += ["-i", str(voiceover)]
+        music = Path(task.get("background_music") or "").expanduser()
+        if music.is_file():
+            command += ["-stream_loop", "-1", "-i", str(music)]
+        command += ["-t", str(duration), "-vf", vf, "-c:v", "libx264", "-preset", "medium", "-crf", "22",
+                    "-movflags", "+faststart"]
+        if voiceover and music.is_file():
+            command += [
+                "-filter_complex", f"[1:a]volume={float(task.get('tts_volume') or 1)}[v];"
+                f"[2:a]volume={float(task.get('music_volume') or 0.2)}[m];[v][m]amix=inputs=2:duration=first[a]",
+                "-map", "0:v", "-map", "[a]", "-c:a", "aac",
+            ]
+        elif voiceover:
+            command += ["-map", "0:v", "-map", "1:a", "-c:a", "aac", "-shortest"]
+        elif music.is_file() and task.get("audio_mode") != "mute":
+            command += [
+                "-filter_complex", f"[0:a]volume=0.65[o];[1:a]volume={float(task.get('music_volume') or 0.2)}[m];"
+                "[o][m]amix=inputs=2:duration=first[a]",
+                "-map", "0:v", "-map", "[a]", "-c:a", "aac",
+            ]
+        elif music.is_file():
+            command += ["-map", "0:v", "-map", "1:a", "-c:a", "aac", "-shortest"]
+        else:
+            command += ["-an"] if task.get("audio_mode") == "mute" else ["-c:a", "aac"]
         command.append(str(output))
         subprocess.run(command, check=True)
         return output, srt

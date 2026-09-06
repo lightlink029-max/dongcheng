@@ -1,8 +1,10 @@
+import base64
 import json
 import os
 import queue
 import secrets
 import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -16,11 +18,13 @@ if getattr(sys, "frozen", False):
 
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+from PIL import Image, ImageTk
 
-from douyin_adapter import capture_login, has_login, open_keyword_search, self_test
+from douyin_adapter import _dpapi, capture_login, has_login, open_keyword_search, self_test
 from mumu_adapter import MumuBridge, check_mumu, install_selector_apk
 from selection_store import SelectionStore
 from selector_bridge import SelectorBridge
+from speech import windows_voices
 from worker import Worker
 
 
@@ -89,7 +93,15 @@ class MediaWorkerApp(tk.Tk):
             ("ollama_url", "Ollama地址", "http://127.0.0.1:11434"),
             ("translation_model", "本地翻译模型", "qwen3:8b"),
             ("whisper_command", "语音识别程序（可选）", ""),
+            ("whisper_model", "Whisper模型", "small"),
             ("ai_edit_command", "AI剪辑程序（可选）", ""),
+            ("sherpa_command", "sherpa-onnx程序（可选）", ""),
+            ("sherpa_model", "sherpa音色模型", ""),
+            ("sherpa_tokens", "sherpa Tokens", ""),
+            ("sherpa_data_dir", "sherpa数据目录", ""),
+            ("volc_app_id", "火山引擎 App ID", ""),
+            ("volc_token", "火山引擎 Access Token", ""),
+            ("volc_cluster", "火山引擎 Cluster", "volcano_tts"),
             ("font_file", "字幕字体", "C:/Windows/Fonts/msyh.ttc"),
             ("mumu_adb", "MuMu ADB（可自动检测）", ""),
             ("mumu_player", "MuMu 主程序（可自动检测）", ""),
@@ -97,23 +109,26 @@ class MediaWorkerApp(tk.Tk):
         ]
         form = ttk.Frame(config_tab, padding=20)
         form.pack(fill="x")
-        for row, (key, label, default) in enumerate(fields):
-            ttk.Label(form, text=label, width=20).grid(row=row, column=0, sticky="w", pady=7)
+        half = (len(fields) + 1) // 2
+        for index, (key, label, default) in enumerate(fields):
+            row, base_column = index % half, (index // half) * 3
+            ttk.Label(form, text=label, width=20).grid(row=row, column=base_column, sticky="w", pady=7)
             var = tk.StringVar(value=default); self.vars[key] = var
-            show = "*" if key == "worker_token" else ""
-            ttk.Entry(form, textvariable=var, show=show).grid(row=row, column=1, sticky="ew", pady=7)
+            show = "*" if key in ("worker_token", "volc_token") else ""
+            ttk.Entry(form, textvariable=var, show=show).grid(row=row, column=base_column + 1, sticky="ew", pady=7)
             if key == "work_dir":
-                ttk.Button(form, text="选择", command=self._choose_dir).grid(row=row, column=2, padx=8)
+                ttk.Button(form, text="选择", command=self._choose_dir).grid(row=row, column=base_column + 2, padx=8)
             elif key in ("mumu_adb", "mumu_player"):
-                ttk.Button(form, text="选择", command=lambda name=key: self._choose_exe(name)).grid(row=row, column=2, padx=8)
+                ttk.Button(form, text="选择", command=lambda name=key: self._choose_exe(name)).grid(row=row, column=base_column + 2, padx=8)
         form.columnconfigure(1, weight=1)
+        form.columnconfigure(4, weight=1)
         self.autostart = tk.BooleanVar(value=False)
         ttk.Checkbutton(form, text="登录Windows后自动启动并开始工作", variable=self.autostart).grid(
-            row=len(fields), column=1, sticky="w", pady=8)
-        login_row = len(fields) + 1
+            row=half, column=1, columnspan=4, sticky="w", pady=8)
+        login_row = half + 1
         ttk.Label(form, text="抖音登录", width=20).grid(row=login_row, column=0, sticky="w", pady=7)
         self.douyin_status = tk.StringVar(value="未登录")
-        ttk.Label(form, textvariable=self.douyin_status).grid(row=login_row, column=1, sticky="w", pady=7)
+        ttk.Label(form, textvariable=self.douyin_status).grid(row=login_row, column=1, columnspan=4, sticky="w", pady=7)
         self.douyin_login_button = ttk.Button(
             form, text="登录/更新抖音登录", command=self.login_douyin,
         )
@@ -160,12 +175,12 @@ class MediaWorkerApp(tk.Tk):
             text="可独立新建项目，也可领取 Odoo 任务。先下载并预览素材，再生成审核稿；确认满意后才回传 Odoo。",
         ).pack(fill="x", padx=10, pady=(0, 8))
 
-        selection_columns = ("video_id", "selected_at", "status", "url", "error")
+        selection_columns = ("video_id", "selected_at", "status", "trim", "copyright", "url", "error")
         self.selection_tree = ttk.Treeview(
             selection_tab, columns=selection_columns, show="headings", selectmode="extended",
         )
-        titles = ("视频ID", "选择时间", "处理状态", "分享链接", "错误")
-        widths = (150, 170, 110, 440, 260)
+        titles = ("视频ID", "选择时间", "处理状态", "入点-出点", "版权", "分享链接", "错误")
+        widths = (140, 160, 100, 110, 100, 360, 220)
         for column, title, width in zip(selection_columns, titles, widths):
             self.selection_tree.heading(column, text=title)
             self.selection_tree.column(column, width=width, anchor="w")
@@ -179,6 +194,7 @@ class MediaWorkerApp(tk.Tk):
         ttk.Button(selection_controls, text="从剪贴板添加", command=self.add_selection_from_clipboard).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="手工添加链接", command=self.add_selection_manually).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="添加本地视频", command=self.add_local_videos).pack(side="left", padx=3)
+        ttk.Button(selection_controls, text="时间轴/版权", command=self.edit_selected_clip).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="删除所选", command=self.delete_selected_videos).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="重新下载", command=self.redownload_selected_videos).pack(side="left", padx=3)
         self.selection_summary = tk.StringVar(value="0 条")
@@ -188,6 +204,7 @@ class MediaWorkerApp(tk.Tk):
         ttk.Button(review_controls, text="① 预览所选素材", command=self.preview_selected_video).pack(side="left", padx=3)
         ttk.Button(review_controls, text="② 生成审核稿", command=self.mix_selected_videos).pack(side="left", padx=3)
         ttk.Button(review_controls, text="③ 预览成片", command=self.preview_result).pack(side="left", padx=3)
+        ttk.Button(review_controls, text="历史版本", command=self.show_versions).pack(side="left", padx=3)
         ttk.Button(review_controls, text="④ 确认回传 Odoo", command=self.upload_result).pack(side="left", padx=3)
         ttk.Button(review_controls, text="打开项目目录", command=self.open_project_folder).pack(side="left", padx=3)
         ttk.Button(review_controls, text="删除本地项目", command=self.delete_local_project).pack(side="left", padx=3)
@@ -222,7 +239,17 @@ class MediaWorkerApp(tk.Tk):
             "local_ai": {"ollama_url": self.vars["ollama_url"].get().strip(),
                          "translation_model": self.vars["translation_model"].get().strip(),
                          "whisper_command": self.vars["whisper_command"].get().strip(),
+                         "whisper_model": self.vars["whisper_model"].get().strip(),
                          "ai_edit_command": self.vars["ai_edit_command"].get().strip()},
+            "speech": {
+                "sherpa_command": self.vars["sherpa_command"].get().strip(),
+                "sherpa_model": self.vars["sherpa_model"].get().strip(),
+                "sherpa_tokens": self.vars["sherpa_tokens"].get().strip(),
+                "sherpa_data_dir": self.vars["sherpa_data_dir"].get().strip(),
+                "volc_app_id": self.vars["volc_app_id"].get().strip(),
+                "volc_token": self.vars["volc_token"].get().strip(),
+                "volc_cluster": self.vars["volc_cluster"].get().strip(),
+            },
         }
 
     def save(self, quiet=False):
@@ -233,6 +260,13 @@ class MediaWorkerApp(tk.Tk):
             persisted = dict(data)
             persisted.pop("selector_port", None)
             persisted.pop("selector_token", None)
+            speech = dict(persisted.get("speech", {}))
+            token = speech.pop("volc_token", "")
+            if token:
+                speech["volc_token_dpapi"] = base64.b64encode(
+                    _dpapi(token.encode("utf-8"), True)
+                ).decode("ascii")
+            persisted["speech"] = speech
             CONFIG_PATH.write_text(json.dumps(persisted, ensure_ascii=False, indent=2), encoding="utf-8")
             self._set_autostart(self.autostart.get())
             if not quiet: messagebox.showinfo(APP_TITLE, "配置已保存")
@@ -244,7 +278,11 @@ class MediaWorkerApp(tk.Tk):
         if CONFIG_PATH.exists():
             try:
                 data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-                flat = dict(data); flat.update(data.get("local_ai", {}))
+                speech = dict(data.get("speech", {}))
+                encrypted = speech.get("volc_token_dpapi")
+                if encrypted:
+                    speech["volc_token"] = _dpapi(base64.b64decode(encrypted), False).decode("utf-8")
+                flat = dict(data); flat.update(data.get("local_ai", {})); flat.update(speech)
                 for key, var in self.vars.items():
                     if key in flat: var.set(str(flat[key]))
             except Exception as exc: self.write_log("配置读取失败：" + str(exc))
@@ -498,9 +536,17 @@ class MediaWorkerApp(tk.Tk):
             "transcribe": "识别原视频语音",
         }
         audio_choices = {"original": "保留原声", "mute": "静音"}
+        tts_choices = {
+            "none": "不生成配音", "windows": "Windows 本地音色",
+            "sherpa": "sherpa-onnx 本地音色", "volcengine": "火山引擎音色",
+        }
+        preset_choices = {
+            "douyin": "抖音 / TikTok 9:16", "reels": "Instagram Reels 9:16",
+            "feed": "Instagram Feed 4:5", "square": "网站 / 社媒方图 1:1",
+        }
         dialog = tk.Toplevel(self)
         dialog.title("编辑视频项目" if task else "新建本地视频项目")
-        dialog.geometry("780x720")
+        dialog.geometry("820x900")
         dialog.transient(self)
         form = ttk.Frame(dialog, padding=15)
         form.pack(fill="both", expand=True)
@@ -515,6 +561,14 @@ class MediaWorkerApp(tk.Tk):
             "edit_mode": tk.StringVar(value=edit_choices.get(existing.get("edit_mode") or "sequence")),
             "subtitle_mode": tk.StringVar(value=subtitle_choices.get(existing.get("subtitle_mode") or "script")),
             "audio_mode": tk.StringVar(value=audio_choices.get(existing.get("audio_mode") or "original")),
+            "export_preset": tk.StringVar(value=preset_choices.get(existing.get("export_preset") or "douyin")),
+            "transition": tk.StringVar(value="淡入淡出" if existing.get("transition") == "fade" else "无转场"),
+            "tts_provider": tk.StringVar(value=tts_choices.get(existing.get("tts_provider") or "none")),
+            "tts_voice": tk.StringVar(value=existing.get("tts_voice") or ""),
+            "tts_speed": tk.StringVar(value=str(existing.get("tts_speed") or 1.0)),
+            "tts_volume": tk.StringVar(value=str(existing.get("tts_volume") or 1.0)),
+            "background_music": tk.StringVar(value=existing.get("background_music") or ""),
+            "music_volume": tk.StringVar(value=str(existing.get("music_volume") or 0.2)),
             "source_image_path": tk.StringVar(value=existing.get("source_image_path") or ""),
         }
         translate = tk.BooleanVar(value=bool(existing.get("translate_subtitles", False)))
@@ -529,13 +583,33 @@ class MediaWorkerApp(tk.Tk):
             ("剪辑方式", "edit_mode", tuple(edit_choices.values())),
             ("字幕来源", "subtitle_mode", tuple(subtitle_choices.values())),
             ("原视频声音", "audio_mode", tuple(audio_choices.values())),
+            ("导出预设", "export_preset", tuple(preset_choices.values())),
+            ("转场", "transition", ("无转场", "淡入淡出")),
+            ("配音服务", "tts_provider", tuple(tts_choices.values())),
+            ("音色名称/ID", "tts_voice", None),
+            ("配音语速", "tts_speed", None),
+            ("配音音量", "tts_volume", None),
+            ("背景音乐音量", "music_volume", None),
         )
         for row, (label, key, choices) in enumerate(rows):
             ttk.Label(form, text=label, width=18).grid(row=row, column=0, sticky="w", pady=5)
-            widget = ttk.Combobox(form, textvariable=values[key], values=choices, state="readonly") if choices else ttk.Entry(form, textvariable=values[key])
+            if key == "tts_voice":
+                widget = ttk.Combobox(form, textvariable=values[key], values=windows_voices())
+            else:
+                widget = ttk.Combobox(form, textvariable=values[key], values=choices, state="readonly") if choices else ttk.Entry(form, textvariable=values[key])
             widget.grid(row=row, column=1, columnspan=2, sticky="ew", pady=5)
 
-        image_row = len(rows)
+        music_row = len(rows)
+        ttk.Label(form, text="背景音乐", width=18).grid(row=music_row, column=0, sticky="w", pady=5)
+        ttk.Entry(form, textvariable=values["background_music"]).grid(row=music_row, column=1, sticky="ew", pady=5)
+        ttk.Button(
+            form, text="选择音频",
+            command=lambda: values["background_music"].set(filedialog.askopenfilename(
+                parent=dialog, filetypes=[("音频", "*.mp3 *.wav *.m4a *.aac"), ("所有文件", "*.*")],
+            ) or values["background_music"].get()),
+        ).grid(row=music_row, column=2, padx=(8, 0))
+
+        image_row = music_row + 1
         ttk.Label(form, text="搜索参考图片", width=18).grid(row=image_row, column=0, sticky="w", pady=5)
         ttk.Entry(form, textvariable=values["source_image_path"]).grid(row=image_row, column=1, sticky="ew", pady=5)
         ttk.Button(
@@ -583,6 +657,8 @@ class MediaWorkerApp(tk.Tk):
         def save_project(open_search=False):
             try:
                 duration = max(3, int(values["duration_seconds"].get()))
+                preset_key = next(key for key, label in preset_choices.items() if label == values["export_preset"].get())
+                preset_ratio = {"douyin": "9:16", "reels": "9:16", "feed": "4:5", "square": "1:1"}[preset_key]
                 task_id = int(existing.get("id") or self.selection_store.next_local_task_id())
                 image_path = values["source_image_path"].get().strip()
                 if image_path:
@@ -603,10 +679,18 @@ class MediaWorkerApp(tk.Tk):
                     "keywords": values["keywords"].get().strip(),
                     "source_language": values["source_language"].get().strip() or "Chinese",
                     "target_language": values["target_language"].get().strip() or "English",
-                    "duration_seconds": duration, "aspect_ratio": values["aspect_ratio"].get(),
+                    "duration_seconds": duration, "aspect_ratio": preset_ratio,
                     "edit_mode": next(key for key, label in edit_choices.items() if label == values["edit_mode"].get()),
                     "subtitle_mode": next(key for key, label in subtitle_choices.items() if label == values["subtitle_mode"].get()),
                     "audio_mode": next(key for key, label in audio_choices.items() if label == values["audio_mode"].get()),
+                    "export_preset": preset_key,
+                    "transition": "fade" if values["transition"].get() == "淡入淡出" else "none",
+                    "tts_provider": next(key for key, label in tts_choices.items() if label == values["tts_provider"].get()),
+                    "tts_voice": values["tts_voice"].get().strip(),
+                    "tts_speed": max(0.5, min(2.0, float(values["tts_speed"].get()))),
+                    "tts_volume": max(0.0, min(2.0, float(values["tts_volume"].get()))),
+                    "background_music": values["background_music"].get().strip(),
+                    "music_volume": max(0.0, min(1.0, float(values["music_volume"].get()))),
                     "translate_subtitles": translate.get(), "video_script": script.get("1.0", "end").strip(),
                     "source_mode": "project_script", "source_image_path": image_path,
                     "source_urls": [line.strip() for line in urls.get("1.0", "end").splitlines() if line.strip()],
@@ -699,7 +783,9 @@ class MediaWorkerApp(tk.Tk):
         for row in rows:
             self.selection_tree.insert("", "end", iid=str(row["id"]), values=(
                 row["video_id"] or "待下载解析", row["selected_at"].replace("T", " ")[:19],
-                labels.get(row["status"], row["status"]), row["url"], row["error"],
+                labels.get(row["status"], row["status"]),
+                "%s-%s" % (row.get("trim_start") or 0, row.get("trim_end") or "结束"),
+                row.get("copyright_status") or "unreviewed", row["url"], row["error"],
             ))
         kind = "本地项目" if task.get("local_only") else "Odoo任务"
         self.selection_title.set("%s %s · %s · %s" % (
@@ -808,6 +894,118 @@ class MediaWorkerApp(tk.Tk):
         except Exception as exc:
             messagebox.showerror(APP_TITLE, str(exc))
 
+    def edit_selected_clip(self):
+        ids = self._selection_ids()
+        if len(ids) != 1:
+            messagebox.showerror(APP_TITLE, "请选择一条已经下载的视频")
+            return
+        row = self.selection_store.get_many(ids)[0]
+        path = Path(row.get("local_path") or "")
+        if not path.is_file():
+            messagebox.showerror(APP_TITLE, "请先下载该视频")
+            return
+        worker = self.worker or Worker(self.config())
+        duration = max(0.1, worker.probe_duration(path))
+        dialog = tk.Toplevel(self)
+        dialog.title("内嵌预览、时间轴与版权")
+        dialog.geometry("760x700")
+        dialog.transient(self)
+        preview = ttk.Label(dialog, text="正在读取预览…", anchor="center")
+        preview.pack(fill="both", expand=True, padx=15, pady=15)
+        position = tk.DoubleVar(value=float(row.get("trim_start") or 0))
+        timeline = ttk.Scale(dialog, from_=0, to=duration, variable=position)
+        timeline.pack(fill="x", padx=20)
+        position_label = tk.StringVar()
+        ttk.Label(dialog, textvariable=position_label).pack(pady=(3, 8))
+        fields = ttk.Frame(dialog, padding=(20, 0))
+        fields.pack(fill="x")
+        trim_start = tk.StringVar(value=str(row.get("trim_start") or 0))
+        trim_end = tk.StringVar(value=str(row.get("trim_end") or round(duration, 3)))
+        copyright_status = tk.StringVar(value=row.get("copyright_status") or "unreviewed")
+        copyright_note = tk.StringVar(value=row.get("copyright_note") or "")
+        for index, (label, variable) in enumerate((("入点（秒）", trim_start), ("出点（秒）", trim_end))):
+            ttk.Label(fields, text=label).grid(row=0, column=index * 2, sticky="w", padx=(0, 6))
+            ttk.Entry(fields, textvariable=variable, width=12).grid(row=0, column=index * 2 + 1, padx=(0, 18))
+        ttk.Label(fields, text="版权状态").grid(row=1, column=0, sticky="w", pady=8)
+        ttk.Combobox(
+            fields, textvariable=copyright_status, state="readonly",
+            values=("unreviewed", "authorized", "self_owned", "restricted"), width=18,
+        ).grid(row=1, column=1, sticky="w")
+        ttk.Label(fields, text="版权备注").grid(row=2, column=0, sticky="w")
+        ttk.Entry(fields, textvariable=copyright_note).grid(row=2, column=1, columnspan=3, sticky="ew")
+        fields.columnconfigure(3, weight=1)
+
+        frame_path = app_dir() / ("preview-%s.jpg" % row["id"])
+        def render_frame(_event=None):
+            current = max(0, min(duration, float(position.get())))
+            position_label.set("%.2f / %.2f 秒" % (current, duration))
+            try:
+                subprocess.run([
+                    worker.ffmpeg(), "-y", "-ss", str(current), "-i", str(path),
+                    "-frames:v", "1", "-vf", "scale=700:-2", str(frame_path),
+                ], check=True, capture_output=True)
+                image = Image.open(frame_path)
+                photo = ImageTk.PhotoImage(image)
+                preview.configure(image=photo, text="")
+                preview.image = photo
+            except Exception as exc:
+                preview.configure(text="预览读取失败：" + str(exc), image="")
+        timeline.bind("<ButtonRelease-1>", render_frame)
+
+        def set_point(variable):
+            variable.set("%.3f" % float(position.get()))
+
+        point_controls = ttk.Frame(dialog)
+        point_controls.pack(pady=8)
+        ttk.Button(point_controls, text="当前位置设为入点", command=lambda: set_point(trim_start)).pack(side="left", padx=4)
+        ttk.Button(point_controls, text="当前位置设为出点", command=lambda: set_point(trim_end)).pack(side="left", padx=4)
+        ttk.Button(point_controls, text="用系统播放器播放", command=lambda: os.startfile(str(path))).pack(side="left", padx=4)
+
+        def save_clip():
+            start, end = float(trim_start.get()), float(trim_end.get())
+            if start < 0 or end <= start or end > duration + 0.1:
+                messagebox.showerror(APP_TITLE, "入点和出点超出视频有效时长", parent=dialog)
+                return
+            self.selection_store.update(
+                row["id"], trim_start=start, trim_end=end,
+                copyright_status=copyright_status.get(), copyright_note=copyright_note.get().strip(),
+            )
+            dialog.destroy()
+            self._refresh_selection_tree()
+
+        buttons = ttk.Frame(dialog)
+        buttons.pack(pady=10)
+        ttk.Button(buttons, text="保存", command=save_clip).pack(side="left", padx=4)
+        ttk.Button(buttons, text="取消", command=dialog.destroy).pack(side="left", padx=4)
+        render_frame()
+
+    def show_versions(self):
+        task = self._active_selection_task()
+        if not task:
+            messagebox.showerror(APP_TITLE, "请先选择一个项目")
+            return
+        versions = self.selection_store.list_versions(task["id"])
+        if not versions:
+            messagebox.showinfo(APP_TITLE, "该项目还没有生成过审核稿")
+            return
+        dialog = tk.Toplevel(self)
+        dialog.title("成片版本历史")
+        dialog.geometry("760x420")
+        tree = ttk.Treeview(dialog, columns=("version", "time", "path"), show="headings")
+        for name, title, width in (("version", "版本", 80), ("time", "生成时间", 180), ("path", "成片文件", 460)):
+            tree.heading(name, text=title); tree.column(name, width=width, anchor="w")
+        for version in versions:
+            tree.insert("", "end", iid=str(version["id"]), values=(
+                "V%s" % version["version_no"], version["created_at"].replace("T", " ")[:19], version["result_path"],
+            ))
+        tree.pack(fill="both", expand=True, padx=12, pady=12)
+        def preview_version():
+            selected = tree.selection()
+            if selected:
+                target = next(item for item in versions if item["id"] == int(selected[0]))
+                self._open_local_path(target["result_path"])
+        ttk.Button(dialog, text="预览所选版本", command=preview_version).pack(pady=(0, 12))
+
     def preview_result(self):
         task = self._active_selection_task()
         try:
@@ -865,9 +1063,14 @@ class MediaWorkerApp(tk.Tk):
             clips_dir.mkdir(parents=True, exist_ok=True)
             clips = []
             for index, row in enumerate(rows, 1):
+                if row.get("copyright_status") == "restricted":
+                    raise RuntimeError("视频 %s 已标记为限制使用，不能加入成片" % (row.get("video_id") or row["id"]))
                 existing = Path(row["local_path"]) if row["local_path"] else None
                 if existing and existing.is_file() and row["status"] in ("downloaded", "ready_review", "done"):
-                    clips.append(existing)
+                    clips.append({
+                        "path": existing, "trim_start": row.get("trim_start") or 0,
+                        "trim_end": row.get("trim_end") or 0,
+                    })
                     continue
                 self.selection_store.update(row["id"], status="downloading", error="")
                 self.events.put(("selection_changed", {}))
@@ -878,7 +1081,10 @@ class MediaWorkerApp(tk.Tk):
                         row["id"], video_id=video_id or row["video_id"],
                         status="downloaded", local_path=str(path), error="",
                     )
-                    clips.append(path)
+                    clips.append({
+                        "path": path, "trim_start": row.get("trim_start") or 0,
+                        "trim_end": row.get("trim_end") or 0,
+                    })
                 except Exception as exc:
                     self.selection_store.update(row["id"], status="failed", error=str(exc))
                     raise
@@ -886,9 +1092,8 @@ class MediaWorkerApp(tk.Tk):
                 for row in rows:
                     self.selection_store.update(row["id"], status="mixing", error="")
                 self.events.put(("selection_changed", {}))
-                mix_dir = worker.root / str(task["id"]) / "mix-output"
-                if mix_dir.exists():
-                    shutil.rmtree(mix_dir)
+                version_no = len(self.selection_store.list_versions(task["id"])) + 1
+                mix_dir = worker.root / str(task["id"]) / ("mix-output-v%s" % version_no)
                 mix_dir.mkdir(parents=True)
                 output, subtitle = worker.compose_video(task, clips, mix_dir)
                 self.selection_store.set_task_result(

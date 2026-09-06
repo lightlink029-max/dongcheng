@@ -67,9 +67,40 @@ class SelectionStore:
                     status TEXT NOT NULL DEFAULT 'selected',
                     local_path TEXT NOT NULL DEFAULT '',
                     error TEXT NOT NULL DEFAULT '',
+                    trim_start REAL NOT NULL DEFAULT 0,
+                    trim_end REAL NOT NULL DEFAULT 0,
+                    copyright_status TEXT NOT NULL DEFAULT 'unreviewed',
+                    copyright_note TEXT NOT NULL DEFAULT '',
                     UNIQUE(task_id, url)
                 )
             """)
+            connection.execute("""
+                CREATE TABLE IF NOT EXISTS render_version (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id INTEGER NOT NULL,
+                    version_no INTEGER NOT NULL,
+                    result_path TEXT NOT NULL,
+                    subtitle_path TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    UNIQUE(task_id, version_no)
+                )
+            """)
+            video_columns = {
+                row["name"] for row in connection.execute(
+                    "PRAGMA table_info(selected_video)"
+                ).fetchall()
+            }
+            video_additions = {
+                "trim_start": "REAL NOT NULL DEFAULT 0",
+                "trim_end": "REAL NOT NULL DEFAULT 0",
+                "copyright_status": "TEXT NOT NULL DEFAULT 'unreviewed'",
+                "copyright_note": "TEXT NOT NULL DEFAULT ''",
+            }
+            for name, definition in video_additions.items():
+                if name not in video_columns:
+                    connection.execute(
+                        f"ALTER TABLE selected_video ADD COLUMN {name} {definition}"
+                    )
             connection.execute("""
                 CREATE TABLE IF NOT EXISTS selection_task (
                     task_id INTEGER PRIMARY KEY,
@@ -160,10 +191,30 @@ class SelectionStore:
                     WHERE task_id = ?""",
                 (str(result_path or ""), str(subtitle_path or ""), status, now, int(task_id)),
             )
+            row = connection.execute(
+                "SELECT COALESCE(MAX(version_no), 0) + 1 AS next_version "
+                "FROM render_version WHERE task_id = ?", (int(task_id),),
+            ).fetchone()
+            connection.execute(
+                """INSERT INTO render_version
+                   (task_id, version_no, result_path, subtitle_path, created_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (int(task_id), row["next_version"], str(result_path or ""),
+                 str(subtitle_path or ""), now),
+            )
+
+    def list_versions(self, task_id):
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM render_version WHERE task_id = ? ORDER BY version_no DESC",
+                (int(task_id),),
+            ).fetchall()
+        return [dict(row) for row in rows]
 
     def delete_task(self, task_id):
         with self._connect() as connection:
             connection.execute("DELETE FROM selected_video WHERE task_id = ?", (int(task_id),))
+            connection.execute("DELETE FROM render_version WHERE task_id = ?", (int(task_id),))
             connection.execute("DELETE FROM selection_task WHERE task_id = ?", (int(task_id),))
 
     def add_text(self, task_id, text):
@@ -216,8 +267,11 @@ class SelectionStore:
         return [dict(row) for row in rows]
 
     def update(self, record_id, **values):
-        allowed = {"video_id", "status", "local_path", "error"}
-        values = {key: str(value or "") for key, value in values.items() if key in allowed}
+        allowed = {
+            "video_id", "status", "local_path", "error", "trim_start", "trim_end",
+            "copyright_status", "copyright_note",
+        }
+        values = {key: value for key, value in values.items() if key in allowed}
         if not values:
             return
         assignments = ", ".join(f"{key} = ?" for key in values)
