@@ -1,5 +1,6 @@
 import sys
 import unittest
+import requests
 from types import SimpleNamespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -77,6 +78,39 @@ class WorkerLeaseTests(unittest.TestCase):
         target = worker.download_url("https://v.douyin.com/example/", Path(self.work_dir.name), 1)
         self.assertEqual(worker.calls, ["douyin"])
         self.assertEqual(target.read_bytes(), b"video")
+
+    def test_attachment_retries_transient_gateway_failure(self):
+        worker = Worker(self.config())
+        failed = requests.Response()
+        failed.status_code = 502
+        failed.url = "https://example.invalid/psc/local-worker/attachments/2351"
+        gateway_error = requests.HTTPError("502 Bad Gateway", response=failed)
+        target = Path(self.work_dir.name) / "source.jpg"
+        with mock.patch.object(
+            worker,
+            "api",
+            side_effect=[gateway_error, SimpleNamespace(content=b"image")],
+        ) as api, mock.patch("worker.time.sleep") as sleep:
+            result = worker.attachment(2351, target)
+        self.assertEqual(result, target)
+        self.assertEqual(target.read_bytes(), b"image")
+        self.assertFalse(Path(str(target) + ".part").exists())
+        self.assertEqual(api.call_count, 2)
+        sleep.assert_called_once_with(1)
+
+    def test_attachment_does_not_retry_not_found(self):
+        worker = Worker(self.config())
+        failed = requests.Response()
+        failed.status_code = 404
+        failed.url = "https://example.invalid/psc/local-worker/attachments/2351"
+        not_found = requests.HTTPError("404 Not Found", response=failed)
+        target = Path(self.work_dir.name) / "missing.jpg"
+        with mock.patch.object(worker, "api", side_effect=not_found) as api, \
+                mock.patch("worker.time.sleep") as sleep:
+            with self.assertRaises(requests.HTTPError):
+                worker.attachment(2351, target)
+        api.assert_called_once()
+        sleep.assert_not_called()
 
     def test_non_douyin_url_is_rejected(self):
         worker = DownloadWorker(self.config())

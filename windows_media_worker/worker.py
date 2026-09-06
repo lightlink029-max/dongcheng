@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import threading
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -70,8 +71,35 @@ class Worker:
                 self.emit("log", message=f"任务 {task_id} 心跳失败：{exc}")
 
     def attachment(self, attachment_id, target):
-        response = self.api("GET", f"/psc/local-worker/attachments/{attachment_id}")
-        target.write_bytes(response.content)
+        target = Path(target)
+        partial = target.with_name(target.name + ".part")
+        retry_statuses = {502, 503, 504}
+        attempts = 5
+        for attempt in range(1, attempts + 1):
+            error = None
+            try:
+                response = self.api("GET", f"/psc/local-worker/attachments/{attachment_id}")
+                partial.write_bytes(response.content)
+                os.replace(partial, target)
+                return target
+            except (requests.ConnectionError, requests.Timeout) as exc:
+                retryable = True
+                error = exc
+            except requests.HTTPError as exc:
+                retryable = exc.response is not None and exc.response.status_code in retry_statuses
+                error = exc
+            if not retryable or attempt == attempts:
+                partial.unlink(missing_ok=True)
+                raise error
+            delay = min(8, 2 ** (attempt - 1))
+            self.emit(
+                "log",
+                message=(
+                    f"附件 {attachment_id} 下载暂时失败（第 {attempt}/{attempts} 次）：{error}；"
+                    f"{delay} 秒后重试"
+                ),
+            )
+            time.sleep(delay)
 
     def download_via_douyin(self, url, target):
         cookie_store = self.config.get("douyin_cookie_store") or str(
