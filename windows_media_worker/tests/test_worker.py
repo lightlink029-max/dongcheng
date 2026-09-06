@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from worker import Worker
 from mumu_adapter import MumuBridge, discover_serial
+from selection_store import SelectionStore, extract_douyin_urls, extract_video_id
 
 
 class StopAfterFirstHeartbeat:
@@ -116,6 +117,32 @@ class WorkerLeaseTests(unittest.TestCase):
         with mock.patch("mumu_adapter._candidate_roots", return_value=[Path("D:/MuMu")]), \
                 mock.patch.object(Path, "is_file", return_value=True):
             self.assertEqual(discover_serial(runner), "127.0.0.1:16384")
+
+    def test_selection_store_saves_metadata_and_deduplicates(self):
+        store = SelectionStore(Path(self.work_dir.name) / "selections.db")
+        text = (
+            "分享 https://www.douyin.com/video/7531234567890123456 复制打开\n"
+            "https://www.douyin.com/video/7531234567890123456"
+        )
+        self.assertEqual(store.add_text(101, text), 1)
+        rows = store.list(101)
+        self.assertEqual(rows[0]["video_id"], "7531234567890123456")
+        self.assertTrue(rows[0]["selected_at"])
+        self.assertEqual(rows[0]["status"], "selected")
+        store.update(rows[0]["id"], status="downloaded", local_path="D:/video.mp4")
+        self.assertEqual(store.list(101)[0]["status"], "downloaded")
+        store.save_task({"id": 101, "keywords": "鞋子", "target_language": "English"})
+        self.assertEqual(store.get_task(101)["keywords"], "鞋子")
+        store.set_task_status(101, "done")
+        self.assertEqual(store.list_tasks()[0]["local_status"], "done")
+
+    def test_selection_url_parser_accepts_only_douyin(self):
+        urls = extract_douyin_urls(
+            "https://v.douyin.com/abc123/ https://example.com/video "
+            "https://www.douyin.com/video/7531234567890123456?modal_id=1"
+        )
+        self.assertEqual(len(urls), 2)
+        self.assertEqual(extract_video_id(urls[1]), "7531234567890123456")
 
 
 if __name__ == "__main__":

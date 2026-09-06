@@ -70,7 +70,7 @@
                     <button name="action_open_douyin_keyword_search" type="object" string="打开抖音文字搜索" class="btn-secondary"/>
                     <button name="action_open_douyin_image_search" type="object" string="打开抖音图片搜索" class="btn-secondary"/>
                 </div>
-                <field name="source_video_urls" placeholder="在抖音结果页人工选择后，由 LightLink 插件同步；也可每行手工填写一个链接"/>
+                <field name="source_video_urls" placeholder="可选：手工指定的视频网址；抖音选片明细由 Windows 工具在本机管理"/>
                 <field name="local_source_mode"/><field name="requested_duration"/>
             </xpath>
         </field>

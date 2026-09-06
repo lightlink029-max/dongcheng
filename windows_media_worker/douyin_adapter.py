@@ -174,9 +174,10 @@ async def _download(url, output_dir, cookies, proxy):
         result = await downloader.download(parsed)
     if not result or result.success != 1:
         raise RuntimeError("Douyin Downloader 未能下载该视频，请更新抖音登录后重试")
+    return str(parsed.get("aweme_id") or parsed.get("item_id") or parsed.get("id") or "")
 
 
-def download_video(url, target, cookie_store, proxy=""):
+def download_video(url, target, cookie_store, proxy="", return_video_id=False):
     cookies = load_cookies(cookie_store)
     if not cookies:
         raise RuntimeError("尚未登录抖音，请先在工具中点击“登录/更新抖音登录”")
@@ -184,9 +185,12 @@ def download_video(url, target, cookie_store, proxy=""):
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True)
-    asyncio.run(_download(url, output_dir, cookies, proxy))
+    video_id = asyncio.run(_download(url, output_dir, cookies, proxy))
     videos = sorted(output_dir.rglob("*.mp4"), key=lambda item: item.stat().st_mtime, reverse=True)
     if len(videos) != 1:
         raise RuntimeError(f"Douyin Downloader 返回了 {len(videos)} 个视频，无法确定目标文件")
+    if not video_id and videos[0].stem.isdigit():
+        video_id = videos[0].stem
     shutil.move(str(videos[0]), str(target))
-    return Path(target)
+    result = Path(target)
+    return (result, video_id) if return_video_id else result

@@ -1,6 +1,7 @@
 import json
 import os
 import queue
+import shutil
 import sys
 import threading
 import time
@@ -17,6 +18,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from douyin_adapter import capture_login, has_login, self_test
 from mumu_adapter import check_mumu
+from selection_store import SelectionStore
 from worker import Worker
 
 
@@ -44,18 +46,27 @@ class MediaWorkerApp(tk.Tk):
         self.worker_thread = None
         self.worker = None
         self.pending_selections = {}
+        self.selection_store = SelectionStore(app_dir() / "selections.db")
+        self.selection_task_id = None
+        self.selection_busy = False
+        self.last_clipboard = ""
         self.vars = {}
         self._build()
         self._load()
         self.after(200, self._drain_events)
+        self.after(800, self._poll_clipboard)
 
     def _build(self):
         notebook = ttk.Notebook(self)
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
-        config_tab, tasks_tab, log_tab = ttk.Frame(notebook), ttk.Frame(notebook), ttk.Frame(notebook)
+        config_tab, tasks_tab = ttk.Frame(notebook), ttk.Frame(notebook)
+        selection_tab, log_tab = ttk.Frame(notebook), ttk.Frame(notebook)
         notebook.add(config_tab, text="连接与配置")
         notebook.add(tasks_tab, text="任务列表")
+        notebook.add(selection_tab, text="抖音选片与混剪")
         notebook.add(log_tab, text="运行日志")
+        self.notebook = notebook
+        self.selection_tab = selection_tab
 
         fields = [
             ("odoo_url", "Odoo地址", "https://lightlink029-max-dongcheng.odoo.com"),
@@ -111,10 +122,45 @@ class MediaWorkerApp(tk.Tk):
         for col, title, width in zip(columns, ("任务ID", "类型", "语种", "状态", "结果/错误"), (80, 130, 140, 120, 480)):
             self.task_tree.heading(col, text=title); self.task_tree.column(col, width=width, anchor="w")
         self.task_tree.pack(fill="both", expand=True, padx=10, pady=10)
+        self.task_tree.bind("<<TreeviewSelect>>", self._on_task_selected)
         task_controls = ttk.Frame(tasks_tab, padding=(10, 0, 10, 10))
         task_controls.pack(fill="x")
-        ttk.Button(task_controls, text="提交所选任务的视频链接", command=self.submit_selection).pack(side="left")
-        ttk.Label(task_controls, text="在 MuMu 抖音中选择视频并复制分享链接，可一次粘贴多条。", foreground="#666").pack(side="left", padx=12)
+        ttk.Button(task_controls, text="打开选片管理", command=self.open_selection_manager).pack(side="left")
+        ttk.Label(task_controls, text="选片明细和处理状态仅保存在本机，Odoo只接收最终成片。", foreground="#666").pack(side="left", padx=12)
+
+        selection_header = ttk.Frame(selection_tab, padding=10)
+        selection_header.pack(fill="x")
+        self.selection_title = tk.StringVar(value="请先启动工作节点并领取抖音选片任务")
+        ttk.Label(selection_header, textvariable=self.selection_title, font=("Microsoft YaHei UI", 11, "bold")).pack(side="left")
+        self.selection_task_choice = ttk.Combobox(selection_header, state="readonly", width=34)
+        self.selection_task_choice.pack(side="left", padx=15)
+        self.selection_task_choice.bind("<<ComboboxSelected>>", self._on_selection_task_choice)
+        self.clipboard_listening = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            selection_header, text="自动收集剪贴板中的抖音链接", variable=self.clipboard_listening,
+        ).pack(side="right")
+
+        selection_columns = ("video_id", "selected_at", "status", "url", "error")
+        self.selection_tree = ttk.Treeview(
+            selection_tab, columns=selection_columns, show="headings", selectmode="extended",
+        )
+        titles = ("视频ID", "选择时间", "处理状态", "分享链接", "错误")
+        widths = (150, 170, 110, 440, 260)
+        for column, title, width in zip(selection_columns, titles, widths):
+            self.selection_tree.heading(column, text=title)
+            self.selection_tree.column(column, width=width, anchor="w")
+        self.selection_tree.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        self.selection_tree.bind("<<TreeviewSelect>>", lambda _event: self._refresh_selection_summary())
+
+        selection_controls = ttk.Frame(selection_tab, padding=(10, 0, 10, 10))
+        selection_controls.pack(fill="x")
+        ttk.Button(selection_controls, text="从剪贴板添加", command=self.add_selection_from_clipboard).pack(side="left", padx=3)
+        ttk.Button(selection_controls, text="手工添加链接", command=self.add_selection_manually).pack(side="left", padx=3)
+        ttk.Button(selection_controls, text="删除所选", command=self.delete_selected_videos).pack(side="left", padx=3)
+        ttk.Button(selection_controls, text="重新下载", command=self.redownload_selected_videos).pack(side="left", padx=3)
+        ttk.Button(selection_controls, text="批量提交混剪", command=self.mix_selected_videos).pack(side="left", padx=3)
+        self.selection_summary = tk.StringVar(value="0 条")
+        ttk.Label(selection_controls, textvariable=self.selection_summary).pack(side="right")
 
         self.log = tk.Text(log_tab, wrap="word", state="disabled", font=("Consolas", 10))
         self.log.pack(fill="both", expand=True, padx=10, pady=10)
@@ -166,6 +212,8 @@ class MediaWorkerApp(tk.Tk):
             except Exception as exc: self.write_log("配置读取失败：" + str(exc))
         self.autostart.set(self._autostart_enabled())
         self._refresh_douyin_status()
+        self._refresh_selection_tasks()
+        self._refresh_selection_tree()
         if "--autostart" in sys.argv:
             self.after(1000, self.start)
 
@@ -294,6 +342,24 @@ class MediaWorkerApp(tk.Tk):
                     task = data["task"]
                     self.pending_selections.pop(task["id"], None)
                     self._task_event("task_done", {"task": task, "output": "已同步 %s 条视频链接" % data["saved"]})
+                elif event == "selection_changed":
+                    self._refresh_selection_tree()
+                elif event == "selection_mix_done":
+                    task = data["task"]
+                    self.pending_selections.pop(task["id"], None)
+                    self.selection_store.set_task_status(task["id"], "done")
+                    self.selection_busy = False
+                    self._refresh_selection_tasks()
+                    self._refresh_selection_tree()
+                    self._task_event("task_done", {"task": task, "output": "成片已回传 Odoo：%s" % data["output"]})
+                    messagebox.showinfo(APP_TITLE, "批量混剪完成，成片已回传 Odoo")
+                elif event == "selection_operation_done":
+                    self.selection_busy = False
+                    self._refresh_selection_tree()
+                elif event == "selection_operation_error":
+                    self.selection_busy = False
+                    self._refresh_selection_tree()
+                    messagebox.showerror(APP_TITLE, data.get("error") or "选片处理失败")
                 elif event == "selection_submit_error":
                     messagebox.showerror(APP_TITLE, data.get("error") or "选片链接同步失败")
                 elif event.startswith("task_"): self._task_event(event, data)
@@ -310,40 +376,239 @@ class MediaWorkerApp(tk.Tk):
         values = (task["id"], task["type"], task["target_language"], status, result)
         if self.task_tree.exists(iid): self.task_tree.item(iid, values=values)
         else: self.task_tree.insert("", 0, iid=iid, values=values)
+        if event == "selection_pending":
+            self.selection_task_id = task["id"]
+            self.selection_store.save_task(task)
+            self._refresh_selection_tasks()
+            self._refresh_selection_tree()
         self.write_log(f"任务 {task['id']}：{status} {result}")
 
-    def submit_selection(self):
+    def _on_task_selected(self, _event=None):
         selected = self.task_tree.selection()
-        if len(selected) != 1:
-            messagebox.showerror(APP_TITLE, "请在任务列表选择一个等待人工选片的任务")
+        if len(selected) == 1 and int(selected[0]) in self.pending_selections:
+            self.selection_task_id = int(selected[0])
+            self._refresh_selection_tree()
+
+    def _on_selection_task_choice(self, _event=None):
+        value = self.selection_task_choice.get().split(" · ", 1)[0]
+        if value.isdigit():
+            self.selection_task_id = int(value)
+            self._refresh_selection_tree()
+
+    def _refresh_selection_tasks(self):
+        tasks = self.selection_store.list_tasks()
+        labels = ["%s · %s · %s" % (
+            task["id"], task.get("local_status", "processing"),
+            (task.get("keywords") or task.get("target_language") or "抖音选片").replace("\n", " ")[:18],
+        ) for task in tasks]
+        self.selection_task_choice["values"] = labels
+        if tasks and self.selection_task_id is None:
+            self.selection_task_id = tasks[0]["id"]
+        for index, task in enumerate(tasks):
+            if task["id"] == self.selection_task_id:
+                self.selection_task_choice.current(index)
+                break
+
+    def open_selection_manager(self):
+        self._on_task_selected()
+        if not self.selection_task_id:
+            messagebox.showerror(APP_TITLE, "请先领取一个抖音选片任务")
             return
-        task_id = int(selected[0])
-        task = self.pending_selections.get(task_id)
+        self.notebook.select(self.selection_tab)
+
+    def _active_selection_task(self):
+        if self.selection_task_id in self.pending_selections:
+            return self.pending_selections[self.selection_task_id]
+        stored = self.selection_store.get_task(self.selection_task_id) if self.selection_task_id else None
+        if stored:
+            return stored
+        if self.pending_selections:
+            self.selection_task_id = next(iter(self.pending_selections))
+            return self.pending_selections[self.selection_task_id]
+        return None
+
+    def _refresh_selection_tree(self):
+        task = self._active_selection_task()
+        for item in self.selection_tree.get_children():
+            self.selection_tree.delete(item)
         if not task:
-            messagebox.showerror(APP_TITLE, "所选任务不是当前等待选片的任务")
+            self.selection_title.set("当前没有等待处理的抖音选片任务")
+            self.selection_summary.set("0 条")
+            return
+        rows = self.selection_store.list(task["id"])
+        labels = {
+            "selected": "已选择", "downloading": "下载中", "downloaded": "已下载",
+            "mixing": "混剪中", "done": "已完成", "failed": "失败",
+        }
+        for row in rows:
+            self.selection_tree.insert("", "end", iid=str(row["id"]), values=(
+                row["video_id"] or "待下载解析", row["selected_at"].replace("T", " ")[:19],
+                labels.get(row["status"], row["status"]), row["url"], row["error"],
+            ))
+        self.selection_title.set("任务 %s · %s" % (task["id"], task.get("keywords") or task.get("target_language") or "抖音选片"))
+        self._refresh_selection_summary()
+
+    def _refresh_selection_summary(self):
+        self.selection_summary.set("%s 条，选中 %s 条" % (
+            len(self.selection_tree.get_children()), len(self.selection_tree.selection()),
+        ))
+
+    def _selection_ids(self, default_all=False):
+        selected = [int(value) for value in self.selection_tree.selection()]
+        if selected or not default_all:
+            return selected
+        return [int(value) for value in self.selection_tree.get_children()]
+
+    def _clipboard_text(self):
+        try:
+            return self.clipboard_get()
+        except tk.TclError:
+            return ""
+
+    def _poll_clipboard(self):
+        try:
+            task = self._active_selection_task()
+            if task and self.clipboard_listening.get() and not self.selection_busy:
+                value = self._clipboard_text()
+                if value and value != self.last_clipboard:
+                    self.last_clipboard = value
+                    added = self.selection_store.add_text(task["id"], value)
+                    if added:
+                        self._refresh_selection_tree()
+                        self.write_log("任务 %s：自动加入 %s 条抖音视频" % (task["id"], added))
+        finally:
+            self.after(800, self._poll_clipboard)
+
+    def add_selection_from_clipboard(self):
+        task = self._active_selection_task()
+        if not task:
+            messagebox.showerror(APP_TITLE, "当前没有等待处理的抖音选片任务")
+            return
+        added = self.selection_store.add_text(task["id"], self._clipboard_text())
+        self._refresh_selection_tree()
+        if not added:
+            messagebox.showinfo(APP_TITLE, "剪贴板中没有新的有效抖音链接")
+
+    def add_selection_manually(self):
+        task = self._active_selection_task()
+        if not task:
+            messagebox.showerror(APP_TITLE, "当前没有等待处理的抖音选片任务")
             return
         dialog = tk.Toplevel(self)
-        dialog.title("提交抖音视频链接")
-        dialog.geometry("720x420")
-        ttk.Label(dialog, text="粘贴抖音“分享 → 复制链接”的内容，每条一行：").pack(anchor="w", padx=15, pady=(15, 5))
-        text = tk.Text(dialog, wrap="word")
-        text.pack(fill="both", expand=True, padx=15, pady=5)
-        def submit():
-            value = text.get("1.0", "end").strip()
-            if not value:
-                messagebox.showerror(APP_TITLE, "请先粘贴至少一个抖音视频链接", parent=dialog)
+        dialog.title("添加抖音分享链接")
+        dialog.geometry("700x360")
+        ttk.Label(dialog, text="每行一个链接，也可直接粘贴抖音分享文字：").pack(anchor="w", padx=15, pady=(15, 5))
+        editor = tk.Text(dialog, wrap="word")
+        editor.pack(fill="both", expand=True, padx=15, pady=5)
+
+        def save_links():
+            added = self.selection_store.add_text(task["id"], editor.get("1.0", "end"))
+            if not added:
+                messagebox.showerror(APP_TITLE, "没有识别到新的有效抖音链接", parent=dialog)
                 return
             dialog.destroy()
-            def run():
+            self._refresh_selection_tree()
+
+        ttk.Button(dialog, text="加入选片库", command=save_links).pack(pady=(5, 15))
+        editor.focus_set()
+
+    def delete_selected_videos(self):
+        ids = self._selection_ids()
+        if not ids:
+            messagebox.showerror(APP_TITLE, "请先选择要删除的记录")
+            return
+        if not messagebox.askyesno(APP_TITLE, "确定删除所选 %s 条选片记录？" % len(ids)):
+            return
+        for row in self.selection_store.get_many(ids):
+            path = Path(row["local_path"]) if row["local_path"] else None
+            if path and path.is_file():
+                path.unlink()
+        self.selection_store.delete(ids)
+        self._refresh_selection_tree()
+
+    def _run_downloads(self, task, rows, mix_after=False):
+        worker = self.worker or Worker(self.config())
+        heartbeat_stop = threading.Event()
+        heartbeat = None
+        if task["id"] in self.pending_selections:
+            heartbeat = threading.Thread(
+                target=worker.heartbeat_loop, args=(task["id"], heartbeat_stop), daemon=True,
+            )
+            heartbeat.start()
+        try:
+            clips_dir = worker.root / str(task["id"]) / "selected-videos"
+            clips_dir.mkdir(parents=True, exist_ok=True)
+            clips = []
+            for index, row in enumerate(rows, 1):
+                existing = Path(row["local_path"]) if row["local_path"] else None
+                if existing and existing.is_file() and row["status"] in ("downloaded", "done"):
+                    clips.append(existing)
+                    continue
+                self.selection_store.update(row["id"], status="downloading", error="")
+                self.events.put(("selection_changed", {}))
+                target = clips_dir / ("video-%s.mp4" % row["id"])
                 try:
-                    result = self.worker.complete_douyin_selection(task_id, value)
-                    self.events.put(("selection_complete", {"task": task, "saved": result.get("saved", 0)}))
+                    path, video_id = worker.download_selection_video(row["url"], target)
+                    self.selection_store.update(
+                        row["id"], video_id=video_id or row["video_id"],
+                        status="downloaded", local_path=str(path), error="",
+                    )
+                    clips.append(path)
                 except Exception as exc:
-                    self.events.put(("log", {"message": "选片链接同步失败：" + str(exc)}))
-                    self.events.put(("selection_submit_error", {"error": str(exc)}))
-            threading.Thread(target=run, daemon=True).start()
-        ttk.Button(dialog, text="同步到 Odoo", command=submit).pack(pady=(5, 15))
-        text.focus_set()
+                    self.selection_store.update(row["id"], status="failed", error=str(exc))
+                    raise
+            if mix_after:
+                for row in rows:
+                    self.selection_store.update(row["id"], status="mixing", error="")
+                self.events.put(("selection_changed", {}))
+                mix_dir = worker.root / str(task["id"]) / "mix-output"
+                if mix_dir.exists():
+                    shutil.rmtree(mix_dir)
+                mix_dir.mkdir(parents=True)
+                output, subtitle = worker.compose_video(task, clips, mix_dir)
+                worker.complete(task, output, subtitle)
+                for row in rows:
+                    self.selection_store.update(row["id"], status="done", error="")
+                self.events.put(("selection_mix_done", {"task": task, "output": str(output)}))
+            else:
+                self.events.put(("selection_operation_done", {}))
+        except Exception as exc:
+            self.events.put(("log", {"message": "选片处理失败：" + str(exc)}))
+            self.events.put(("selection_operation_error", {"error": str(exc)}))
+        finally:
+            heartbeat_stop.set()
+            if heartbeat:
+                heartbeat.join(timeout=2)
+
+    def redownload_selected_videos(self):
+        task = self._active_selection_task()
+        ids = self._selection_ids()
+        if not task or not ids:
+            messagebox.showerror(APP_TITLE, "请先选择要重新下载的视频")
+            return
+        if self.selection_busy:
+            messagebox.showinfo(APP_TITLE, "已有选片处理正在运行")
+            return
+        self.selection_store.reset_download(ids)
+        rows = self.selection_store.get_many(ids)
+        self.selection_busy = True
+        threading.Thread(target=self._run_downloads, args=(task, rows, False), daemon=True).start()
+
+    def mix_selected_videos(self):
+        task = self._active_selection_task()
+        ids = self._selection_ids(default_all=True)
+        if not task or not ids:
+            messagebox.showerror(APP_TITLE, "请先加入至少一个抖音视频")
+            return
+        if task["id"] not in self.pending_selections:
+            messagebox.showerror(APP_TITLE, "该任务已结束；可以管理或重新下载素材，但不能再次回传同一个 Odoo 任务")
+            return
+        if self.selection_busy:
+            messagebox.showinfo(APP_TITLE, "已有选片处理正在运行")
+            return
+        rows = self.selection_store.get_many(ids)
+        self.selection_busy = True
+        threading.Thread(target=self._run_downloads, args=(task, rows, True), daemon=True).start()
 
     def write_log(self, message):
         line = time.strftime("%Y-%m-%d %H:%M:%S ") + message + "\n"

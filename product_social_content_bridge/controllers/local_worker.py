@@ -135,7 +135,7 @@ class LocalWorkerController(http.Controller):
             return request.make_json_response({"error": "task is not an active selection"}, status=409)
         task.write({
             "state": "processing", "progress": 40,
-            "status_message": "图片已传入 MuMu，等待人工选片",
+            "status_message": "图片已传入 MuMu，选片与混剪由 Windows 工具处理",
             "lease_expires_at": self._lease_expiry(),
         })
         return request.make_json_response({"ok": True})

@@ -83,6 +83,17 @@ class Worker:
             (self.config.get("download_proxy") or "").strip(),
         )
 
+    def download_selection_video(self, url, target):
+        cookie_store = self.config.get("douyin_cookie_store") or str(
+            Path(os.environ.get("LOCALAPPDATA", Path.home()))
+            / "LightLinkMediaWorker" / "secrets.json"
+        )
+        return download_video(
+            url, target, cookie_store,
+            (self.config.get("download_proxy") or "").strip(),
+            return_video_id=True,
+        )
+
     def download_url(self, url, target_dir, index):
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https"):
@@ -145,15 +156,7 @@ class Worker:
         canvas.save(output, quality=92)
         return output, None
 
-    def video(self, task, job_dir):
-        clips = []
-        for index, url in enumerate(task.get("source_urls") or [], 1):
-            clips.append(self.download_url(url, job_dir, index))
-        for index, item in enumerate(task.get("source_media") or [], len(clips) + 1):
-            suffix = Path(item.get("name") or "clip.mp4").suffix or ".mp4"
-            target = job_dir / f"asset-{index}{suffix}"
-            self.attachment(item["id"], target)
-            clips.append(target)
+    def compose_video(self, task, clips, job_dir):
         if not clips:
             raise ValueError("任务没有视频URL或视频素材")
         srt = self.make_srt(task, job_dir)
@@ -172,6 +175,17 @@ class Worker:
                    "-c:a", "aac", "-movflags", "+faststart", str(output)]
         subprocess.run(command, check=True)
         return output, srt
+
+    def video(self, task, job_dir):
+        clips = []
+        for index, url in enumerate(task.get("source_urls") or [], 1):
+            clips.append(self.download_url(url, job_dir, index))
+        for index, item in enumerate(task.get("source_media") or [], len(clips) + 1):
+            suffix = Path(item.get("name") or "clip.mp4").suffix or ".mp4"
+            target = job_dir / f"asset-{index}{suffix}"
+            self.attachment(item["id"], target)
+            clips.append(target)
+        return self.compose_video(task, clips, job_dir)
 
     def complete(self, task, output, subtitle):
         with output.open("rb") as stream:
