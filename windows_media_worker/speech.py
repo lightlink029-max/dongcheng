@@ -113,11 +113,19 @@ def _windows_tts(text, output, voice="", speed=1.0, volume=1.0):
 
 
 def _sherpa_tts(config, text, output, voice="", speed=1.0, _volume=1.0):
-    executable = Path(config.get("sherpa_command") or "").expanduser()
-    model = Path(config.get("sherpa_model") or "").expanduser()
-    tokens = Path(config.get("sherpa_tokens") or "").expanduser()
-    data_dir = Path(config.get("sherpa_data_dir") or "").expanduser()
-    missing = [str(path) for path in (executable, model, tokens, data_dir) if not path.exists()]
+    values = [
+        config.get("sherpa_command"), config.get("sherpa_model"),
+        config.get("sherpa_tokens"), config.get("sherpa_data_dir"),
+    ]
+    if not all(str(value or "").strip() for value in values):
+        raise RuntimeError("sherpa-onnx 尚未完整配置：程序、模型、tokens 和 data-dir 均为必填")
+    executable, model, tokens, data_dir = [Path(value).expanduser() for value in values]
+    missing = [
+        str(path) for path, valid in (
+            (executable, executable.is_file()), (model, model.is_file()),
+            (tokens, tokens.is_file()), (data_dir, data_dir.is_dir()),
+        ) if not valid
+    ]
     if missing:
         raise RuntimeError("sherpa-onnx 尚未完整配置：" + "、".join(missing))
     command = [

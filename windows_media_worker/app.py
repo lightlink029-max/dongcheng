@@ -277,7 +277,7 @@ class MediaWorkerApp(tk.Tk):
     def _load(self):
         if CONFIG_PATH.exists():
             try:
-                data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+                data = json.loads(CONFIG_PATH.read_text(encoding="utf-8-sig"))
                 speech = dict(data.get("speech", {}))
                 encrypted = speech.get("volc_token_dpapi")
                 if encrypted:

@@ -11,6 +11,12 @@ from speech import synthesize
 
 
 class SpeechTests(unittest.TestCase):
+    def test_sherpa_tts_rejects_empty_configuration(self):
+        with TemporaryDirectory() as folder, self.assertRaisesRegex(
+            RuntimeError, "sherpa-onnx 尚未完整配置"
+        ):
+            synthesize({}, "sherpa", "hello", Path(folder) / "voice.wav")
+
     def test_volcengine_tts_writes_returned_audio(self):
         response = mock.Mock()
         response.raise_for_status.return_value = None
