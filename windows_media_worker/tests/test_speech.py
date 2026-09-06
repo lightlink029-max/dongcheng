@@ -31,7 +31,7 @@ class SpeechTests(unittest.TestCase):
             self.assertEqual(output.read_bytes(), b"wave-data")
         payload = post.call_args.kwargs["json"]
         self.assertEqual(payload["audio"]["voice_type"], "voice-id")
-        self.assertEqual(post.call_args.kwargs["headers"]["Authorization"], "Bearer;token")
+        self.assertEqual(post.call_args.kwargs["headers"]["Authorization"], "Bearer; token")
 
 
 if __name__ == "__main__":

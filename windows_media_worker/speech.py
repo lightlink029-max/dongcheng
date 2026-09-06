@@ -160,7 +160,7 @@ def _volcengine_tts(config, text, output, voice="", speed=1.0, volume=1.0):
     }
     response = requests.post(
         config.get("volc_tts_url") or "https://openspeech.bytedance.com/api/v1/tts",
-        headers={"Authorization": "Bearer;" + token, "Content-Type": "application/json"},
+        headers={"Authorization": "Bearer; " + token, "Content-Type": "application/json"},
         json=payload, timeout=300,
     )
     response.raise_for_status()
