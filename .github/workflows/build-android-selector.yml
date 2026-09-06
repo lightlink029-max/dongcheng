@@ -1,0 +1,39 @@
+name: Build LightLink Selector APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [production]
+    paths:
+      - "android_selector/**"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+      - name: Build APK
+        working-directory: android_selector
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Save APK in repository
+        run: |
+          mkdir -p android_selector/release
+          cp android_selector/app/build/outputs/apk/debug/app-debug.apk android_selector/release/LightLinkSelector.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f android_selector/release/LightLinkSelector.apk
+          git diff --cached --quiet && exit 0
+          git commit -m "Build LightLink Selector APK"
+          git push

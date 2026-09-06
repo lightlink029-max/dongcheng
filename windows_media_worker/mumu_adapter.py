@@ -4,9 +4,11 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
+from urllib.parse import urlencode
 
 
 DOUYIN_PACKAGE = "com.ss.android.ugc.aweme"
+SELECTOR_PACKAGE = "com.lightlink.selector"
 DEFAULT_SERIAL = "127.0.0.1:7555"
 
 
@@ -84,11 +86,14 @@ def discover_serial(runner=None):
 
 
 class MumuBridge:
-    def __init__(self, adb_path="", serial=DEFAULT_SERIAL, player_path="", runner=None):
+    def __init__(self, adb_path="", serial=DEFAULT_SERIAL, player_path="", runner=None,
+                 selector_port=0, selector_token=""):
         self.adb = find_adb(adb_path)
         self.runner = runner or subprocess.run
         self.serial = (serial or discover_serial(self.runner) or DEFAULT_SERIAL).strip()
         self.player = find_player(player_path)
+        self.selector_port = int(selector_port or 0)
+        self.selector_token = selector_token or ""
 
     def _run(self, *args, timeout=30, check=True):
         result = self.runner(
@@ -144,10 +149,55 @@ class MumuBridge:
         packages = self._run("-s", self.serial, "shell", "pm", "list", "packages", DOUYIN_PACKAGE).stdout
         if DOUYIN_PACKAGE not in packages:
             raise RuntimeError("MuMu 中尚未安装抖音 App")
+        selector_packages = self._run(
+            "-s", self.serial, "shell", "pm", "list", "packages", SELECTOR_PACKAGE,
+        ).stdout
+        if SELECTOR_PACKAGE not in selector_packages:
+            raise RuntimeError("MuMu 中尚未安装 LightLink 选片 APK")
+        if not self.selector_port or not self.selector_token:
+            raise RuntimeError("Windows 选片接收通道尚未启动")
+        self._run(
+            "-s", self.serial, "reverse",
+            "tcp:%s" % self.selector_port, "tcp:%s" % self.selector_port,
+        )
+        configure_url = "lightlink://configure?" + urlencode({
+            "task_id": int(task_id), "port": self.selector_port,
+            "token": self.selector_token,
+        })
+        self._run(
+            "-s", self.serial, "shell", "am", "start", "-W",
+            "-a", "android.intent.action.VIEW", "-d", configure_url,
+            SELECTOR_PACKAGE,
+        )
+        self._run("-s", self.serial, "shell", "am", "force-stop", DOUYIN_PACKAGE)
         self._run(
             "-s", self.serial, "shell", "monkey", "-p", DOUYIN_PACKAGE,
             "-c", "android.intent.category.LAUNCHER", "1",
         )
+        time.sleep(4)
+        size_output = self._run("-s", self.serial, "shell", "wm", "size").stdout
+        match = __import__("re").search(r"Physical size:\s*(\d+)x(\d+)", size_output)
+        if not match:
+            raise RuntimeError("无法读取 MuMu 屏幕尺寸")
+        width, height = int(match.group(1)), int(match.group(2))
+        # 抖音首页搜索、图搜相机、相册、最新图片。坐标按屏幕比例计算，
+        # MuMu 分辨率变化时仍能保持相同位置。
+        for x_ratio, y_ratio, delay in (
+            (0.958, 0.032, 2),
+            (0.874, 0.032, 2),
+            (0.781, 0.875, 2),
+            (0.122, 0.129, 6),
+        ):
+            self._run(
+                "-s", self.serial, "shell", "input", "tap",
+                str(round(width * x_ratio)), str(round(height * y_ratio)),
+            )
+            time.sleep(delay)
+        activity = self._run(
+            "-s", self.serial, "shell", "dumpsys", "activity", "activities",
+        ).stdout
+        if "VisualSearchActivity" not in activity:
+            raise RuntimeError("抖音未进入图片搜索结果页，请保持抖音已登录后重试")
         return remote
 
 
@@ -157,3 +207,20 @@ def check_mumu(config):
         config.get("mumu_player", ""),
     )
     return bridge.connect()
+
+
+def install_selector_apk(config, apk_path):
+    apk = Path(apk_path)
+    if not apk.is_file():
+        raise FileNotFoundError("未找到 LightLink 选片 APK：%s" % apk)
+    bridge = MumuBridge(
+        config.get("mumu_adb", ""), config.get("mumu_serial", ""),
+        config.get("mumu_player", ""),
+    )
+    bridge.connect_or_start()
+    result = bridge._run(
+        "-s", bridge.serial, "install", "-r", str(apk.resolve()), timeout=180,
+    )
+    if "Success" not in result.stdout:
+        raise RuntimeError("APK 安装未成功：%s" % result.stdout.strip())
+    return {"serial": bridge.serial, "apk": str(apk.resolve())}

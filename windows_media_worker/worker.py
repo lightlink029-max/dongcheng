@@ -239,10 +239,16 @@ class Worker:
         bridge = MumuBridge(
             self.config.get("mumu_adb", ""), self.config.get("mumu_serial", ""),
             self.config.get("mumu_player", ""),
+            selector_port=self.config.get("selector_port", 0),
+            selector_token=self.config.get("selector_token", ""),
         )
         remote_path = bridge.prepare_image_search(image_path, task["id"])
         self.api("POST", f"/psc/local-worker/tasks/{task['id']}/selection-ready")
-        self.emit("selection_pending", task=task, output=remote_path)
+        self.emit(
+            "selection_pending",
+            task=task,
+            output=f"已自动输入参考图，等待选择视频（{remote_path}）",
+        )
         return remote_path
 
     def complete_douyin_selection(self, task_id, urls):

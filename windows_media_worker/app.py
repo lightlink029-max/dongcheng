@@ -1,6 +1,7 @@
 import json
 import os
 import queue
+import secrets
 import shutil
 import sys
 import threading
@@ -17,8 +18,9 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from douyin_adapter import capture_login, has_login, self_test
-from mumu_adapter import check_mumu
+from mumu_adapter import check_mumu, install_selector_apk
 from selection_store import SelectionStore
+from selector_bridge import SelectorBridge
 from worker import Worker
 
 
@@ -47,12 +49,21 @@ class MediaWorkerApp(tk.Tk):
         self.worker = None
         self.pending_selections = {}
         self.selection_store = SelectionStore(app_dir() / "selections.db")
+        self.selector_token = secrets.token_urlsafe(24)
+        self.selector_bridge = SelectorBridge(
+            self.selection_store, self.selector_token,
+            lambda task_id, added: self.events.put((
+                "selector_submission", {"task_id": task_id, "added": added},
+            )),
+        )
+        self.selector_bridge.start()
         self.selection_task_id = None
         self.selection_busy = False
         self.last_clipboard = ""
         self.vars = {}
         self._build()
         self._load()
+        self.protocol("WM_DELETE_WINDOW", self._close_app)
         self.after(200, self._drain_events)
         self.after(800, self._poll_clipboard)
 
@@ -110,6 +121,7 @@ class MediaWorkerApp(tk.Tk):
         ttk.Button(controls, text="保存配置", command=self.save).pack(side="left", padx=4)
         ttk.Button(controls, text="测试Odoo连接", command=self.test_connection).pack(side="left", padx=4)
         ttk.Button(controls, text="检测MuMu", command=self.test_mumu).pack(side="left", padx=4)
+        ttk.Button(controls, text="安装/更新选片APK", command=self.install_selector).pack(side="left", padx=4)
         self.start_button = ttk.Button(controls, text="启动工作节点", command=self.start)
         self.start_button.pack(side="left", padx=4)
         self.stop_button = ttk.Button(controls, text="停止", command=self.stop, state="disabled")
@@ -139,6 +151,10 @@ class MediaWorkerApp(tk.Tk):
         ttk.Checkbutton(
             selection_header, text="自动收集剪贴板中的抖音链接", variable=self.clipboard_listening,
         ).pack(side="right")
+        ttk.Label(
+            selection_tab,
+            text="在 MuMu 中逐个打开需要的视频，点击“分享 → 复制链接”；工具会自动加入下方列表。完成后全选并批量提交混剪。",
+        ).pack(fill="x", padx=10, pady=(0, 8))
 
         selection_columns = ("video_id", "selected_at", "status", "url", "error")
         self.selection_tree = ttk.Treeview(
@@ -154,6 +170,7 @@ class MediaWorkerApp(tk.Tk):
 
         selection_controls = ttk.Frame(selection_tab, padding=(10, 0, 10, 10))
         selection_controls.pack(fill="x")
+        ttk.Button(selection_controls, text="全选", command=self.select_all_videos).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="从剪贴板添加", command=self.add_selection_from_clipboard).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="手工添加链接", command=self.add_selection_manually).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="删除所选", command=self.delete_selected_videos).pack(side="left", padx=3)
@@ -186,6 +203,8 @@ class MediaWorkerApp(tk.Tk):
             "mumu_adb": self.vars["mumu_adb"].get().strip(),
             "mumu_player": self.vars["mumu_player"].get().strip(),
             "mumu_serial": self.vars["mumu_serial"].get().strip(),
+            "selector_port": self.selector_bridge.port,
+            "selector_token": self.selector_token,
             "local_ai": {"ollama_url": self.vars["ollama_url"].get().strip(),
                          "translation_model": self.vars["translation_model"].get().strip()},
         }
@@ -195,7 +214,10 @@ class MediaWorkerApp(tk.Tk):
             data = self.config()
             if not data["odoo_url"].startswith("https://"):
                 raise ValueError("Odoo地址必须使用 https://")
-            CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            persisted = dict(data)
+            persisted.pop("selector_port", None)
+            persisted.pop("selector_token", None)
+            CONFIG_PATH.write_text(json.dumps(persisted, ensure_ascii=False, indent=2), encoding="utf-8")
             self._set_autostart(self.autostart.get())
             if not quiet: messagebox.showinfo(APP_TITLE, "配置已保存")
             return True
@@ -277,6 +299,18 @@ class MediaWorkerApp(tk.Tk):
                 self.events.put(("mumu", {"ok": False, "error": str(exc)}))
         threading.Thread(target=run, daemon=True).start()
 
+    def install_selector(self):
+        if not self.save(quiet=True): return
+        base = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]
+        apk = base / "LightLinkSelector.apk" if getattr(sys, "frozen", False) else base / "android_selector" / "release" / "LightLinkSelector.apk"
+        def run():
+            try:
+                result = install_selector_apk(self.config(), apk)
+                self.events.put(("selector_installed", {"ok": True, "result": result}))
+            except Exception as exc:
+                self.events.put(("selector_installed", {"ok": False, "error": str(exc)}))
+        threading.Thread(target=run, daemon=True).start()
+
     def start(self):
         if self.worker_thread and self.worker_thread.is_alive(): return
         if not self.save(quiet=True): return
@@ -338,12 +372,25 @@ class MediaWorkerApp(tk.Tk):
                         messagebox.showinfo(APP_TITLE, "MuMu连接成功\nADB：%s\n设备：%s" % (result["adb"], result["serial"]))
                     else:
                         messagebox.showerror(APP_TITLE, data.get("error") or "MuMu连接失败")
+                elif event == "selector_installed":
+                    if data["ok"]:
+                        messagebox.showinfo(APP_TITLE, "LightLink 选片 APK 已安装/更新到 MuMu")
+                    else:
+                        messagebox.showerror(APP_TITLE, data.get("error") or "选片 APK 安装失败")
                 elif event == "selection_complete":
                     task = data["task"]
                     self.pending_selections.pop(task["id"], None)
                     self._task_event("task_done", {"task": task, "output": "已同步 %s 条视频链接" % data["saved"]})
                 elif event == "selection_changed":
                     self._refresh_selection_tree()
+                elif event == "selector_submission":
+                    self.selection_task_id = data["task_id"]
+                    self._refresh_selection_tasks()
+                    self._refresh_selection_tree()
+                    self.write_log(
+                        "任务 %s：APK 提交选片，新增 %s 条" %
+                        (data["task_id"], data["added"])
+                    )
                 elif event == "selection_mix_done":
                     task = data["task"]
                     self.pending_selections.pop(task["id"], None)
@@ -458,6 +505,12 @@ class MediaWorkerApp(tk.Tk):
         if selected or not default_all:
             return selected
         return [int(value) for value in self.selection_tree.get_children()]
+
+    def select_all_videos(self):
+        items = self.selection_tree.get_children()
+        if items:
+            self.selection_tree.selection_set(items)
+        self._refresh_selection_summary()
 
     def _clipboard_text(self):
         try:
@@ -614,6 +667,11 @@ class MediaWorkerApp(tk.Tk):
         line = time.strftime("%Y-%m-%d %H:%M:%S ") + message + "\n"
         self.log.config(state="normal"); self.log.insert("end", line); self.log.see("end"); self.log.config(state="disabled")
         with (app_dir() / "worker.log").open("a", encoding="utf-8") as stream: stream.write(line)
+
+    def _close_app(self):
+        self.stop_event.set()
+        self.selector_bridge.close()
+        self.destroy()
 
 
 if __name__ == "__main__":

@@ -11,6 +11,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from worker import Worker
 from mumu_adapter import MumuBridge, discover_serial
 from selection_store import SelectionStore, extract_douyin_urls, extract_video_id
+from selector_bridge import SelectorBridge
+import json
+from urllib.request import Request, urlopen
 
 
 class StopAfterFirstHeartbeat:
@@ -151,6 +154,68 @@ class WorkerLeaseTests(unittest.TestCase):
         with mock.patch("mumu_adapter._candidate_roots", return_value=[Path("D:/MuMu")]), \
                 mock.patch.object(Path, "is_file", return_value=True):
             self.assertEqual(discover_serial(runner), "127.0.0.1:16384")
+
+    def test_mumu_image_search_enters_reference_image_automatically(self):
+        calls = []
+
+        def runner(command, **_kwargs):
+            calls.append(command)
+            joined = " ".join(command)
+            if " get-state" in joined:
+                output = "device"
+            elif "pm list packages com.lightlink.selector" in joined:
+                output = "package:com.lightlink.selector"
+            elif "pm list packages" in joined:
+                output = "package:com.ss.android.ugc.aweme"
+            elif "wm size" in joined:
+                output = "Physical size: 1440x2560"
+            elif "dumpsys activity activities" in joined:
+                output = "topResumedActivity=com.ss.android.ugc.aweme/.search.visualsearch.VisualSearchActivity"
+            else:
+                output = "connected"
+            return SimpleNamespace(returncode=0, stdout=output, stderr="")
+
+        with TemporaryDirectory() as folder, \
+                mock.patch("mumu_adapter.find_adb", return_value="D:/MuMu/adb.exe"), \
+                mock.patch("mumu_adapter.find_player", return_value=""), \
+                mock.patch("mumu_adapter.time.sleep"):
+            image = Path(folder) / "reference.jpg"
+            image.write_bytes(b"image")
+            remote = MumuBridge(
+                "D:/MuMu/adb.exe", "127.0.0.1:16384", runner=runner,
+                selector_port=18765, selector_token="test-token",
+            ).prepare_image_search(image, 3)
+
+        taps = [call[-2:] for call in calls if "input" in call and "tap" in call]
+        self.assertEqual(remote, "/sdcard/Pictures/LightLink/task-3.jpg")
+        self.assertEqual(taps, [["1380", "82"], ["1259", "82"], ["1125", "2240"], ["176", "330"]])
+        joined_calls = [" ".join(call) for call in calls]
+        self.assertTrue(any("reverse tcp:18765 tcp:18765" in call for call in joined_calls))
+        self.assertTrue(any("lightlink://configure?" in call and "task_id=3" in call for call in joined_calls))
+
+    def test_selector_bridge_accepts_authenticated_local_submission(self):
+        store = SelectionStore(Path(self.work_dir.name) / "bridge.db")
+        store.save_task({"id": 55, "keywords": "鞋", "target_language": "English"})
+        changes = []
+        bridge = SelectorBridge(store, "secret", lambda task_id, added: changes.append((task_id, added)))
+        bridge.start()
+        try:
+            body = json.dumps({
+                "task_id": 55,
+                "urls": ["https://www.douyin.com/video/7531234567890123456"],
+            }).encode("utf-8")
+            request = Request(
+                "http://127.0.0.1:%s/selection/submit" % bridge.port,
+                data=body, method="POST",
+                headers={"Content-Type": "application/json", "X-LightLink-Token": "secret"},
+            )
+            response = json.loads(urlopen(request, timeout=3).read())
+        finally:
+            bridge.close()
+        self.assertTrue(response["ok"])
+        self.assertEqual(response["added"], 1)
+        self.assertEqual(changes, [(55, 1)])
+        self.assertEqual(len(store.list(55)), 1)
 
     def test_selection_store_saves_metadata_and_deduplicates(self):
         store = SelectionStore(Path(self.work_dir.name) / "selections.db")
