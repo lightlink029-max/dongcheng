@@ -201,6 +201,7 @@ class Worker:
         source = task.get("content_source")
         choices = {
             "original_transcript": task.get("original_transcript") or "",
+            "translated_script": task.get("translated_script") or "",
             "project_script": task.get("video_script") or task.get("prompt") or "",
             "keywords": task.get("keywords") or "",
         }
@@ -209,6 +210,7 @@ class Worker:
             if not text:
                 labels = {
                     "original_transcript": "原视频中文",
+                    "translated_script": "人工校验译文",
                     "project_script": "Odoo/项目脚本",
                     "keywords": "Odoo/项目关键词",
                 }
@@ -245,6 +247,8 @@ class Worker:
 
         text = self.selected_content_text(task)
         translate_subtitles = task.get("translate_subtitles")
+        if task.get("content_source") == "translated_script":
+            translate_subtitles = False
         if translate_subtitles is None:
             translate_subtitles = task.get("content_source") in ("original_transcript", "keywords")
         translated = self.translate(text, task["target_language"]) if translate_subtitles else text

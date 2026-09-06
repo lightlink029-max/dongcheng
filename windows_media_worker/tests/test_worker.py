@@ -146,11 +146,13 @@ class WorkerLeaseTests(unittest.TestCase):
     def test_operator_can_choose_each_editable_content_source(self):
         task = {
             "original_transcript": "原视频中文",
+            "translated_script": "Verified English translation",
             "video_script": "Odoo script",
             "keywords": "product keywords",
         }
         for source, expected in (
             ("original_transcript", "原视频中文"),
+            ("translated_script", "Verified English translation"),
             ("project_script", "Odoo script"),
             ("keywords", "product keywords"),
         ):
@@ -163,6 +165,17 @@ class WorkerLeaseTests(unittest.TestCase):
                 "content_source": "original_transcript",
                 "video_script": "Do not silently use this fallback",
             })
+
+    def test_verified_translation_is_not_translated_twice(self):
+        worker = NoTranslationWorker(self.config())
+        task = {
+            "content_source": "translated_script",
+            "translated_script": "Human-approved English copy",
+            "translate_subtitles": True,
+            "target_language": "English", "duration_seconds": 15,
+        }
+        srt = worker.make_srt(task, Path(self.work_dir.name))
+        self.assertIn("Human-approved English copy", srt.read_text(encoding="utf-8"))
 
     def test_subtitles_can_be_disabled(self):
         worker = NoTranslationWorker(self.config())
