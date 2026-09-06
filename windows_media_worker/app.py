@@ -1255,11 +1255,17 @@ class MediaWorkerApp(tk.Tk):
         output_dir.mkdir(parents=True, exist_ok=True)
         texts = []
         for row, source in sources:
-            srt = transcribe(
-                worker.config.get("local_ai", {}), source,
-                output_dir / ("video-%s.srt" % row["id"]),
-                task.get("source_language") or "Chinese",
-            )
+            try:
+                srt = transcribe(
+                    worker.config.get("local_ai", {}), source,
+                    output_dir / ("video-%s.srt" % row["id"]),
+                    task.get("source_language") or "Chinese",
+                )
+            except RuntimeError as exc:
+                if "没有从原视频中识别到可用语音" not in str(exc):
+                    raise
+                worker.emit("log", message="视频 %s 没有可识别语音，已跳过" % row["id"])
+                continue
             if not srt:
                 raise RuntimeError("本地语音识别尚未安装或配置，无法提取原视频中文")
             text = Worker.subtitle_text(srt).strip()
