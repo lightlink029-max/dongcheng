@@ -19,6 +19,11 @@ class VoiceLibraryTests(unittest.TestCase):
         self.assertEqual(by_provider["sherpa"][0]["voice_id"], "0")
         self.assertEqual(by_provider["sherpa"][0]["source"], "Sherpa 本地模型")
         self.assertEqual(by_provider["volcengine"][0]["voice_id"], "zh_female_vv_uranus_bigtts")
+        self.assertGreaterEqual(len(by_provider["volcengine"]), 10)
+        self.assertTrue(all(
+            item["model_id"] == "seed-tts-2.0"
+            for item in by_provider["volcengine"]
+        ))
         self.assertTrue(all(item["source_url"] for item in profiles))
         self.assertTrue(all(not item["editable"] for item in profiles))
 
@@ -29,6 +34,8 @@ class VoiceLibraryTests(unittest.TestCase):
                 "id": "voice-1", "name": "English Female", "provider": "volcengine",
                 "voice_id": "BV001", "source": "Volcengine account",
                 "source_url": "https://example.com/voices",
+                "model_id": "seed-tts-2.0", "language": "English",
+                "description": "General purpose",
             }]
             save_voice_profiles(path, profiles)
             self.assertEqual(load_voice_profiles(path), profiles)

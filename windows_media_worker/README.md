@@ -46,4 +46,6 @@
 
 配音只保留 sherpa-onnx 本地音色和新版火山引擎。sherpa-onnx 需配置程序、VITS 模型、tokens 和 data-dir；火山引擎需在新版控制台配置 API Key、Resource ID（豆包语音合成 2.0 默认 `seed-tts-2.0`）及已开通的音色 ID。生成的视频始终可烧录目标语言字幕，配音和背景音乐会随成片一并输出。`ai_edit_command` 是可选的本地 AI 剪辑程序路径，程序接收输入 JSON 和输出 JSON 两个参数，输出 `{"order": [0, 1]}` 形式且必须包含全部素材索引。
 
+“音色管理”按服务商筛选音色，并显示模型/Resource ID、语种、用途和音色 ID。选择音色、输入试听文案后点击“生成并试听”即可调用对应的 sherpa 模型或火山引擎模型播放样音；确认后可直接应用到当前视频项目。
+
 在 Windows PowerShell 中运行 `Install-LocalAI-To-D.ps1`，可把 Ollama、`qwen3:8b`、Faster Whisper `small`、sherpa-onnx 及英文音色统一安装到 `D:\odooAiwoker\AI`，自动写入工具配置并执行翻译和配音自检。如需经过本机代理，可追加 `-Proxy http://127.0.0.1:10808`。

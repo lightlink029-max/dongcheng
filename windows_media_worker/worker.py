@@ -257,8 +257,13 @@ class Worker:
         if not text:
             return None
         output = Path(job_dir) / "voiceover.wav"
+        speech_config = dict(self.config.get("speech", {}))
+        if provider == "volcengine" and task.get("tts_model_id"):
+            speech_config["volc_resource_id"] = task["tts_model_id"]
+        elif provider == "sherpa" and task.get("tts_model_id"):
+            speech_config["sherpa_model"] = task["tts_model_id"]
         return synthesize(
-            self.config.get("speech", {}), provider, text, output,
+            speech_config, provider, text, output,
             task.get("tts_voice") or "", task.get("tts_speed") or 1.0,
             task.get("tts_volume") or 1.0,
         )

@@ -190,6 +190,27 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertIn("00:00:12,500", content)
         self.assertNotIn("\n" + script + "\n", content)
 
+    def test_voiceover_uses_the_selected_volcengine_model(self):
+        config = self.config()
+        config["speech"] = {
+            "volc_api_key": "secret", "volc_resource_id": "seed-tts-2.0",
+        }
+        worker = Worker(config)
+        folder = Path(self.work_dir.name)
+        srt = folder / "subtitle.srt"
+        srt.write_text(
+            "1\n00:00:00,000 --> 00:00:02,000\nVoice preview\n",
+            encoding="utf-8",
+        )
+        expected = folder / "voiceover.mp3"
+        with mock.patch("worker.synthesize", return_value=expected) as synthesize:
+            result = worker.make_voiceover({
+                "tts_provider": "volcengine", "tts_voice": "voice-id",
+                "tts_model_id": "seed-tts-custom",
+            }, srt, folder)
+        self.assertEqual(result, expected)
+        self.assertEqual(synthesize.call_args.args[0]["volc_resource_id"], "seed-tts-custom")
+
     def test_overlong_voiceover_extends_video_without_speed_change(self):
         config = self.config()
         config["ffmpeg"] = "C:/test/ffmpeg.exe"

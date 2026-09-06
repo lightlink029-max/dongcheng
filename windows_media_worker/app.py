@@ -8,6 +8,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 import winreg
 from pathlib import Path
 
@@ -24,6 +25,7 @@ from douyin_adapter import _dpapi, capture_login, has_login, open_keyword_search
 from mumu_adapter import MumuBridge, check_mumu, install_selector_apk
 from selection_store import SelectionStore
 from selector_bridge import SelectorBridge
+from speech import synthesize
 from voice_library import default_voice_profiles, load_voice_profiles, save_voice_profiles
 from worker import Worker, create_version_directory
 
@@ -484,6 +486,20 @@ class MediaWorkerApp(tk.Tk):
                     messagebox.showerror(APP_TITLE, data.get("error") or "选片处理失败")
                 elif event == "selection_submit_error":
                     messagebox.showerror(APP_TITLE, data.get("error") or "选片链接同步失败")
+                elif event == "voice_preview":
+                    button = data.get("button")
+                    try:
+                        if button and button.winfo_exists():
+                            button.config(state="normal")
+                    except tk.TclError:
+                        pass
+                    if data.get("error"):
+                        messagebox.showerror(APP_TITLE, data["error"])
+                    else:
+                        try:
+                            os.startfile(data["path"])
+                        except OSError as exc:
+                            messagebox.showerror(APP_TITLE, "试听音频无法播放：" + str(exc))
                 elif event.startswith("task_"): self._task_event(event, data)
                 elif event == "selection_pending": self._task_event(event, data)
                 elif event == "stopped":
@@ -578,7 +594,9 @@ class MediaWorkerApp(tk.Tk):
             "audio_mode": tk.StringVar(value=audio_choices.get(existing.get("audio_mode") or "original")),
             "export_preset": tk.StringVar(value=preset_choices.get(existing.get("export_preset") or "douyin")),
             "transition": tk.StringVar(value="淡入淡出" if existing.get("transition") == "fade" else "无转场"),
-            "tts_provider": tk.StringVar(value=tts_choices.get(existing.get("tts_provider") or "none")),
+            "tts_provider": tk.StringVar(value=tts_choices.get(
+                existing.get("tts_provider") or "none", tts_choices["none"],
+            )),
             "tts_voice": tk.StringVar(value=existing.get("tts_voice") or ""),
             "tts_speed": tk.StringVar(value=str(existing.get("tts_speed") or 1.0)),
             "tts_volume": tk.StringVar(value=str(existing.get("tts_volume") or 1.0)),
@@ -606,6 +624,7 @@ class MediaWorkerApp(tk.Tk):
             ("配音音量", "tts_volume", None),
             ("背景音乐音量", "music_volume", None),
         )
+        widgets = {}
         for row, (label, key, choices) in enumerate(rows):
             ttk.Label(form, text=label, width=18).grid(row=row, column=0, sticky="w", pady=5)
             if key == "tts_voice":
@@ -616,6 +635,23 @@ class MediaWorkerApp(tk.Tk):
             else:
                 widget = ttk.Combobox(form, textvariable=values[key], values=choices, state="readonly") if choices else ttk.Entry(form, textvariable=values[key])
             widget.grid(row=row, column=1, columnspan=2, sticky="ew", pady=5)
+            widgets[key] = widget
+
+        def load_provider_voices(_event=None):
+            provider_label = values["tts_provider"].get()
+            provider_key = next(
+                (key for key, label in tts_choices.items() if label == provider_label), "none",
+            )
+            profiles = [
+                profile for profile in self._voice_profiles()
+                if profile["provider"] == provider_key
+            ]
+            widgets["tts_voice"]["values"] = [profile["voice_id"] for profile in profiles]
+            if profiles and not values["tts_voice"].get().strip():
+                values["tts_voice"].set(profiles[0]["voice_id"])
+
+        widgets["tts_provider"].bind("<<ComboboxSelected>>", load_provider_voices)
+        load_provider_voices()
 
         music_row = len(rows)
         ttk.Label(form, text="背景音乐", width=18).grid(row=music_row, column=0, sticky="w", pady=5)
@@ -705,6 +741,13 @@ class MediaWorkerApp(tk.Tk):
                     "transition": "fade" if values["transition"].get() == "淡入淡出" else "none",
                     "tts_provider": next(key for key, label in tts_choices.items() if label == values["tts_provider"].get()),
                     "tts_voice": values["tts_voice"].get().strip(),
+                    "tts_model_id": next((
+                        profile.get("model_id", "") for profile in self._voice_profiles()
+                        if profile["provider"] == next(
+                            key for key, label in tts_choices.items()
+                            if label == values["tts_provider"].get()
+                        ) and profile["voice_id"] == values["tts_voice"].get().strip()
+                    ), existing.get("tts_model_id") or ""),
                     "tts_speed": max(0.5, min(2.0, float(values["tts_speed"].get()))),
                     "tts_volume": max(0.0, min(2.0, float(values["tts_volume"].get()))),
                     "background_music": values["background_music"].get().strip(),
@@ -1160,7 +1203,10 @@ class MediaWorkerApp(tk.Tk):
         threading.Thread(target=self._run_downloads, args=(task, rows, True), daemon=True).start()
 
     def _voice_profiles(self):
-        profiles = default_voice_profiles(self.vars["sherpa_model"].get().strip())
+        profiles = default_voice_profiles(
+            self.vars["sherpa_model"].get().strip(),
+            self.vars["volc_resource_id"].get().strip(),
+        )
         profiles.extend(
             dict(profile, editable=True)
             for profile in load_voice_profiles(VOICE_LIBRARY_PATH)
@@ -1174,17 +1220,36 @@ class MediaWorkerApp(tk.Tk):
         }
         dialog = tk.Toplevel(self)
         dialog.title("音色管理")
-        dialog.geometry("880x520")
+        dialog.geometry("1080x680")
         dialog.transient(self)
         body = ttk.Frame(dialog, padding=15)
         body.pack(fill="both", expand=True)
-        columns = ("name", "provider", "voice_id", "source", "kind")
+        filter_row = ttk.Frame(body)
+        filter_row.pack(fill="x", pady=(0, 10))
+        ttk.Label(filter_row, text="服务商").pack(side="left")
+        provider_filter = tk.StringVar(value="全部")
+        provider_box = ttk.Combobox(
+            filter_row, textvariable=provider_filter,
+            values=("全部", *providers.values()), state="readonly", width=24,
+        )
+        provider_box.pack(side="left", padx=8)
+        ttk.Label(filter_row, text="选择服务商后仅加载对应模型和音色", foreground="#666").pack(side="left")
+
+        columns = (
+            "name", "provider", "model_id", "language", "description",
+            "voice_id", "source", "kind",
+        )
         tree = ttk.Treeview(body, columns=columns, show="headings", selectmode="browse")
         headings = {
             "name": "音色名称", "provider": "配音服务", "voice_id": "音色 ID",
+            "model_id": "模型 / Resource ID", "language": "语种",
+            "description": "音色类型",
             "source": "音色来源", "kind": "类型",
         }
-        widths = {"name": 230, "provider": 130, "voice_id": 190, "source": 160, "kind": 70}
+        widths = {
+            "name": 135, "provider": 120, "model_id": 135, "language": 95,
+            "description": 90, "voice_id": 240, "source": 145, "kind": 55,
+        }
         for column in columns:
             tree.heading(column, text=headings[column])
             tree.column(column, width=widths[column], anchor="w")
@@ -1199,12 +1264,17 @@ class MediaWorkerApp(tk.Tk):
             tree.delete(*tree.get_children())
             profile_map.clear()
             for profile in self._voice_profiles():
+                selected_provider = provider_filter.get()
+                if selected_provider != "全部" and providers.get(profile["provider"]) != selected_provider:
+                    continue
                 iid = profile["id"]
                 if tree.exists(iid):
                     iid += ":duplicate"
                 profile_map[iid] = profile
                 tree.insert("", "end", iid=iid, values=(
                     profile["name"], providers.get(profile["provider"], profile["provider"]),
+                    profile.get("model_id", ""), profile.get("language", ""),
+                    profile.get("description", ""),
                     profile["voice_id"], profile["source"],
                     "自定义" if profile.get("editable") else "系统",
                 ))
@@ -1230,6 +1300,8 @@ class MediaWorkerApp(tk.Tk):
             }
             help_text.set(instructions.get(selected["provider"], "请从该音色的来源页面获取音色 ID。"))
 
+        provider_box.bind("<<ComboboxSelected>>", lambda _event: (refresh(), update_help()))
+
         def open_source():
             selected = selected_profile()
             source_url = (selected or {}).get("source_url", "").strip()
@@ -1251,7 +1323,7 @@ class MediaWorkerApp(tk.Tk):
                 return
             editor = tk.Toplevel(dialog)
             editor.title("新增音色" if create else "编辑音色")
-            editor.geometry("480x280")
+            editor.geometry("520x390")
             editor.resizable(False, False)
             editor.transient(dialog)
             editor.grab_set()
@@ -1262,20 +1334,45 @@ class MediaWorkerApp(tk.Tk):
                 next(iter(providers)) if create else selected["provider"]
             ])
             voice_id = tk.StringVar(value="" if create else selected["voice_id"])
+            model_id = tk.StringVar(value=(
+                self.vars["volc_resource_id"].get().strip() if create
+                else selected.get("model_id", "")
+            ))
+            language = tk.StringVar(value="" if create else selected.get("language", ""))
+            description = tk.StringVar(value="" if create else selected.get("description", ""))
             source = tk.StringVar(value="" if create else selected["source"])
             source_url = tk.StringVar(value="" if create else selected.get("source_url", ""))
             fields = (
                 ("音色名称", name, None),
                 ("配音服务", provider, tuple(providers.values())),
+                ("模型/Resource ID", model_id, None),
                 ("音色 ID", voice_id, None),
+                ("语种", language, None),
+                ("音色说明", description, None),
                 ("音色来源", source, ("Sherpa 本地模型", "火山引擎", "自定义")),
                 ("来源网址", source_url, None),
             )
+            editor_widgets = {}
             for row, (label, variable, choices) in enumerate(fields):
                 ttk.Label(form, text=label, width=14).grid(row=row, column=0, sticky="w", pady=7)
                 widget = ttk.Combobox(form, textvariable=variable, values=choices) if choices else ttk.Entry(form, textvariable=variable)
                 widget.grid(row=row, column=1, sticky="ew", pady=7)
+                editor_widgets[label] = widget
             form.columnconfigure(1, weight=1)
+
+            def load_provider_model(_event=None):
+                provider_key = next(
+                    key for key, label in providers.items() if label == provider.get()
+                )
+                model_id.set(
+                    self.vars["volc_resource_id"].get().strip()
+                    if provider_key == "volcengine"
+                    else self.vars["sherpa_model"].get().strip()
+                )
+
+            editor_widgets["配音服务"].bind("<<ComboboxSelected>>", load_provider_model)
+            if create:
+                load_provider_model()
 
             def save_profile():
                 try:
@@ -1284,7 +1381,8 @@ class MediaWorkerApp(tk.Tk):
                         "id": (selected or {}).get("id") or secrets.token_hex(8),
                         "name": name.get().strip(), "provider": provider_key,
                         "voice_id": voice_id.get().strip(), "source": source.get().strip(),
-                        "source_url": source_url.get().strip(),
+                        "source_url": source_url.get().strip(), "model_id": model_id.get().strip(),
+                        "language": language.get().strip(), "description": description.get().strip(),
                     }
                     if not values["name"] or not values["voice_id"] or not values["source"]:
                         raise ValueError("音色名称、音色 ID 和音色来源不能为空")
@@ -1300,7 +1398,7 @@ class MediaWorkerApp(tk.Tk):
                     messagebox.showerror(APP_TITLE, str(exc), parent=editor)
 
             actions = ttk.Frame(form)
-            actions.grid(row=5, column=0, columnspan=2, sticky="e", pady=(10, 0))
+            actions.grid(row=8, column=0, columnspan=2, sticky="e", pady=(10, 0))
             ttk.Button(actions, text="保存", command=save_profile).pack(side="left", padx=4)
             ttk.Button(actions, text="取消", command=editor.destroy).pack(side="left", padx=4)
 
@@ -1326,9 +1424,50 @@ class MediaWorkerApp(tk.Tk):
             task.update({
                 "tts_provider": selected["provider"], "tts_voice": selected["voice_id"],
                 "tts_voice_source": selected["source"],
+                "tts_model_id": selected.get("model_id", ""),
             })
             self.selection_store.update_task(task)
             messagebox.showinfo(APP_TITLE, f"已将“{selected['name']}”应用到当前项目。", parent=dialog)
+
+        preview = ttk.LabelFrame(body, text="音色试听", padding=10)
+        preview.pack(fill="x", pady=(10, 0))
+        preview_text = tk.StringVar(value="你好，欢迎使用 LightLink 音色试听。Hello, welcome to the voice preview.")
+        ttk.Entry(preview, textvariable=preview_text).pack(side="left", fill="x", expand=True)
+
+        def preview_voice():
+            selected = selected_profile()
+            text = preview_text.get().strip()
+            if not selected or not text:
+                messagebox.showerror(APP_TITLE, "请选择音色并输入试听文本。", parent=dialog)
+                return
+            preview_button.config(state="disabled")
+            speech_config = dict(self.config().get("speech", {}))
+            if selected["provider"] == "volcengine" and selected.get("model_id"):
+                speech_config["volc_resource_id"] = selected["model_id"]
+            elif selected["provider"] == "sherpa" and selected.get("model_id"):
+                speech_config["sherpa_model"] = selected["model_id"]
+            output_dir = app_dir() / "voice-previews"
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output = output_dir / ("preview-" + uuid.uuid4().hex + ".wav")
+
+            def run_preview():
+                try:
+                    result = synthesize(
+                        speech_config, selected["provider"], text, output,
+                        selected["voice_id"], 1.0, 1.0,
+                    )
+                    self.events.put(("voice_preview", {
+                        "path": str(result), "button": preview_button,
+                    }))
+                except Exception as exc:
+                    self.events.put(("voice_preview", {
+                        "error": str(exc), "button": preview_button,
+                    }))
+
+            threading.Thread(target=run_preview, daemon=True).start()
+
+        preview_button = ttk.Button(preview, text="生成并试听", command=preview_voice)
+        preview_button.pack(side="left", padx=(10, 0))
 
         actions = ttk.Frame(body)
         actions.pack(fill="x", pady=(10, 0))
