@@ -5,10 +5,27 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from voice_library import load_voice_profiles, save_voice_profiles
+from voice_library import default_voice_profiles, load_voice_profiles, save_voice_profiles
 
 
 class VoiceLibraryTests(unittest.TestCase):
+    def test_each_provider_default_voice_is_available(self):
+        profiles = default_voice_profiles(
+            ["Microsoft Huihui", "Microsoft David"], r"D:\models\vits-zh.onnx",
+        )
+        by_provider = {}
+        for profile in profiles:
+            by_provider.setdefault(profile["provider"], []).append(profile)
+
+        self.assertEqual(
+            [item["voice_id"] for item in by_provider["windows"]],
+            ["Microsoft Huihui", "Microsoft David"],
+        )
+        self.assertEqual(by_provider["sherpa"][0]["voice_id"], "0")
+        self.assertEqual(by_provider["sherpa"][0]["source"], "Sherpa 本地模型")
+        self.assertEqual(by_provider["volcengine"][0]["voice_id"], "BV001_streaming")
+        self.assertTrue(all(not item["editable"] for item in profiles))
+
     def test_profiles_round_trip_with_source(self):
         with TemporaryDirectory() as folder:
             path = Path(folder) / "voices.json"

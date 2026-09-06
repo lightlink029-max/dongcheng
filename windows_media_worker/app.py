@@ -25,7 +25,7 @@ from mumu_adapter import MumuBridge, check_mumu, install_selector_apk
 from selection_store import SelectionStore
 from selector_bridge import SelectorBridge
 from speech import windows_voices
-from voice_library import load_voice_profiles, save_voice_profiles
+from voice_library import default_voice_profiles, load_voice_profiles, save_voice_profiles
 from worker import Worker
 
 
@@ -205,6 +205,7 @@ class MediaWorkerApp(tk.Tk):
         review_controls.pack(fill="x")
         ttk.Button(review_controls, text="① 预览所选素材", command=self.preview_selected_video).pack(side="left", padx=3)
         ttk.Button(review_controls, text="② 生成审核稿", command=self.mix_selected_videos).pack(side="left", padx=3)
+        ttk.Button(review_controls, text="音色管理", command=self.open_voice_manager).pack(side="left", padx=3)
         ttk.Button(review_controls, text="③ 预览成片", command=self.preview_result).pack(side="left", padx=3)
         ttk.Button(review_controls, text="历史版本", command=self.show_versions).pack(side="left", padx=3)
         ttk.Button(review_controls, text="④ 确认回传 Odoo", command=self.upload_result).pack(side="left", padx=3)
@@ -1137,228 +1138,158 @@ class MediaWorkerApp(tk.Tk):
         if self.selection_busy:
             messagebox.showinfo(APP_TITLE, "已有选片处理正在运行")
             return
+        rows = self.selection_store.get_many(ids)
+        self.selection_busy = True
+        threading.Thread(target=self._run_downloads, args=(task, rows, True), daemon=True).start()
+
+    def _voice_profiles(self):
+        profiles = default_voice_profiles(
+            windows_voices(), self.vars["sherpa_model"].get().strip(),
+        )
+        profiles.extend(
+            dict(profile, editable=True) for profile in load_voice_profiles(VOICE_LIBRARY_PATH)
+        )
+        return profiles
+
+    def open_voice_manager(self):
         providers = {
-            "none": "不生成配音", "windows": "Windows 本地音色",
-            "sherpa": "sherpa-onnx 本地音色", "volcengine": "火山引擎音色",
+            "windows": "Windows 本地音色", "sherpa": "sherpa-onnx 本地音色",
+            "volcengine": "火山引擎音色",
         }
         dialog = tk.Toplevel(self)
-        dialog.title("生成审核稿")
-        dialog.geometry("640x390")
-        dialog.resizable(False, False)
+        dialog.title("音色管理")
+        dialog.geometry("880x520")
         dialog.transient(self)
-        dialog.grab_set()
-        form = ttk.Frame(dialog, padding=20)
-        form.pack(fill="both", expand=True)
-        provider = tk.StringVar(value=providers.get(
-            task.get("tts_provider") or "none", providers["none"],
-        ))
-        voice_choice = tk.StringVar()
-        voice_id = tk.StringVar(value=task.get("tts_voice") or "")
-        voice_source = tk.StringVar(value=task.get("tts_voice_source") or "")
-        speed = tk.StringVar(value=str(task.get("tts_speed") or 1.0))
-        volume = tk.StringVar(value=str(task.get("tts_volume") or 1.0))
-        voice_map = {}
+        body = ttk.Frame(dialog, padding=15)
+        body.pack(fill="both", expand=True)
+        columns = ("name", "provider", "voice_id", "source", "kind")
+        tree = ttk.Treeview(body, columns=columns, show="headings", selectmode="browse")
+        headings = {
+            "name": "音色名称", "provider": "配音服务", "voice_id": "音色 ID",
+            "source": "音色来源", "kind": "类型",
+        }
+        widths = {"name": 230, "provider": 130, "voice_id": 190, "source": 160, "kind": 70}
+        for column in columns:
+            tree.heading(column, text=headings[column])
+            tree.column(column, width=widths[column], anchor="w")
+        tree.pack(fill="both", expand=True)
+        profile_map = {}
 
-        ttk.Label(form, text="配音服务", width=16).grid(row=0, column=0, sticky="w", pady=7)
-        provider_box = ttk.Combobox(
-            form, textvariable=provider, values=tuple(providers.values()), state="readonly",
-        )
-        provider_box.grid(row=0, column=1, sticky="ew", pady=7)
-        ttk.Label(form, text="选择音色", width=16).grid(row=1, column=0, sticky="w", pady=7)
-        voice_box = ttk.Combobox(form, textvariable=voice_choice)
-        voice_box.grid(row=1, column=1, sticky="ew", pady=7)
-        voice_actions = ttk.Frame(form)
-        voice_actions.grid(row=2, column=1, sticky="w", pady=(0, 5))
-        ttk.Label(form, text="音色 ID", width=16).grid(row=3, column=0, sticky="w", pady=7)
-        ttk.Entry(form, textvariable=voice_id).grid(row=3, column=1, sticky="ew", pady=7)
-        ttk.Label(form, text="音色来源", width=16).grid(row=4, column=0, sticky="w", pady=7)
-        ttk.Entry(form, textvariable=voice_source).grid(row=4, column=1, sticky="ew", pady=7)
-        ttk.Label(form, text="配音语速", width=16).grid(row=5, column=0, sticky="w", pady=7)
-        ttk.Entry(form, textvariable=speed).grid(row=5, column=1, sticky="ew", pady=7)
-        ttk.Label(form, text="配音音量", width=16).grid(row=6, column=0, sticky="w", pady=7)
-        ttk.Entry(form, textvariable=volume).grid(row=6, column=1, sticky="ew", pady=7)
-        hint = tk.StringVar()
-        ttk.Label(form, textvariable=hint, foreground="#666", wraplength=450).grid(
-            row=7, column=0, columnspan=2, sticky="w", pady=(5, 8),
-        )
-        form.columnconfigure(1, weight=1)
+        def refresh(select_id=None):
+            tree.delete(*tree.get_children())
+            profile_map.clear()
+            for profile in self._voice_profiles():
+                iid = profile["id"]
+                if tree.exists(iid):
+                    iid += ":duplicate"
+                profile_map[iid] = profile
+                tree.insert("", "end", iid=iid, values=(
+                    profile["name"], providers.get(profile["provider"], profile["provider"]),
+                    profile["voice_id"], profile["source"],
+                    "自定义" if profile.get("editable") else "系统",
+                ))
+                if profile["id"] == select_id:
+                    tree.selection_set(iid)
+                    tree.focus(iid)
 
-        def profiles_for(provider_key):
-            profiles = []
-            if provider_key == "windows":
-                profiles.extend({
-                    "id": "system:" + item, "name": item, "provider": "windows",
-                    "voice_id": item, "source": "Windows 系统", "editable": False,
-                } for item in windows_voices())
-            elif provider_key == "sherpa":
-                model = Path(self.vars["sherpa_model"].get().strip())
-                profiles.append({
-                    "id": "system:sherpa:0", "name": model.stem or "Sherpa 默认音色",
-                    "provider": "sherpa", "voice_id": "0", "source": "Sherpa 本地模型",
-                    "editable": False,
-                })
-            elif provider_key == "volcengine":
-                profiles.append({
-                    "id": "system:volcengine:default", "name": "火山引擎默认音色",
-                    "provider": "volcengine", "voice_id": "", "source": "火山引擎",
-                    "editable": False,
-                })
-            profiles.extend(
-                dict(item, editable=True) for item in load_voice_profiles(VOICE_LIBRARY_PATH)
-                if item["provider"] == provider_key
-            )
-            return profiles
+        def selected_profile():
+            selected = tree.selection()
+            return profile_map.get(selected[0]) if selected else None
 
-        def refresh_voices(_event=None, select_id=None):
-            provider_key = next(key for key, label in providers.items() if label == provider.get())
-            if _event:
-                voice_id.set("")
-                voice_source.set("")
-            voice_map.clear()
-            for item in profiles_for(provider_key):
-                label = f"{item['name']}｜{item['source']}"
-                voice_map[label] = item
-            choices = list(voice_map)
-            voice_box.configure(
-                values=choices, state="normal" if provider_key != "none" else "disabled",
-            )
-            if provider_key == "windows":
-                hint.set("系统音色只读；可新增自定义音色记录并注明来源。")
-            elif provider_key == "sherpa":
-                hint.set("多说话人模型可新增不同音色 ID；当前模型默认使用 0。")
-            elif provider_key == "volcengine":
-                hint.set("可保存已开通的火山引擎音色 ID 和具体来源。")
-            else:
-                hint.set("本次审核稿不生成配音。")
-            selected = next(
-                (label for label, item in voice_map.items() if item["id"] == select_id), None,
-            )
-            if not selected:
-                selected = next(
-                    (label for label, item in voice_map.items()
-                     if item["voice_id"] == voice_id.get().strip()), None,
-                )
-            voice_choice.set(selected or voice_id.get().strip())
-
-        def select_voice(_event=None):
-            item = voice_map.get(voice_choice.get())
-            if item:
-                voice_id.set(item["voice_id"])
-                voice_source.set(item["source"])
-
-        def edit_voice(create=False):
-            selected = voice_map.get(voice_choice.get())
+        def edit_profile(create=False):
+            selected = selected_profile()
             if not create and not selected:
                 messagebox.showinfo(APP_TITLE, "请先选择要编辑的音色。", parent=dialog)
                 return
-            if not create and selected and not selected.get("editable"):
-                messagebox.showinfo(APP_TITLE, "系统音色不能编辑，可以新增一条自定义音色。", parent=dialog)
+            if not create and not selected.get("editable"):
+                messagebox.showinfo(APP_TITLE, "系统默认音色不能编辑，可以新增自定义音色。", parent=dialog)
                 return
             editor = tk.Toplevel(dialog)
             editor.title("新增音色" if create else "编辑音色")
-            editor.geometry("470x270")
+            editor.geometry("480x280")
             editor.resizable(False, False)
             editor.transient(dialog)
             editor.grab_set()
-            body = ttk.Frame(editor, padding=18)
-            body.pack(fill="both", expand=True)
-            profile_provider = tk.StringVar(value=provider.get())
-            profile_name = tk.StringVar(value="" if create else (selected or {}).get("name", ""))
-            profile_id = tk.StringVar(value="" if create else (selected or {}).get("voice_id", voice_id.get()))
-            profile_source = tk.StringVar(value="" if create else (selected or {}).get("source", voice_source.get()))
+            form = ttk.Frame(editor, padding=18)
+            form.pack(fill="both", expand=True)
+            name = tk.StringVar(value="" if create else selected["name"])
+            provider = tk.StringVar(value=providers[
+                next(iter(providers)) if create else selected["provider"]
+            ])
+            voice_id = tk.StringVar(value="" if create else selected["voice_id"])
+            source = tk.StringVar(value="" if create else selected["source"])
             fields = (
-                ("音色名称", profile_name, None),
-                ("配音服务", profile_provider, tuple(value for key, value in providers.items() if key != "none")),
-                ("音色 ID", profile_id, None),
-                ("音色来源", profile_source, ("Windows 系统", "Sherpa 本地模型", "火山引擎", "自定义")),
+                ("音色名称", name, None),
+                ("配音服务", provider, tuple(providers.values())),
+                ("音色 ID", voice_id, None),
+                ("音色来源", source, ("Windows 系统", "Sherpa 本地模型", "火山引擎", "自定义")),
             )
             for row, (label, variable, choices) in enumerate(fields):
-                ttk.Label(body, text=label, width=14).grid(row=row, column=0, sticky="w", pady=6)
-                widget = ttk.Combobox(body, textvariable=variable, values=choices) if choices else ttk.Entry(body, textvariable=variable)
-                widget.grid(row=row, column=1, sticky="ew", pady=6)
-            body.columnconfigure(1, weight=1)
+                ttk.Label(form, text=label, width=14).grid(row=row, column=0, sticky="w", pady=7)
+                widget = ttk.Combobox(form, textvariable=variable, values=choices) if choices else ttk.Entry(form, textvariable=variable)
+                widget.grid(row=row, column=1, sticky="ew", pady=7)
+            form.columnconfigure(1, weight=1)
 
             def save_profile():
                 try:
-                    name = profile_name.get().strip()
-                    source = profile_source.get().strip()
-                    value = profile_id.get().strip()
-                    if not name or not source:
-                        raise ValueError("音色名称和音色来源不能为空")
-                    provider_key = next(
-                        key for key, label in providers.items() if label == profile_provider.get()
-                    )
-                    if not value:
-                        raise ValueError("音色 ID 不能为空")
-                    profiles = load_voice_profiles(VOICE_LIBRARY_PATH)
-                    record_id = (selected or {}).get("id") if not create else None
-                    record_id = record_id or secrets.token_hex(8)
-                    record = {
-                        "id": record_id, "name": name, "provider": provider_key,
-                        "voice_id": value, "source": source,
+                    provider_key = next(key for key, label in providers.items() if label == provider.get())
+                    values = {
+                        "id": (selected or {}).get("id") or secrets.token_hex(8),
+                        "name": name.get().strip(), "provider": provider_key,
+                        "voice_id": voice_id.get().strip(), "source": source.get().strip(),
                     }
-                    profiles = [item for item in profiles if item["id"] != record_id]
-                    profiles.append(record)
+                    if not values["name"] or not values["voice_id"] or not values["source"]:
+                        raise ValueError("音色名称、音色 ID 和音色来源不能为空")
+                    profiles = [
+                        item for item in load_voice_profiles(VOICE_LIBRARY_PATH)
+                        if item["id"] != values["id"]
+                    ]
+                    profiles.append(values)
                     save_voice_profiles(VOICE_LIBRARY_PATH, profiles)
-                    provider.set(providers[provider_key])
-                    voice_id.set(value)
-                    voice_source.set(source)
                     editor.destroy()
-                    refresh_voices(select_id=record_id)
+                    refresh(values["id"])
                 except Exception as exc:
                     messagebox.showerror(APP_TITLE, str(exc), parent=editor)
 
-            buttons = ttk.Frame(body)
-            buttons.grid(row=len(fields), column=0, columnspan=2, sticky="e", pady=(10, 0))
-            ttk.Button(buttons, text="保存", command=save_profile).pack(side="left", padx=4)
-            ttk.Button(buttons, text="取消", command=editor.destroy).pack(side="left", padx=4)
+            actions = ttk.Frame(form)
+            actions.grid(row=4, column=0, columnspan=2, sticky="e", pady=(10, 0))
+            ttk.Button(actions, text="保存", command=save_profile).pack(side="left", padx=4)
+            ttk.Button(actions, text="取消", command=editor.destroy).pack(side="left", padx=4)
 
-        def delete_voice():
-            selected = voice_map.get(voice_choice.get())
+        def delete_profile():
+            selected = selected_profile()
             if not selected or not selected.get("editable"):
-                messagebox.showinfo(APP_TITLE, "请选择一个自定义音色；系统音色不能删除。", parent=dialog)
+                messagebox.showinfo(APP_TITLE, "请选择自定义音色；系统默认音色不能删除。", parent=dialog)
                 return
             if not messagebox.askyesno(APP_TITLE, f"删除音色“{selected['name']}”？", parent=dialog):
                 return
-            profiles = [
+            save_voice_profiles(VOICE_LIBRARY_PATH, [
                 item for item in load_voice_profiles(VOICE_LIBRARY_PATH)
                 if item["id"] != selected["id"]
-            ]
-            save_voice_profiles(VOICE_LIBRARY_PATH, profiles)
-            voice_id.set("")
-            voice_source.set("")
-            refresh_voices()
+            ])
+            refresh()
 
-        def generate():
-            try:
-                provider_key = next(key for key, label in providers.items() if label == provider.get())
-                task.update({
-                    "tts_provider": provider_key,
-                    "tts_voice": voice_id.get().strip(),
-                    "tts_voice_source": voice_source.get().strip(),
-                    "tts_speed": max(0.5, min(2.0, float(speed.get()))),
-                    "tts_volume": max(0.0, min(2.0, float(volume.get()))),
-                })
-                self.selection_store.update_task(task)
-                rows = self.selection_store.get_many(ids)
-                dialog.destroy()
-                self.selection_busy = True
-                threading.Thread(
-                    target=self._run_downloads, args=(task, rows, True), daemon=True,
-                ).start()
-            except Exception as exc:
-                messagebox.showerror(APP_TITLE, str(exc), parent=dialog)
+        def apply_to_project():
+            selected = selected_profile()
+            task = self._active_selection_task()
+            if not selected or not task:
+                messagebox.showerror(APP_TITLE, "请先选择音色和当前视频项目。", parent=dialog)
+                return
+            task.update({
+                "tts_provider": selected["provider"], "tts_voice": selected["voice_id"],
+                "tts_voice_source": selected["source"],
+            })
+            self.selection_store.update_task(task)
+            messagebox.showinfo(APP_TITLE, f"已将“{selected['name']}”应用到当前项目。", parent=dialog)
 
-        provider_box.bind("<<ComboboxSelected>>", refresh_voices)
-        voice_box.bind("<<ComboboxSelected>>", select_voice)
-        ttk.Button(voice_actions, text="新增", command=lambda: edit_voice(True)).pack(side="left", padx=(0, 4))
-        ttk.Button(voice_actions, text="编辑", command=edit_voice).pack(side="left", padx=4)
-        ttk.Button(voice_actions, text="删除", command=delete_voice).pack(side="left", padx=4)
-        refresh_voices()
-        actions = ttk.Frame(form)
-        actions.grid(row=8, column=0, columnspan=2, sticky="e", pady=(5, 0))
-        ttk.Button(actions, text="开始生成", command=generate).pack(side="left", padx=4)
-        ttk.Button(actions, text="取消", command=dialog.destroy).pack(side="left", padx=4)
+        actions = ttk.Frame(body)
+        actions.pack(fill="x", pady=(10, 0))
+        ttk.Button(actions, text="新增", command=lambda: edit_profile(True)).pack(side="left", padx=3)
+        ttk.Button(actions, text="编辑", command=edit_profile).pack(side="left", padx=3)
+        ttk.Button(actions, text="删除", command=delete_profile).pack(side="left", padx=3)
+        ttk.Button(actions, text="应用到当前项目", command=apply_to_project).pack(side="left", padx=12)
+        ttk.Button(actions, text="关闭", command=dialog.destroy).pack(side="right", padx=3)
+        refresh()
 
     def upload_result(self):
         task = self._active_selection_task()
