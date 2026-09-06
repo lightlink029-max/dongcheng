@@ -1,9 +1,9 @@
 import re
 import sqlite3
 import json
+from pathlib import Path
 from contextlib import contextmanager
 from datetime import datetime
-from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 
@@ -75,9 +75,28 @@ class SelectionStore:
                     task_id INTEGER PRIMARY KEY,
                     payload TEXT NOT NULL,
                     status TEXT NOT NULL DEFAULT 'processing',
-                    updated_at TEXT NOT NULL
+                    updated_at TEXT NOT NULL,
+                    result_path TEXT NOT NULL DEFAULT '',
+                    subtitle_path TEXT NOT NULL DEFAULT ''
                 )
             """)
+            columns = {
+                row["name"] for row in connection.execute(
+                    "PRAGMA table_info(selection_task)"
+                ).fetchall()
+            }
+            for name in ("result_path", "subtitle_path"):
+                if name not in columns:
+                    connection.execute(
+                        "ALTER TABLE selection_task ADD COLUMN %s TEXT NOT NULL DEFAULT ''" % name
+                    )
+
+    def next_local_task_id(self):
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT MIN(task_id) AS minimum FROM selection_task WHERE task_id < 0"
+            ).fetchone()
+        return min(-1, int(row["minimum"] or 0) - 1)
 
     def save_task(self, task, status="processing"):
         now = datetime.now().astimezone().isoformat(timespec="seconds")
@@ -107,7 +126,10 @@ class SelectionStore:
         result = []
         for row in rows:
             task = json.loads(row["payload"])
-            task["local_status"] = row["status"]
+            task.update({
+                "local_status": row["status"], "result_path": row["result_path"],
+                "subtitle_path": row["subtitle_path"],
+            })
             result.append(task)
         return result
 
@@ -119,8 +141,30 @@ class SelectionStore:
         if not row:
             return None
         task = json.loads(row["payload"])
-        task["local_status"] = row["status"]
+        task.update({
+            "local_status": row["status"], "result_path": row["result_path"],
+            "subtitle_path": row["subtitle_path"],
+        })
         return task
+
+    def update_task(self, task, status=None):
+        current = self.get_task(task["id"])
+        self.save_task(task, status=status or (current or {}).get("local_status", "processing"))
+
+    def set_task_result(self, task_id, result_path, subtitle_path="", status="ready_review"):
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        with self._connect() as connection:
+            connection.execute(
+                """UPDATE selection_task
+                      SET result_path = ?, subtitle_path = ?, status = ?, updated_at = ?
+                    WHERE task_id = ?""",
+                (str(result_path or ""), str(subtitle_path or ""), status, now, int(task_id)),
+            )
+
+    def delete_task(self, task_id):
+        with self._connect() as connection:
+            connection.execute("DELETE FROM selected_video WHERE task_id = ?", (int(task_id),))
+            connection.execute("DELETE FROM selection_task WHERE task_id = ?", (int(task_id),))
 
     def add_text(self, task_id, text):
         added = 0
@@ -131,6 +175,24 @@ class SelectionStore:
                     """INSERT OR IGNORE INTO selected_video
                        (task_id, url, video_id, selected_at) VALUES (?, ?, ?, ?)""",
                     (int(task_id), url, extract_video_id(url), now),
+                )
+                added += cursor.rowcount
+        return added
+
+    def add_local_files(self, task_id, paths):
+        added = 0
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        with self._connect() as connection:
+            for value in paths:
+                path = Path(value).expanduser().resolve()
+                if not path.is_file():
+                    continue
+                url = path.as_uri()
+                cursor = connection.execute(
+                    """INSERT OR IGNORE INTO selected_video
+                       (task_id, url, video_id, selected_at, status, local_path)
+                       VALUES (?, ?, ?, ?, 'downloaded', ?)""",
+                    (int(task_id), url, path.stem, now, str(path)),
                 )
                 added += cursor.rowcount
         return added
@@ -166,8 +228,11 @@ class SelectionStore:
             )
 
     def reset_download(self, ids):
-        for record_id in ids:
-            self.update(record_id, status="selected", local_path="", error="")
+        for row in self.get_many(ids):
+            if row["url"].startswith("file:"):
+                self.update(row["id"], status="downloaded", error="")
+            else:
+                self.update(row["id"], status="selected", local_path="", error="")
 
     def delete(self, ids):
         values = [int(value) for value in ids]

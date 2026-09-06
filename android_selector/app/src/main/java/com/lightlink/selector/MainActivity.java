@@ -90,7 +90,7 @@ public class MainActivity extends Activity {
     }
 
     private void refresh() {
-        header.setText("LightLink 选片 · Odoo任务 " + (store.taskId() == 0 ? "未配置" : store.taskId()));
+        header.setText("LightLink 选片 · 项目 " + (store.taskId() == 0 ? "未配置" : store.taskId()));
         list.removeAllViews();
         for (String url : store.list()) {
             CheckBox box = new CheckBox(this);

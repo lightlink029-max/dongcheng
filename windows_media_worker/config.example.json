@@ -15,6 +15,7 @@
   "local_ai": {
     "ollama_url": "http://127.0.0.1:11434",
     "translation_model": "qwen3:8b",
-    "whisper_command": ""
+    "whisper_command": "",
+    "ai_edit_command": ""
   }
 }

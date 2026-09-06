@@ -9,6 +9,7 @@ import tempfile
 import time
 from ctypes import wintypes
 from pathlib import Path
+from urllib.parse import quote
 
 
 VENDOR_ROOT = Path(__file__).resolve().parent / "vendor" / "douyin"
@@ -84,6 +85,21 @@ def has_login(path):
     return REQUIRED_COOKIES.issubset(cookies) and bool(LOGIN_COOKIES.intersection(cookies))
 
 
+def _profile_dir(path):
+    return Path(path).parent / "edge-profile" / "douyin"
+
+
+def _persistent_context(playwright, path, proxy=""):
+    profile_dir = _profile_dir(path)
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    options = {"channel": "msedge", "headless": False}
+    if proxy:
+        options["proxy"] = {"server": proxy}
+    return playwright.chromium.launch_persistent_context(
+        user_data_dir=str(profile_dir), **options
+    )
+
+
 def self_test():
     _enable_vendor()
     from auth import CookieManager  # noqa: F401
@@ -111,16 +127,9 @@ def capture_login(path, proxy="", timeout_seconds=600, status_callback=None):
 
     notify = status_callback or (lambda _message: None)
     store = Path(path)
-    profile_dir = store.parent / "edge-profile" / "douyin"
-    profile_dir.mkdir(parents=True, exist_ok=True)
     notify("正在打开 LightLink 专用 Edge；登录状态会保留，下次无需重复登录")
     with sync_playwright() as playwright:
-        options = {"channel": "msedge", "headless": False}
-        if proxy:
-            options["proxy"] = {"server": proxy}
-        context = playwright.chromium.launch_persistent_context(
-            user_data_dir=str(profile_dir), **options
-        )
+        context = _persistent_context(playwright, store, proxy)
         # Migrate a still-valid login captured by older versions into the
         # persistent profile so upgrading does not force another login.
         try:
@@ -154,6 +163,23 @@ def capture_login(path, proxy="", timeout_seconds=600, status_callback=None):
                     return len(cookies)
                 page.wait_for_timeout(2000)
             raise TimeoutError("等待抖音登录超时，请重新点击“登录/更新抖音登录”")
+        finally:
+            context.close()
+
+
+def open_keyword_search(path, keyword, proxy=""):
+    from playwright.sync_api import sync_playwright
+
+    url = "https://www.douyin.com/search/%s?type=video" % quote(keyword.strip())
+    with sync_playwright() as playwright:
+        context = _persistent_context(playwright, path, proxy)
+        page = context.pages[0] if context.pages else context.new_page()
+        page.goto(url, wait_until="domcontentloaded", timeout=120000)
+        try:
+            while context.pages:
+                context.pages[0].wait_for_timeout(1000)
+        except Exception:
+            pass
         finally:
             context.close()
 

@@ -130,6 +130,29 @@ class WorkerLeaseTests(unittest.TestCase):
         srt = worker.make_srt(task, Path(self.work_dir.name))
         self.assertIn("Ready-to-use English subtitle", srt.read_text(encoding="utf-8"))
 
+    def test_subtitles_can_be_disabled(self):
+        worker = NoTranslationWorker(self.config())
+        task = {"subtitle_mode": "none", "target_language": "English"}
+        self.assertIsNone(worker.make_srt(task, Path(self.work_dir.name)))
+
+    def test_srt_timestamp_supports_more_than_one_minute(self):
+        worker = NoTranslationWorker(self.config())
+        task = {
+            "video_script": "Long video", "subtitle_mode": "script",
+            "translate_subtitles": False, "target_language": "English",
+            "duration_seconds": 75,
+        }
+        srt = worker.make_srt(task, Path(self.work_dir.name))
+        self.assertIn("00:01:15,000", srt.read_text(encoding="utf-8"))
+
+    def test_clip_order_can_be_reversed(self):
+        worker = Worker(self.config())
+        clips = [Path("one.mp4"), Path("two.mp4")]
+        self.assertEqual(
+            worker.arrange_clips({"edit_mode": "reverse"}, clips, Path(self.work_dir.name)),
+            list(reversed(clips)),
+        )
+
     def test_mumu_bridge_uses_configured_serial(self):
         calls = []
         def runner(command, **_kwargs):
@@ -234,6 +257,29 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertEqual(store.get_task(101)["keywords"], "鞋子")
         store.set_task_status(101, "done")
         self.assertEqual(store.list_tasks()[0]["local_status"], "done")
+
+    def test_local_project_files_and_review_result_are_persisted(self):
+        store = SelectionStore(Path(self.work_dir.name) / "local-projects.db")
+        task_id = store.next_local_task_id()
+        store.save_task({
+            "id": task_id, "local_only": True, "name": "Local test",
+            "target_language": "English",
+        }, status="draft")
+        video = Path(self.work_dir.name) / "clip.mp4"
+        video.write_bytes(b"video")
+        self.assertEqual(store.add_local_files(task_id, [video]), 1)
+        row = store.list(task_id)[0]
+        self.assertEqual(row["status"], "downloaded")
+        self.assertEqual(Path(row["local_path"]), video)
+        store.reset_download([row["id"]])
+        preserved = store.list(task_id)[0]
+        self.assertEqual(preserved["status"], "downloaded")
+        self.assertEqual(Path(preserved["local_path"]), video)
+        output = Path(self.work_dir.name) / "output.mp4"
+        store.set_task_result(task_id, output, status="ready_review")
+        saved = store.get_task(task_id)
+        self.assertEqual(saved["local_status"], "ready_review")
+        self.assertEqual(saved["result_path"], str(output))
 
     def test_selection_url_parser_accepts_only_douyin(self):
         urls = extract_douyin_urls(

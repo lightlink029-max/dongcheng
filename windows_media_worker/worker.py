@@ -1,5 +1,7 @@
 import mimetypes
+import json
 import os
+import random
 import shutil
 import subprocess
 import threading
@@ -152,18 +154,98 @@ class Worker:
         response.raise_for_status()
         return response.json().get("response", text).strip()
 
-    def make_srt(self, task, job_dir):
+    @staticmethod
+    def _srt_time(seconds):
+        seconds = max(0, int(seconds))
+        hours, remainder = divmod(seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d},000"
+
+    def _translate_srt(self, text, language):
+        translated = self.translate(
+            "Translate only the subtitle text in this SRT into %s. Preserve every index, "
+            "timestamp and blank line exactly:\n%s" % (language, text), language,
+        )
+        if translated.count("-->") != text.count("-->"):
+            raise RuntimeError("字幕翻译结果破坏了时间轴，请调整本地翻译模型后重试")
+        return translated
+
+    def make_srt(self, task, job_dir, source_video=None):
+        subtitle_mode = task.get("subtitle_mode")
+        if subtitle_mode == "none":
+            return None
+        if subtitle_mode == "transcribe":
+            if not source_video:
+                raise ValueError("语音识别需要至少一个源视频")
+            command = (self.config.get("local_ai", {}).get("whisper_command") or "").strip()
+            executable = Path(command).expanduser() if command else None
+            if not executable or not executable.is_file():
+                raise RuntimeError(
+                    "尚未配置本地语音识别程序。该程序需按顺序接收：输入视频、输出SRT、目标语种"
+                )
+            recognized = job_dir / "recognized.srt"
+            subprocess.run([
+                str(executable), str(source_video), str(recognized),
+                str(task.get("source_language") or "Chinese"),
+            ], check=True)
+            if not recognized.is_file():
+                raise RuntimeError("本地语音识别程序没有生成 SRT 文件")
+            text = recognized.read_text(encoding="utf-8-sig")
+            if task.get("translate_subtitles", True):
+                text = self._translate_srt(text, task["target_language"])
+            output = job_dir / "subtitle.srt"
+            output.write_text(text, encoding="utf-8")
+            return output
+
         script = (task.get("video_script") or "").strip()
         source_mode = task.get("source_mode") or "auto"
-        if script and source_mode in ("auto", "project_script"):
+        translate_subtitles = task.get("translate_subtitles")
+        if translate_subtitles is None:
+            translate_subtitles = not (script and source_mode in ("auto", "project_script"))
+        if script and not translate_subtitles:
             translated = script
         else:
             text = script or task.get("prompt") or task.get("keywords") or ""
             translated = self.translate(text, task["target_language"])
         duration = max(3, int(task.get("duration_seconds") or 15))
         srt = job_dir / "subtitle.srt"
-        srt.write_text(f"1\n00:00:00,000 --> 00:00:{duration:02d},000\n{translated}\n", encoding="utf-8")
+        srt.write_text(
+            "1\n00:00:00,000 --> %s\n%s\n" % (self._srt_time(duration), translated),
+            encoding="utf-8",
+        )
         return srt
+
+    def arrange_clips(self, task, clips, job_dir):
+        clips = list(clips)
+        mode = task.get("edit_mode") or "sequence"
+        if mode == "reverse":
+            return list(reversed(clips))
+        if mode == "random":
+            random.Random(str(task.get("id") or "local")).shuffle(clips)
+            return clips
+        if mode != "ai":
+            return clips
+        command = (self.config.get("local_ai", {}).get("ai_edit_command") or "").strip()
+        executable = Path(command).expanduser() if command else None
+        if not executable or not executable.is_file():
+            raise RuntimeError("选择了 AI 剪辑，但尚未配置本地 AI 剪辑程序")
+        manifest = job_dir / "edit-input.json"
+        plan = job_dir / "edit-plan.json"
+        manifest.write_text(json.dumps({
+            "clips": [str(path) for path in clips],
+            "prompt": task.get("prompt") or "",
+            "target_language": task.get("target_language") or "",
+            "duration_seconds": int(task.get("duration_seconds") or 15),
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
+        subprocess.run([str(executable), str(manifest), str(plan)], check=True)
+        if not plan.is_file():
+            raise RuntimeError("本地 AI 剪辑程序没有生成 edit-plan.json")
+        indexes = json.loads(plan.read_text(encoding="utf-8"))
+        if isinstance(indexes, dict):
+            indexes = indexes.get("order")
+        if not isinstance(indexes, list) or sorted(indexes) != list(range(len(clips))):
+            raise RuntimeError("AI 剪辑计划中的 order 必须包含每个片段索引且不能重复")
+        return [clips[index] for index in indexes]
 
     def image(self, task, job_dir):
         source = job_dir / "reference.jpg"
@@ -187,20 +269,29 @@ class Worker:
     def compose_video(self, task, clips, job_dir):
         if not clips:
             raise ValueError("任务没有视频URL或视频素材")
-        srt = self.make_srt(task, job_dir)
+        job_dir = Path(job_dir)
+        job_dir.mkdir(parents=True, exist_ok=True)
+        clips = self.arrange_clips(task, clips, job_dir)
+        srt = self.make_srt(task, job_dir, clips[0])
         concat = job_dir / "concat.txt"
         concat.write_text("".join(f"file '{str(path).replace(chr(39), chr(39)*2)}'\n" for path in clips), encoding="utf-8")
         output = job_dir / "output.mp4"
         duration = max(3, int(task.get("duration_seconds") or 15))
         ratio = task.get("aspect_ratio", "9:16")
         width, height = {"9:16": (1080, 1920), "4:5": (1080, 1350), "1:1": (1080, 1080)}.get(ratio, (1080, 1920))
-        subtitle_path = str(srt).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
-        vf = (f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
-              f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black,"
-              f"subtitles='{subtitle_path}'")
+        filters = [
+            f"scale={width}:{height}:force_original_aspect_ratio=decrease",
+            f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black",
+        ]
+        if srt:
+            subtitle_path = str(srt).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
+            filters.append(f"subtitles='{subtitle_path}'")
+        vf = ",".join(filters)
         command = [self.ffmpeg(), "-y", "-f", "concat", "-safe", "0", "-i", str(concat),
                    "-t", str(duration), "-vf", vf, "-c:v", "libx264", "-preset", "medium", "-crf", "22",
-                   "-c:a", "aac", "-movflags", "+faststart", str(output)]
+                   "-movflags", "+faststart"]
+        command += ["-an"] if task.get("audio_mode") == "mute" else ["-c:a", "aac"]
+        command.append(str(output))
         subprocess.run(command, check=True)
         return output, srt
 

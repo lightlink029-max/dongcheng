@@ -17,8 +17,8 @@ if getattr(sys, "frozen", False):
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-from douyin_adapter import capture_login, has_login, self_test
-from mumu_adapter import check_mumu, install_selector_apk
+from douyin_adapter import capture_login, has_login, open_keyword_search, self_test
+from mumu_adapter import MumuBridge, check_mumu, install_selector_apk
 from selection_store import SelectionStore
 from selector_bridge import SelectorBridge
 from worker import Worker
@@ -88,6 +88,8 @@ class MediaWorkerApp(tk.Tk):
             ("download_proxy", "下载代理（可选）", ""),
             ("ollama_url", "Ollama地址", "http://127.0.0.1:11434"),
             ("translation_model", "本地翻译模型", "qwen3:8b"),
+            ("whisper_command", "语音识别程序（可选）", ""),
+            ("ai_edit_command", "AI剪辑程序（可选）", ""),
             ("font_file", "字幕字体", "C:/Windows/Fonts/msyh.ttc"),
             ("mumu_adb", "MuMu ADB（可自动检测）", ""),
             ("mumu_player", "MuMu 主程序（可自动检测）", ""),
@@ -144,8 +146,10 @@ class MediaWorkerApp(tk.Tk):
         selection_header.pack(fill="x")
         self.selection_title = tk.StringVar(value="请先启动工作节点并领取抖音选片任务")
         ttk.Label(selection_header, textvariable=self.selection_title, font=("Microsoft YaHei UI", 11, "bold")).pack(side="left")
+        ttk.Button(selection_header, text="新建本地项目", command=self.create_local_project).pack(side="left", padx=(15, 3))
+        ttk.Button(selection_header, text="编辑处理设置", command=self.edit_active_project).pack(side="left", padx=3)
         self.selection_task_choice = ttk.Combobox(selection_header, state="readonly", width=34)
-        self.selection_task_choice.pack(side="left", padx=15)
+        self.selection_task_choice.pack(side="left", padx=8)
         self.selection_task_choice.bind("<<ComboboxSelected>>", self._on_selection_task_choice)
         self.clipboard_listening = tk.BooleanVar(value=True)
         ttk.Checkbutton(
@@ -153,7 +157,7 @@ class MediaWorkerApp(tk.Tk):
         ).pack(side="right")
         ttk.Label(
             selection_tab,
-            text="在 MuMu 中逐个打开需要的视频，点击“分享 → 复制链接”；工具会自动加入下方列表。完成后全选并批量提交混剪。",
+            text="可独立新建项目，也可领取 Odoo 任务。先下载并预览素材，再生成审核稿；确认满意后才回传 Odoo。",
         ).pack(fill="x", padx=10, pady=(0, 8))
 
         selection_columns = ("video_id", "selected_at", "status", "url", "error")
@@ -167,17 +171,27 @@ class MediaWorkerApp(tk.Tk):
             self.selection_tree.column(column, width=width, anchor="w")
         self.selection_tree.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         self.selection_tree.bind("<<TreeviewSelect>>", lambda _event: self._refresh_selection_summary())
+        self.selection_tree.bind("<Double-1>", lambda _event: self.preview_selected_video())
 
         selection_controls = ttk.Frame(selection_tab, padding=(10, 0, 10, 10))
         selection_controls.pack(fill="x")
         ttk.Button(selection_controls, text="全选", command=self.select_all_videos).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="从剪贴板添加", command=self.add_selection_from_clipboard).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="手工添加链接", command=self.add_selection_manually).pack(side="left", padx=3)
+        ttk.Button(selection_controls, text="添加本地视频", command=self.add_local_videos).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="删除所选", command=self.delete_selected_videos).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="重新下载", command=self.redownload_selected_videos).pack(side="left", padx=3)
-        ttk.Button(selection_controls, text="批量提交混剪", command=self.mix_selected_videos).pack(side="left", padx=3)
         self.selection_summary = tk.StringVar(value="0 条")
         ttk.Label(selection_controls, textvariable=self.selection_summary).pack(side="right")
+        review_controls = ttk.Frame(selection_tab, padding=(10, 0, 10, 10))
+        review_controls.pack(fill="x")
+        ttk.Button(review_controls, text="① 预览所选素材", command=self.preview_selected_video).pack(side="left", padx=3)
+        ttk.Button(review_controls, text="② 生成审核稿", command=self.mix_selected_videos).pack(side="left", padx=3)
+        ttk.Button(review_controls, text="③ 预览成片", command=self.preview_result).pack(side="left", padx=3)
+        ttk.Button(review_controls, text="④ 确认回传 Odoo", command=self.upload_result).pack(side="left", padx=3)
+        ttk.Button(review_controls, text="打开项目目录", command=self.open_project_folder).pack(side="left", padx=3)
+        ttk.Button(review_controls, text="删除本地项目", command=self.delete_local_project).pack(side="left", padx=3)
+        ttk.Label(review_controls, text="独立本地项目停在第③步，成片不会自动上传。", foreground="#666").pack(side="right")
 
         self.log = tk.Text(log_tab, wrap="word", state="disabled", font=("Consolas", 10))
         self.log.pack(fill="both", expand=True, padx=10, pady=10)
@@ -206,7 +220,9 @@ class MediaWorkerApp(tk.Tk):
             "selector_port": self.selector_bridge.port,
             "selector_token": self.selector_token,
             "local_ai": {"ollama_url": self.vars["ollama_url"].get().strip(),
-                         "translation_model": self.vars["translation_model"].get().strip()},
+                         "translation_model": self.vars["translation_model"].get().strip(),
+                         "whisper_command": self.vars["whisper_command"].get().strip(),
+                         "ai_edit_command": self.vars["ai_edit_command"].get().strip()},
         }
 
     def save(self, quiet=False):
@@ -391,7 +407,13 @@ class MediaWorkerApp(tk.Tk):
                         "任务 %s：APK 提交选片，新增 %s 条" %
                         (data["task_id"], data["added"])
                     )
-                elif event == "selection_mix_done":
+                elif event == "selection_mix_ready":
+                    task = data["task"]
+                    self.selection_busy = False
+                    self._refresh_selection_tasks()
+                    self._refresh_selection_tree()
+                    messagebox.showinfo(APP_TITLE, "审核稿已生成。请先预览成片，确认满意后再回传 Odoo。")
+                elif event == "selection_upload_done":
                     task = data["task"]
                     self.pending_selections.pop(task["id"], None)
                     self.selection_store.set_task_status(task["id"], "done")
@@ -399,7 +421,7 @@ class MediaWorkerApp(tk.Tk):
                     self._refresh_selection_tasks()
                     self._refresh_selection_tree()
                     self._task_event("task_done", {"task": task, "output": "成片已回传 Odoo：%s" % data["output"]})
-                    messagebox.showinfo(APP_TITLE, "批量混剪完成，成片已回传 Odoo")
+                    messagebox.showinfo(APP_TITLE, "成片已确认并回传 Odoo")
                 elif event == "selection_operation_done":
                     self.selection_busy = False
                     self._refresh_selection_tree()
@@ -438,15 +460,17 @@ class MediaWorkerApp(tk.Tk):
 
     def _on_selection_task_choice(self, _event=None):
         value = self.selection_task_choice.get().split(" · ", 1)[0]
-        if value.isdigit():
+        try:
             self.selection_task_id = int(value)
             self._refresh_selection_tree()
+        except ValueError:
+            pass
 
     def _refresh_selection_tasks(self):
         tasks = self.selection_store.list_tasks()
         labels = ["%s · %s · %s" % (
             task["id"], task.get("local_status", "processing"),
-            (task.get("keywords") or task.get("target_language") or "抖音选片").replace("\n", " ")[:18],
+            (task.get("name") or task.get("keywords") or task.get("target_language") or "抖音选片").replace("\n", " ")[:18],
         ) for task in tasks]
         self.selection_task_choice["values"] = labels
         if tasks and self.selection_task_id is None:
@@ -463,9 +487,194 @@ class MediaWorkerApp(tk.Tk):
             return
         self.notebook.select(self.selection_tab)
 
+    def _project_dialog(self, task=None):
+        existing = task or {}
+        edit_choices = {
+            "sequence": "顺序拼接", "reverse": "倒序拼接",
+            "random": "随机排序", "ai": "本地 AI 剪辑程序",
+        }
+        subtitle_choices = {
+            "none": "不添加字幕", "script": "使用项目脚本",
+            "transcribe": "识别原视频语音",
+        }
+        audio_choices = {"original": "保留原声", "mute": "静音"}
+        dialog = tk.Toplevel(self)
+        dialog.title("编辑视频项目" if task else "新建本地视频项目")
+        dialog.geometry("780x720")
+        dialog.transient(self)
+        form = ttk.Frame(dialog, padding=15)
+        form.pack(fill="both", expand=True)
+
+        values = {
+            "name": tk.StringVar(value=existing.get("name") or "本地视频项目"),
+            "keywords": tk.StringVar(value=existing.get("keywords") or ""),
+            "source_language": tk.StringVar(value=existing.get("source_language") or "Chinese"),
+            "target_language": tk.StringVar(value=existing.get("target_language") or "English"),
+            "duration_seconds": tk.StringVar(value=str(existing.get("duration_seconds") or 15)),
+            "aspect_ratio": tk.StringVar(value=existing.get("aspect_ratio") or "9:16"),
+            "edit_mode": tk.StringVar(value=edit_choices.get(existing.get("edit_mode") or "sequence")),
+            "subtitle_mode": tk.StringVar(value=subtitle_choices.get(existing.get("subtitle_mode") or "script")),
+            "audio_mode": tk.StringVar(value=audio_choices.get(existing.get("audio_mode") or "original")),
+            "source_image_path": tk.StringVar(value=existing.get("source_image_path") or ""),
+        }
+        translate = tk.BooleanVar(value=bool(existing.get("translate_subtitles", False)))
+        local_files = list(existing.get("local_files") or [])
+
+        rows = (
+            ("项目名称", "name", None), ("搜索关键词", "keywords", None),
+            ("原视频语言", "source_language", None),
+            ("目标语言", "target_language", None),
+            ("成片时长（秒）", "duration_seconds", None),
+            ("画面比例", "aspect_ratio", ("9:16", "4:5", "1:1")),
+            ("剪辑方式", "edit_mode", tuple(edit_choices.values())),
+            ("字幕来源", "subtitle_mode", tuple(subtitle_choices.values())),
+            ("原视频声音", "audio_mode", tuple(audio_choices.values())),
+        )
+        for row, (label, key, choices) in enumerate(rows):
+            ttk.Label(form, text=label, width=18).grid(row=row, column=0, sticky="w", pady=5)
+            widget = ttk.Combobox(form, textvariable=values[key], values=choices, state="readonly") if choices else ttk.Entry(form, textvariable=values[key])
+            widget.grid(row=row, column=1, columnspan=2, sticky="ew", pady=5)
+
+        image_row = len(rows)
+        ttk.Label(form, text="搜索参考图片", width=18).grid(row=image_row, column=0, sticky="w", pady=5)
+        ttk.Entry(form, textvariable=values["source_image_path"]).grid(row=image_row, column=1, sticky="ew", pady=5)
+        ttk.Button(
+            form, text="选择图片",
+            command=lambda: values["source_image_path"].set(filedialog.askopenfilename(
+                parent=dialog, filetypes=[("图片", "*.jpg *.jpeg *.png *.webp"), ("所有文件", "*.*")],
+            ) or values["source_image_path"].get()),
+        ).grid(row=image_row, column=2, padx=(8, 0))
+
+        video_row = image_row + 1
+        ttk.Label(form, text="本地视频", width=18).grid(row=video_row, column=0, sticky="nw", pady=5)
+        local_label = tk.StringVar(value="已选择 %s 个文件" % len(local_files))
+        ttk.Label(form, textvariable=local_label).grid(row=video_row, column=1, sticky="w", pady=5)
+        def choose_videos():
+            selected = filedialog.askopenfilenames(
+                parent=dialog, filetypes=[("视频", "*.mp4 *.mov *.mkv *.webm *.avi"), ("所有文件", "*.*")],
+            )
+            for path in selected:
+                if path not in local_files:
+                    local_files.append(path)
+            local_label.set("已选择 %s 个文件" % len(local_files))
+        ttk.Button(form, text="添加视频", command=choose_videos).grid(row=video_row, column=2, padx=(8, 0))
+
+        url_row = video_row + 1
+        ttk.Label(form, text="抖音链接", width=18).grid(row=url_row, column=0, sticky="nw", pady=5)
+        urls = tk.Text(form, height=4, wrap="word")
+        urls.grid(row=url_row, column=1, columnspan=2, sticky="nsew", pady=5)
+        urls.insert("1.0", "\n".join(existing.get("source_urls") or []))
+        script_row = url_row + 1
+        ttk.Label(form, text="字幕/项目脚本", width=18).grid(row=script_row, column=0, sticky="nw", pady=5)
+        script = tk.Text(form, height=8, wrap="word")
+        script.grid(row=script_row, column=1, columnspan=2, sticky="nsew", pady=5)
+        script.insert("1.0", existing.get("video_script") or "")
+        ttk.Checkbutton(
+            form, text="将字幕翻译为目标语言（需要本地翻译模型）", variable=translate,
+        ).grid(row=script_row + 1, column=1, columnspan=2, sticky="w", pady=5)
+        ttk.Label(
+            form,
+            text="语音识别与 AI 剪辑均为可选本地程序；未配置时仍可使用脚本字幕和三种基础剪辑方式。",
+            foreground="#666",
+        ).grid(row=script_row + 2, column=0, columnspan=3, sticky="w", pady=5)
+        form.columnconfigure(1, weight=1)
+        form.rowconfigure(script_row, weight=1)
+
+        def save_project(open_search=False):
+            try:
+                duration = max(3, int(values["duration_seconds"].get()))
+                task_id = int(existing.get("id") or self.selection_store.next_local_task_id())
+                image_path = values["source_image_path"].get().strip()
+                if image_path:
+                    source = Path(image_path).expanduser().resolve()
+                    if not source.is_file():
+                        raise FileNotFoundError("搜索参考图片不存在")
+                    target_dir = Path(self.vars["work_dir"].get()).resolve() / "local-projects" / str(abs(task_id))
+                    target_dir.mkdir(parents=True, exist_ok=True)
+                    target = target_dir / ("reference" + (source.suffix or ".jpg"))
+                    if source != target:
+                        shutil.copy2(source, target)
+                    image_path = str(target)
+                project = dict(existing)
+                project.update({
+                    "id": task_id, "type": existing.get("type") or "local_project",
+                    "local_only": bool(existing.get("local_only", task is None)),
+                    "name": values["name"].get().strip() or "本地视频项目",
+                    "keywords": values["keywords"].get().strip(),
+                    "source_language": values["source_language"].get().strip() or "Chinese",
+                    "target_language": values["target_language"].get().strip() or "English",
+                    "duration_seconds": duration, "aspect_ratio": values["aspect_ratio"].get(),
+                    "edit_mode": next(key for key, label in edit_choices.items() if label == values["edit_mode"].get()),
+                    "subtitle_mode": next(key for key, label in subtitle_choices.items() if label == values["subtitle_mode"].get()),
+                    "audio_mode": next(key for key, label in audio_choices.items() if label == values["audio_mode"].get()),
+                    "translate_subtitles": translate.get(), "video_script": script.get("1.0", "end").strip(),
+                    "source_mode": "project_script", "source_image_path": image_path,
+                    "source_urls": [line.strip() for line in urls.get("1.0", "end").splitlines() if line.strip()],
+                    "local_files": local_files,
+                })
+                self.selection_store.update_task(project, status=existing.get("local_status") or "draft")
+                self.selection_store.add_text(task_id, "\n".join(project["source_urls"]))
+                self.selection_store.add_local_files(task_id, local_files)
+                if task_id in self.pending_selections:
+                    self.pending_selections[task_id] = project
+                self.selection_task_id = task_id
+                dialog.destroy()
+                self._refresh_selection_tasks()
+                self._refresh_selection_tree()
+                self.notebook.select(self.selection_tab)
+                if open_search:
+                    self._open_project_search(project)
+            except Exception as exc:
+                messagebox.showerror(APP_TITLE, str(exc), parent=dialog)
+
+        actions = ttk.Frame(form)
+        actions.grid(row=script_row + 3, column=0, columnspan=3, sticky="e", pady=(10, 0))
+        ttk.Button(actions, text="保存", command=save_project).pack(side="left", padx=4)
+        ttk.Button(actions, text="保存并打开抖音搜索", command=lambda: save_project(True)).pack(side="left", padx=4)
+        ttk.Button(actions, text="取消", command=dialog.destroy).pack(side="left", padx=4)
+
+    def create_local_project(self):
+        self._project_dialog()
+
+    def edit_active_project(self):
+        task = self._active_selection_task()
+        if not task:
+            messagebox.showerror(APP_TITLE, "请先选择一个项目")
+            return
+        self._project_dialog(task)
+
+    def _open_project_search(self, task):
+        image_path = task.get("source_image_path")
+        if image_path:
+            def run_image_search():
+                try:
+                    bridge = MumuBridge(
+                        self.vars["mumu_adb"].get(), self.vars["mumu_serial"].get(),
+                        self.vars["mumu_player"].get(), self.selector_bridge.port, self.selector_token,
+                    )
+                    remote = bridge.prepare_image_search(image_path, task["id"])
+                    self.events.put(("log", {"message": "本地项目 %s：图片已输入 MuMu（%s）" % (task["id"], remote)}))
+                except Exception as exc:
+                    self.events.put(("selection_operation_error", {"error": str(exc)}))
+            threading.Thread(target=run_image_search, daemon=True).start()
+            return
+        keyword = (task.get("keywords") or "").strip()
+        if not keyword:
+            messagebox.showerror(APP_TITLE, "请先填写关键词或选择参考图片")
+            return
+        threading.Thread(
+            target=open_keyword_search,
+            args=(app_dir() / "secrets.json", keyword, self.vars["download_proxy"].get().strip()),
+            daemon=True,
+        ).start()
+
     def _active_selection_task(self):
         if self.selection_task_id in self.pending_selections:
-            return self.pending_selections[self.selection_task_id]
+            active = dict(self.pending_selections[self.selection_task_id])
+            stored = self.selection_store.get_task(self.selection_task_id)
+            if stored:
+                active.update(stored)
+            return active
         stored = self.selection_store.get_task(self.selection_task_id) if self.selection_task_id else None
         if stored:
             return stored
@@ -485,14 +694,18 @@ class MediaWorkerApp(tk.Tk):
         rows = self.selection_store.list(task["id"])
         labels = {
             "selected": "已选择", "downloading": "下载中", "downloaded": "已下载",
-            "mixing": "混剪中", "done": "已完成", "failed": "失败",
+            "mixing": "混剪中", "ready_review": "待审核", "done": "已完成", "failed": "失败",
         }
         for row in rows:
             self.selection_tree.insert("", "end", iid=str(row["id"]), values=(
                 row["video_id"] or "待下载解析", row["selected_at"].replace("T", " ")[:19],
                 labels.get(row["status"], row["status"]), row["url"], row["error"],
             ))
-        self.selection_title.set("任务 %s · %s" % (task["id"], task.get("keywords") or task.get("target_language") or "抖音选片"))
+        kind = "本地项目" if task.get("local_only") else "Odoo任务"
+        self.selection_title.set("%s %s · %s · %s" % (
+            kind, task["id"], task.get("name") or task.get("keywords") or task.get("target_language") or "抖音选片",
+            task.get("local_status") or "处理中",
+        ))
         self._refresh_selection_summary()
 
     def _refresh_selection_summary(self):
@@ -565,6 +778,65 @@ class MediaWorkerApp(tk.Tk):
         ttk.Button(dialog, text="加入选片库", command=save_links).pack(pady=(5, 15))
         editor.focus_set()
 
+    def add_local_videos(self):
+        task = self._active_selection_task()
+        if not task:
+            messagebox.showerror(APP_TITLE, "请先选择或新建一个项目")
+            return
+        paths = filedialog.askopenfilenames(
+            filetypes=[("视频", "*.mp4 *.mov *.mkv *.webm *.avi"), ("所有文件", "*.*")],
+        )
+        if paths:
+            self.selection_store.add_local_files(task["id"], paths)
+            self._refresh_selection_tree()
+
+    @staticmethod
+    def _open_local_path(path):
+        target = Path(path or "")
+        if not target.is_file():
+            raise FileNotFoundError("本地文件不存在，请先下载或重新生成")
+        os.startfile(str(target))
+
+    def preview_selected_video(self):
+        ids = self._selection_ids()
+        if len(ids) != 1:
+            messagebox.showerror(APP_TITLE, "请选择一条已经下载的视频")
+            return
+        row = self.selection_store.get_many(ids)[0]
+        try:
+            self._open_local_path(row["local_path"])
+        except Exception as exc:
+            messagebox.showerror(APP_TITLE, str(exc))
+
+    def preview_result(self):
+        task = self._active_selection_task()
+        try:
+            self._open_local_path((task or {}).get("result_path"))
+        except Exception as exc:
+            messagebox.showerror(APP_TITLE, str(exc))
+
+    def open_project_folder(self):
+        task = self._active_selection_task()
+        if not task:
+            messagebox.showerror(APP_TITLE, "请先选择一个项目")
+            return
+        result = Path(task.get("result_path") or "")
+        folder = result.parent if result.is_file() else Path(self.vars["work_dir"].get()).resolve() / str(task["id"])
+        folder.mkdir(parents=True, exist_ok=True)
+        os.startfile(str(folder))
+
+    def delete_local_project(self):
+        task = self._active_selection_task()
+        if not task or not task.get("local_only"):
+            messagebox.showinfo(APP_TITLE, "只能在本工具中删除独立本地项目；Odoo任务请在 Odoo 中管理。")
+            return
+        if not messagebox.askyesno(APP_TITLE, "删除该本地项目记录？已下载和生成的媒体文件会保留。"):
+            return
+        self.selection_store.delete_task(task["id"])
+        self.selection_task_id = None
+        self._refresh_selection_tasks()
+        self._refresh_selection_tree()
+
     def delete_selected_videos(self):
         ids = self._selection_ids()
         if not ids:
@@ -574,7 +846,7 @@ class MediaWorkerApp(tk.Tk):
             return
         for row in self.selection_store.get_many(ids):
             path = Path(row["local_path"]) if row["local_path"] else None
-            if path and path.is_file():
+            if path and path.is_file() and not row["url"].startswith("file:"):
                 path.unlink()
         self.selection_store.delete(ids)
         self._refresh_selection_tree()
@@ -594,7 +866,7 @@ class MediaWorkerApp(tk.Tk):
             clips = []
             for index, row in enumerate(rows, 1):
                 existing = Path(row["local_path"]) if row["local_path"] else None
-                if existing and existing.is_file() and row["status"] in ("downloaded", "done"):
+                if existing and existing.is_file() and row["status"] in ("downloaded", "ready_review", "done"):
                     clips.append(existing)
                     continue
                 self.selection_store.update(row["id"], status="downloading", error="")
@@ -619,10 +891,12 @@ class MediaWorkerApp(tk.Tk):
                     shutil.rmtree(mix_dir)
                 mix_dir.mkdir(parents=True)
                 output, subtitle = worker.compose_video(task, clips, mix_dir)
-                worker.complete(task, output, subtitle)
+                self.selection_store.set_task_result(
+                    task["id"], output, subtitle or "", status="ready_review",
+                )
                 for row in rows:
-                    self.selection_store.update(row["id"], status="done", error="")
-                self.events.put(("selection_mix_done", {"task": task, "output": str(output)}))
+                    self.selection_store.update(row["id"], status="ready_review", error="")
+                self.events.put(("selection_mix_ready", {"task": task, "output": str(output)}))
             else:
                 self.events.put(("selection_operation_done", {}))
         except Exception as exc:
@@ -653,15 +927,47 @@ class MediaWorkerApp(tk.Tk):
         if not task or not ids:
             messagebox.showerror(APP_TITLE, "请先加入至少一个抖音视频")
             return
-        if task["id"] not in self.pending_selections:
-            messagebox.showerror(APP_TITLE, "该任务已结束；可以管理或重新下载素材，但不能再次回传同一个 Odoo 任务")
-            return
         if self.selection_busy:
             messagebox.showinfo(APP_TITLE, "已有选片处理正在运行")
             return
         rows = self.selection_store.get_many(ids)
         self.selection_busy = True
         threading.Thread(target=self._run_downloads, args=(task, rows, True), daemon=True).start()
+
+    def upload_result(self):
+        task = self._active_selection_task()
+        if not task:
+            messagebox.showerror(APP_TITLE, "请先选择一个项目")
+            return
+        if task.get("local_only"):
+            messagebox.showinfo(APP_TITLE, "这是独立本地项目，成片会保留在本机；从 Odoo 下发的项目才支持回传。")
+            return
+        if task["id"] not in self.pending_selections:
+            messagebox.showerror(APP_TITLE, "该 Odoo 任务当前未被本工具持有，请启动工作节点重新领取后再回传")
+            return
+        result = Path(task.get("result_path") or "")
+        subtitle = Path(task.get("subtitle_path") or "") if task.get("subtitle_path") else None
+        if not result.is_file():
+            messagebox.showerror(APP_TITLE, "尚未生成可回传的审核稿")
+            return
+        if not messagebox.askyesno(APP_TITLE, "已确认预览结果满意，并将成片回传 Odoo？"):
+            return
+        if self.selection_busy:
+            messagebox.showinfo(APP_TITLE, "已有选片处理正在运行")
+            return
+        self.selection_busy = True
+
+        def run_upload():
+            worker = self.worker or Worker(self.config())
+            try:
+                worker.complete(task, result, subtitle if subtitle and subtitle.is_file() else None)
+                for row in self.selection_store.list(task["id"]):
+                    self.selection_store.update(row["id"], status="done", error="")
+                self.events.put(("selection_upload_done", {"task": task, "output": str(result)}))
+            except Exception as exc:
+                self.events.put(("selection_operation_error", {"error": str(exc)}))
+
+        threading.Thread(target=run_upload, daemon=True).start()
 
     def write_log(self, message):
         line = time.strftime("%Y-%m-%d %H:%M:%S ") + message + "\n"
