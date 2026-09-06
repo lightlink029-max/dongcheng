@@ -1135,9 +1135,87 @@ class MediaWorkerApp(tk.Tk):
         if self.selection_busy:
             messagebox.showinfo(APP_TITLE, "已有选片处理正在运行")
             return
-        rows = self.selection_store.get_many(ids)
-        self.selection_busy = True
-        threading.Thread(target=self._run_downloads, args=(task, rows, True), daemon=True).start()
+        providers = {
+            "none": "不生成配音", "windows": "Windows 本地音色",
+            "sherpa": "sherpa-onnx 本地音色", "volcengine": "火山引擎音色",
+        }
+        dialog = tk.Toplevel(self)
+        dialog.title("生成审核稿")
+        dialog.geometry("520x280")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+        form = ttk.Frame(dialog, padding=20)
+        form.pack(fill="both", expand=True)
+        provider = tk.StringVar(value=providers.get(
+            task.get("tts_provider") or "none", providers["none"],
+        ))
+        voice = tk.StringVar(value=task.get("tts_voice") or "")
+        speed = tk.StringVar(value=str(task.get("tts_speed") or 1.0))
+        volume = tk.StringVar(value=str(task.get("tts_volume") or 1.0))
+
+        ttk.Label(form, text="配音服务", width=16).grid(row=0, column=0, sticky="w", pady=7)
+        provider_box = ttk.Combobox(
+            form, textvariable=provider, values=tuple(providers.values()), state="readonly",
+        )
+        provider_box.grid(row=0, column=1, sticky="ew", pady=7)
+        ttk.Label(form, text="音色名称/ID", width=16).grid(row=1, column=0, sticky="w", pady=7)
+        voice_box = ttk.Combobox(form, textvariable=voice)
+        voice_box.grid(row=1, column=1, sticky="ew", pady=7)
+        ttk.Label(form, text="配音语速", width=16).grid(row=2, column=0, sticky="w", pady=7)
+        ttk.Entry(form, textvariable=speed).grid(row=2, column=1, sticky="ew", pady=7)
+        ttk.Label(form, text="配音音量", width=16).grid(row=3, column=0, sticky="w", pady=7)
+        ttk.Entry(form, textvariable=volume).grid(row=3, column=1, sticky="ew", pady=7)
+        hint = tk.StringVar()
+        ttk.Label(form, textvariable=hint, foreground="#666", wraplength=450).grid(
+            row=4, column=0, columnspan=2, sticky="w", pady=(5, 8),
+        )
+        form.columnconfigure(1, weight=1)
+
+        def refresh_voices(_event=None):
+            provider_key = next(key for key, label in providers.items() if label == provider.get())
+            current = voice.get().strip()
+            if provider_key == "windows":
+                choices = windows_voices()
+                hint.set("可从本机已安装的 Windows 音色中选择，也可留空使用系统默认音色。")
+            elif provider_key == "sherpa":
+                choices = ["0"]
+                hint.set("当前 Sherpa 模型默认使用音色 0；多说话人模型可直接填写其他说话人 ID。")
+            elif provider_key == "volcengine":
+                choices = []
+                hint.set("请输入已在火山引擎开通的音色 ID；留空使用默认音色。")
+            else:
+                choices = []
+                hint.set("本次审核稿不生成配音。")
+            voice_box.configure(values=choices, state="normal" if provider_key != "none" else "disabled")
+            if current:
+                voice.set(current)
+
+        def generate():
+            try:
+                provider_key = next(key for key, label in providers.items() if label == provider.get())
+                task.update({
+                    "tts_provider": provider_key,
+                    "tts_voice": voice.get().strip(),
+                    "tts_speed": max(0.5, min(2.0, float(speed.get()))),
+                    "tts_volume": max(0.0, min(2.0, float(volume.get()))),
+                })
+                self.selection_store.update_task(task)
+                rows = self.selection_store.get_many(ids)
+                dialog.destroy()
+                self.selection_busy = True
+                threading.Thread(
+                    target=self._run_downloads, args=(task, rows, True), daemon=True,
+                ).start()
+            except Exception as exc:
+                messagebox.showerror(APP_TITLE, str(exc), parent=dialog)
+
+        provider_box.bind("<<ComboboxSelected>>", refresh_voices)
+        refresh_voices()
+        actions = ttk.Frame(form)
+        actions.grid(row=5, column=0, columnspan=2, sticky="e", pady=(5, 0))
+        ttk.Button(actions, text="开始生成", command=generate).pack(side="left", padx=4)
+        ttk.Button(actions, text="取消", command=dialog.destroy).pack(side="left", padx=4)
 
     def upload_result(self):
         task = self._active_selection_task()
