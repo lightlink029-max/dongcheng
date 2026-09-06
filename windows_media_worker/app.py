@@ -25,7 +25,7 @@ from douyin_adapter import _dpapi, capture_login, has_login, open_keyword_search
 from mumu_adapter import MumuBridge, check_mumu, install_selector_apk
 from selection_store import SelectionStore
 from selector_bridge import SelectorBridge
-from speech import synthesize
+from speech import synthesize, transcribe
 from voice_library import default_voice_profiles, load_voice_profiles, save_voice_profiles
 from worker import Worker, create_version_directory
 
@@ -86,61 +86,81 @@ class MediaWorkerApp(tk.Tk):
         self.notebook = notebook
         self.selection_tab = selection_tab
 
-        fields = [
-            ("odoo_url", "Odoo地址", "https://lightlink029-max-dongcheng.odoo.com"),
-            ("worker_token", "工作节点令牌", ""),
-            ("worker_id", "工作节点名称", os.environ.get("COMPUTERNAME", "media-pc-01")),
-            ("work_dir", "工作目录", str(app_dir() / "jobs")),
-            ("poll_seconds", "轮询间隔（秒）", "10"),
-            ("download_proxy", "下载代理（可选）", ""),
-            ("ollama_url", "Ollama地址", "http://127.0.0.1:11434"),
-            ("translation_model", "本地翻译模型", "qwen3:8b"),
-            ("whisper_command", "语音识别程序（可选）", ""),
-            ("whisper_model", "Whisper模型", "small"),
-            ("ai_edit_command", "AI剪辑程序（可选）", ""),
-            ("sherpa_command", "sherpa-onnx程序（可选）", ""),
-            ("sherpa_model", "sherpa音色模型", ""),
-            ("sherpa_tokens", "sherpa Tokens", ""),
-            ("sherpa_data_dir", "sherpa数据目录", ""),
-            ("volc_api_key", "火山引擎 API Key", ""),
-            ("volc_resource_id", "火山 Resource ID", "seed-tts-2.0"),
-            ("font_file", "字幕字体", "C:/Windows/Fonts/msyh.ttc"),
-            ("mumu_adb", "MuMu ADB（可自动检测）", ""),
-            ("mumu_player", "MuMu 主程序（可自动检测）", ""),
-            ("mumu_serial", "MuMu ADB 地址（留空自动检测）", ""),
+        config_groups = [
+            ("Odoo工作节点", [
+                ("odoo_url", "Odoo地址", "https://lightlink029-max-dongcheng.odoo.com"),
+                ("worker_token", "工作节点令牌", ""),
+                ("worker_id", "工作节点名称", os.environ.get("COMPUTERNAME", "media-pc-01")),
+                ("work_dir", "工作目录", str(app_dir() / "jobs")),
+                ("poll_seconds", "轮询间隔（秒）", "10"),
+                ("font_file", "字幕字体", "C:/Windows/Fonts/msyh.ttc"),
+            ]),
+            ("抖音下载", [
+                ("download_proxy", "下载代理（可选）", ""),
+            ]),
+            ("本地AI", [
+                ("ollama_url", "Ollama地址", "http://127.0.0.1:11434"),
+                ("translation_model", "本地翻译模型", "qwen3:8b"),
+                ("whisper_command", "语音识别程序（可选）", ""),
+                ("whisper_model", "Whisper模型", "small"),
+                ("ai_edit_command", "AI剪辑程序（可选）", ""),
+            ]),
+            ("语音合成", [
+                ("sherpa_command", "sherpa-onnx程序（可选）", ""),
+                ("sherpa_model", "sherpa音色模型", ""),
+                ("sherpa_tokens", "sherpa Tokens", ""),
+                ("sherpa_data_dir", "sherpa数据目录", ""),
+                ("volc_api_key", "火山引擎 API Key", ""),
+                ("volc_resource_id", "火山 Resource ID", "seed-tts-2.0"),
+            ]),
+            ("MuMu选片", [
+                ("mumu_adb", "MuMu ADB（可自动检测）", ""),
+                ("mumu_player", "MuMu 主程序（可自动检测）", ""),
+                ("mumu_serial", "MuMu ADB 地址（留空自动检测）", ""),
+            ]),
         ]
-        form = ttk.Frame(config_tab, padding=20)
-        form.pack(fill="x")
-        half = (len(fields) + 1) // 2
-        for index, (key, label, default) in enumerate(fields):
-            row, base_column = index % half, (index // half) * 3
-            ttk.Label(form, text=label, width=20).grid(row=row, column=base_column, sticky="w", pady=7)
-            var = tk.StringVar(value=default); self.vars[key] = var
-            show = "*" if key in ("worker_token", "volc_api_key") else ""
-            ttk.Entry(form, textvariable=var, show=show).grid(row=row, column=base_column + 1, sticky="ew", pady=7)
-            if key == "work_dir":
-                ttk.Button(form, text="选择", command=self._choose_dir).grid(row=row, column=base_column + 2, padx=8)
-            elif key in ("mumu_adb", "mumu_player"):
-                ttk.Button(form, text="选择", command=lambda name=key: self._choose_exe(name)).grid(row=row, column=base_column + 2, padx=8)
-        form.columnconfigure(1, weight=1)
-        form.columnconfigure(4, weight=1)
+        config_notebook = ttk.Notebook(config_tab)
+        config_notebook.pack(fill="both", expand=True, padx=20, pady=(20, 5))
+        config_frames = {}
+        for group_name, fields in config_groups:
+            form = ttk.Frame(config_notebook, padding=20)
+            config_notebook.add(form, text=group_name)
+            config_frames[group_name] = form
+            for row, (key, label, default) in enumerate(fields):
+                ttk.Label(form, text=label, width=24).grid(row=row, column=0, sticky="w", pady=8)
+                var = tk.StringVar(value=default)
+                self.vars[key] = var
+                show = "*" if key in ("worker_token", "volc_api_key") else ""
+                ttk.Entry(form, textvariable=var, show=show).grid(row=row, column=1, sticky="ew", pady=8)
+                if key == "work_dir":
+                    ttk.Button(form, text="选择", command=self._choose_dir).grid(row=row, column=2, padx=8)
+                elif key in ("mumu_adb", "mumu_player"):
+                    ttk.Button(form, text="选择", command=lambda name=key: self._choose_exe(name)).grid(row=row, column=2, padx=8)
+            form.columnconfigure(1, weight=1)
+
+        odoo_form = config_frames["Odoo工作节点"]
         self.autostart = tk.BooleanVar(value=False)
-        ttk.Checkbutton(form, text="登录Windows后自动启动并开始工作", variable=self.autostart).grid(
-            row=half, column=1, columnspan=4, sticky="w", pady=8)
-        login_row = half + 1
-        ttk.Label(form, text="抖音登录", width=20).grid(row=login_row, column=0, sticky="w", pady=7)
+        ttk.Checkbutton(odoo_form, text="登录Windows后自动启动并开始工作", variable=self.autostart).grid(
+            row=6, column=1, sticky="w", pady=8)
+        douyin_form = config_frames["抖音下载"]
+        ttk.Label(douyin_form, text="抖音登录", width=24).grid(row=1, column=0, sticky="w", pady=8)
         self.douyin_status = tk.StringVar(value="未登录")
-        ttk.Label(form, textvariable=self.douyin_status).grid(row=login_row, column=1, columnspan=4, sticky="w", pady=7)
+        ttk.Label(douyin_form, textvariable=self.douyin_status).grid(row=1, column=1, sticky="w", pady=8)
         self.douyin_login_button = ttk.Button(
-            form, text="登录/更新抖音登录", command=self.login_douyin,
+            douyin_form, text="登录/更新抖音登录", command=self.login_douyin,
         )
-        self.douyin_login_button.grid(row=login_row, column=2, padx=8)
+        self.douyin_login_button.grid(row=1, column=2, padx=8)
+        ttk.Button(odoo_form, text="测试Odoo连接", command=self.test_connection).grid(
+            row=7, column=1, sticky="w", pady=8,
+        )
+        mumu_form = config_frames["MuMu选片"]
+        mumu_actions = ttk.Frame(mumu_form)
+        mumu_actions.grid(row=3, column=1, sticky="w", pady=8)
+        ttk.Button(mumu_actions, text="检测MuMu", command=self.test_mumu).pack(side="left", padx=(0, 8))
+        ttk.Button(mumu_actions, text="安装/更新选片APK", command=self.install_selector).pack(side="left")
         controls = ttk.Frame(config_tab, padding=(20, 5))
         controls.pack(fill="x")
         ttk.Button(controls, text="保存配置", command=self.save).pack(side="left", padx=4)
-        ttk.Button(controls, text="测试Odoo连接", command=self.test_connection).pack(side="left", padx=4)
-        ttk.Button(controls, text="检测MuMu", command=self.test_mumu).pack(side="left", padx=4)
-        ttk.Button(controls, text="安装/更新选片APK", command=self.install_selector).pack(side="left", padx=4)
         self.start_button = ttk.Button(controls, text="启动工作节点", command=self.start)
         self.start_button.pack(side="left", padx=4)
         self.stop_button = ttk.Button(controls, text="停止", command=self.stop, state="disabled")
@@ -198,20 +218,24 @@ class MediaWorkerApp(tk.Tk):
         ttk.Button(selection_controls, text="添加本地视频", command=self.add_local_videos).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="时间轴/版权", command=self.edit_selected_clip).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="删除所选", command=self.delete_selected_videos).pack(side="left", padx=3)
-        ttk.Button(selection_controls, text="重新下载", command=self.redownload_selected_videos).pack(side="left", padx=3)
+        ttk.Button(selection_controls, text="① 下载/重新下载", command=self.redownload_selected_videos).pack(side="left", padx=3)
         self.selection_summary = tk.StringVar(value="0 条")
         ttk.Label(selection_controls, textvariable=self.selection_summary).pack(side="right")
-        review_controls = ttk.Frame(selection_tab, padding=(10, 0, 10, 10))
-        review_controls.pack(fill="x")
-        ttk.Button(review_controls, text="① 预览所选素材", command=self.preview_selected_video).pack(side="left", padx=3)
-        ttk.Button(review_controls, text="② 生成审核稿", command=self.mix_selected_videos).pack(side="left", padx=3)
-        ttk.Button(review_controls, text="音色管理", command=self.open_voice_manager).pack(side="left", padx=3)
-        ttk.Button(review_controls, text="③ 预览成片", command=self.preview_result).pack(side="left", padx=3)
-        ttk.Button(review_controls, text="历史版本", command=self.show_versions).pack(side="left", padx=3)
-        ttk.Button(review_controls, text="④ 确认回传 Odoo", command=self.upload_result).pack(side="left", padx=3)
-        ttk.Button(review_controls, text="打开项目目录", command=self.open_project_folder).pack(side="left", padx=3)
-        ttk.Button(review_controls, text="删除本地项目", command=self.delete_local_project).pack(side="left", padx=3)
-        ttk.Label(review_controls, text="独立本地项目停在第③步，成片不会自动上传。", foreground="#666").pack(side="right")
+        workflow_controls = ttk.Frame(selection_tab, padding=(10, 0, 10, 5))
+        workflow_controls.pack(fill="x")
+        ttk.Button(workflow_controls, text="② 预览素材", command=self.preview_selected_video).pack(side="left", padx=3)
+        ttk.Button(workflow_controls, text="③ 识别原视频中文", command=self.recognize_original_chinese).pack(side="left", padx=3)
+        ttk.Button(workflow_controls, text="④ 编辑/选择文案与音色", command=self.edit_active_project).pack(side="left", padx=3)
+        ttk.Button(workflow_controls, text="⑤ 生成审核稿", command=self.mix_selected_videos).pack(side="left", padx=3)
+        ttk.Button(workflow_controls, text="⑥ 预览成片", command=self.preview_result).pack(side="left", padx=3)
+        ttk.Button(workflow_controls, text="⑦ 确认回传 Odoo", command=self.upload_result).pack(side="left", padx=3)
+        utility_controls = ttk.Frame(selection_tab, padding=(10, 0, 10, 10))
+        utility_controls.pack(fill="x")
+        ttk.Button(utility_controls, text="音色管理", command=self.open_voice_manager).pack(side="left", padx=3)
+        ttk.Button(utility_controls, text="历史版本", command=self.show_versions).pack(side="left", padx=3)
+        ttk.Button(utility_controls, text="打开项目目录", command=self.open_project_folder).pack(side="left", padx=3)
+        ttk.Button(utility_controls, text="删除本地项目", command=self.delete_local_project).pack(side="left", padx=3)
+        ttk.Label(utility_controls, text="独立本地项目只保存在本机，不会自动上传。", foreground="#666").pack(side="right")
 
         self.log = tk.Text(log_tab, wrap="word", state="disabled", font=("Consolas", 10))
         self.log.pack(fill="both", expand=True, padx=10, pady=10)
@@ -454,6 +478,16 @@ class MediaWorkerApp(tk.Tk):
                     self._task_event("task_done", {"task": task, "output": "已同步 %s 条视频链接" % data["saved"]})
                 elif event == "selection_changed":
                     self._refresh_selection_tree()
+                elif event == "transcript_ready":
+                    task = data["task"]
+                    if task["id"] in self.pending_selections:
+                        self.pending_selections[task["id"]] = task
+                    self.selection_busy = False
+                    self._refresh_selection_tasks()
+                    messagebox.showinfo(
+                        APP_TITLE,
+                        "已识别并保存 %s 个视频的中文。请点击“编辑/选择文案与音色”检查内容。" % data["count"],
+                    )
                 elif event == "selector_submission":
                     self.selection_task_id = data["task_id"]
                     self._refresh_selection_tasks()
@@ -563,8 +597,12 @@ class MediaWorkerApp(tk.Tk):
             "random": "随机排序", "ai": "本地 AI 剪辑程序",
         }
         subtitle_choices = {
-            "none": "不添加字幕", "script": "使用项目脚本",
-            "transcribe": "识别原视频语音",
+            "none": "不添加字幕", "script": "使用选定文案",
+        }
+        content_choices = {
+            "original_transcript": "原视频中文",
+            "project_script": "Odoo/项目脚本",
+            "keywords": "Odoo/项目关键词",
         }
         audio_choices = {"original": "保留原声", "mute": "静音"}
         tts_choices = {
@@ -577,10 +615,25 @@ class MediaWorkerApp(tk.Tk):
         }
         dialog = tk.Toplevel(self)
         dialog.title("编辑视频项目" if task else "新建本地视频项目")
-        dialog.geometry("820x900")
+        dialog.geometry("860x960")
         dialog.transient(self)
-        form = ttk.Frame(dialog, padding=15)
-        form.pack(fill="both", expand=True)
+        body = ttk.Frame(dialog)
+        body.pack(fill="both", expand=True)
+        canvas = tk.Canvas(body, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(body, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        form = ttk.Frame(canvas, padding=15)
+        form_window = canvas.create_window((0, 0), window=form, anchor="nw")
+        form.bind(
+            "<Configure>",
+            lambda _event: canvas.configure(scrollregion=canvas.bbox("all")),
+        )
+        canvas.bind(
+            "<Configure>",
+            lambda event: canvas.itemconfigure(form_window, width=event.width),
+        )
 
         values = {
             "name": tk.StringVar(value=existing.get("name") or "本地视频项目"),
@@ -590,7 +643,13 @@ class MediaWorkerApp(tk.Tk):
             "duration_seconds": tk.StringVar(value=str(existing.get("duration_seconds") or 15)),
             "aspect_ratio": tk.StringVar(value=existing.get("aspect_ratio") or "9:16"),
             "edit_mode": tk.StringVar(value=edit_choices.get(existing.get("edit_mode") or "sequence")),
-            "subtitle_mode": tk.StringVar(value=subtitle_choices.get(existing.get("subtitle_mode") or "script")),
+            "subtitle_mode": tk.StringVar(value=subtitle_choices.get(existing.get("subtitle_mode"), subtitle_choices["script"])),
+            "content_source": tk.StringVar(value=content_choices.get(
+                existing.get("content_source") or (
+                    "original_transcript" if existing.get("subtitle_mode") == "transcribe"
+                    else "project_script"
+                ),
+            )),
             "audio_mode": tk.StringVar(value=audio_choices.get(existing.get("audio_mode") or "original")),
             "export_preset": tk.StringVar(value=preset_choices.get(existing.get("export_preset") or "douyin")),
             "transition": tk.StringVar(value="淡入淡出" if existing.get("transition") == "fade" else "无转场"),
@@ -604,7 +663,7 @@ class MediaWorkerApp(tk.Tk):
             "music_volume": tk.StringVar(value=str(existing.get("music_volume") or 0.2)),
             "source_image_path": tk.StringVar(value=existing.get("source_image_path") or ""),
         }
-        translate = tk.BooleanVar(value=bool(existing.get("translate_subtitles", False)))
+        translate = tk.BooleanVar(value=bool(existing.get("translate_subtitles", True)))
         local_files = list(existing.get("local_files") or [])
 
         rows = (
@@ -615,6 +674,7 @@ class MediaWorkerApp(tk.Tk):
             ("画面比例", "aspect_ratio", ("9:16", "4:5", "1:1")),
             ("剪辑方式", "edit_mode", tuple(edit_choices.values())),
             ("字幕来源", "subtitle_mode", tuple(subtitle_choices.values())),
+            ("最终文案来源", "content_source", tuple(content_choices.values())),
             ("原视频声音", "audio_mode", tuple(audio_choices.values())),
             ("导出预设", "export_preset", tuple(preset_choices.values())),
             ("转场", "transition", ("无转场", "淡入淡出")),
@@ -692,17 +752,23 @@ class MediaWorkerApp(tk.Tk):
         urls = tk.Text(form, height=4, wrap="word")
         urls.grid(row=url_row, column=1, columnspan=2, sticky="nsew", pady=5)
         urls.insert("1.0", "\n".join(existing.get("source_urls") or []))
-        script_row = url_row + 1
-        ttk.Label(form, text="字幕/项目脚本", width=18).grid(row=script_row, column=0, sticky="nw", pady=5)
-        script = tk.Text(form, height=8, wrap="word")
+        original_row = url_row + 1
+        ttk.Label(form, text="原视频中文", width=18).grid(row=original_row, column=0, sticky="nw", pady=5)
+        original_transcript = tk.Text(form, height=5, wrap="word")
+        original_transcript.grid(row=original_row, column=1, columnspan=2, sticky="nsew", pady=5)
+        original_transcript.insert("1.0", existing.get("original_transcript") or "")
+
+        script_row = original_row + 1
+        ttk.Label(form, text="Odoo/项目脚本", width=18).grid(row=script_row, column=0, sticky="nw", pady=5)
+        script = tk.Text(form, height=5, wrap="word")
         script.grid(row=script_row, column=1, columnspan=2, sticky="nsew", pady=5)
-        script.insert("1.0", existing.get("video_script") or "")
+        script.insert("1.0", existing.get("video_script") or existing.get("prompt") or "")
         ttk.Checkbutton(
-            form, text="将字幕翻译为目标语言（需要本地翻译模型）", variable=translate,
+            form, text="将选定文案翻译为目标语言（需要本地翻译模型）", variable=translate,
         ).grid(row=script_row + 1, column=1, columnspan=2, sticky="w", pady=5)
         ttk.Label(
             form,
-            text="语音识别与 AI 剪辑均为可选本地程序；未配置时仍可使用脚本字幕和三种基础剪辑方式。",
+            text="先识别并保存原视频中文，再编辑三类文案、选择最终来源和音色；生成审核稿后仍需人工确认。",
             foreground="#666",
         ).grid(row=script_row + 2, column=0, columnspan=3, sticky="w", pady=5)
         form.columnconfigure(1, weight=1)
@@ -736,6 +802,7 @@ class MediaWorkerApp(tk.Tk):
                     "duration_seconds": duration, "aspect_ratio": preset_ratio,
                     "edit_mode": next(key for key, label in edit_choices.items() if label == values["edit_mode"].get()),
                     "subtitle_mode": next(key for key, label in subtitle_choices.items() if label == values["subtitle_mode"].get()),
+                    "content_source": next(key for key, label in content_choices.items() if label == values["content_source"].get()),
                     "audio_mode": next(key for key, label in audio_choices.items() if label == values["audio_mode"].get()),
                     "export_preset": preset_key,
                     "transition": "fade" if values["transition"].get() == "淡入淡出" else "none",
@@ -752,8 +819,14 @@ class MediaWorkerApp(tk.Tk):
                     "tts_volume": max(0.0, min(2.0, float(values["tts_volume"].get()))),
                     "background_music": values["background_music"].get().strip(),
                     "music_volume": max(0.0, min(1.0, float(values["music_volume"].get()))),
-                    "translate_subtitles": translate.get(), "video_script": script.get("1.0", "end").strip(),
-                    "source_mode": "project_script", "source_image_path": image_path,
+                    "translate_subtitles": translate.get(),
+                    "original_transcript": original_transcript.get("1.0", "end").strip(),
+                    "video_script": script.get("1.0", "end").strip(),
+                    "source_mode": next(
+                        key for key, label in content_choices.items()
+                        if label == values["content_source"].get()
+                    ),
+                    "source_image_path": image_path,
                     "source_urls": [line.strip() for line in urls.get("1.0", "end").splitlines() if line.strip()],
                     "local_files": local_files,
                 })
@@ -1109,6 +1182,54 @@ class MediaWorkerApp(tk.Tk):
                 path.unlink()
         self.selection_store.delete(ids)
         self._refresh_selection_tree()
+
+    def recognize_original_chinese(self):
+        task = self._active_selection_task()
+        ids = self._selection_ids(default_all=True)
+        if not task or not ids:
+            messagebox.showerror(APP_TITLE, "请先加入并下载至少一个视频")
+            return
+        if self.selection_busy:
+            messagebox.showinfo(APP_TITLE, "已有选片处理正在运行")
+            return
+        rows = self.selection_store.get_many(ids)
+        sources = [
+            (row, Path(row["local_path"])) for row in rows
+            if row.get("local_path") and Path(row["local_path"]).is_file()
+        ]
+        if not sources:
+            messagebox.showerror(APP_TITLE, "所选视频尚未下载，请先执行“下载/重新下载”")
+            return
+        self.selection_busy = True
+
+        def run():
+            try:
+                worker = self.worker or Worker(self.config())
+                output_dir = worker.root / str(task["id"]) / "source-transcripts"
+                output_dir.mkdir(parents=True, exist_ok=True)
+                texts = []
+                for row, source in sources:
+                    srt = transcribe(
+                        worker.config.get("local_ai", {}), source,
+                        output_dir / ("video-%s.srt" % row["id"]),
+                        task.get("source_language") or "Chinese",
+                    )
+                    if not srt:
+                        raise RuntimeError("本地语音识别尚未安装或配置，无法提取原视频中文")
+                    text = Worker.subtitle_text(srt).strip()
+                    if text:
+                        texts.append(text)
+                if not texts:
+                    raise RuntimeError("没有从所选视频中识别到可用中文")
+                updated = dict(task)
+                updated["original_transcript"] = "\n".join(texts)
+                updated.setdefault("content_source", "original_transcript")
+                self.selection_store.update_task(updated)
+                self.events.put(("transcript_ready", {"task": updated, "count": len(texts)}))
+            except Exception as exc:
+                self.events.put(("selection_operation_error", {"error": str(exc)}))
+
+        threading.Thread(target=run, daemon=True).start()
 
     def _run_downloads(self, task, rows, mix_after=False):
         worker = self.worker or Worker(self.config())

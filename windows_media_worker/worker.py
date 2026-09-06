@@ -196,6 +196,29 @@ class Worker:
             raise RuntimeError("字幕翻译结果破坏了时间轴，请调整本地翻译模型后重试")
         return translated
 
+    @staticmethod
+    def selected_content_text(task):
+        source = task.get("content_source")
+        choices = {
+            "original_transcript": task.get("original_transcript") or "",
+            "project_script": task.get("video_script") or task.get("prompt") or "",
+            "keywords": task.get("keywords") or "",
+        }
+        if source in choices:
+            text = choices[source].strip()
+            if not text:
+                labels = {
+                    "original_transcript": "原视频中文",
+                    "project_script": "Odoo/项目脚本",
+                    "keywords": "Odoo/项目关键词",
+                }
+                raise ValueError("选定的文案来源“%s”为空，请先编辑内容" % labels[source])
+            return text
+        return (
+            task.get("video_script") or task.get("prompt") or
+            task.get("keywords") or task.get("original_transcript") or ""
+        ).strip()
+
     def make_srt(self, task, job_dir, source_video=None):
         subtitle_mode = task.get("subtitle_mode")
         if subtitle_mode == "none":
@@ -220,16 +243,11 @@ class Worker:
                 return None
             self.emit("log", message="未安装 faster-whisper，已自动改用项目文本生成字幕")
 
-        script = (task.get("video_script") or "").strip()
-        source_mode = task.get("source_mode") or "auto"
+        text = self.selected_content_text(task)
         translate_subtitles = task.get("translate_subtitles")
         if translate_subtitles is None:
-            translate_subtitles = not (script and source_mode in ("auto", "project_script"))
-        if script and not translate_subtitles:
-            translated = script
-        else:
-            text = script or task.get("prompt") or task.get("keywords") or ""
-            translated = self.translate(text, task["target_language"])
+            translate_subtitles = task.get("content_source") in ("original_transcript", "keywords")
+        translated = self.translate(text, task["target_language"]) if translate_subtitles else text
         duration = max(3, int(task.get("duration_seconds") or 15))
         srt = job_dir / "subtitle.srt"
         srt.write_text(

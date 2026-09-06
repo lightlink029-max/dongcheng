@@ -143,6 +143,27 @@ class WorkerLeaseTests(unittest.TestCase):
         srt = worker.make_srt(task, Path(self.work_dir.name))
         self.assertIn("Ready-to-use English subtitle", srt.read_text(encoding="utf-8"))
 
+    def test_operator_can_choose_each_editable_content_source(self):
+        task = {
+            "original_transcript": "原视频中文",
+            "video_script": "Odoo script",
+            "keywords": "product keywords",
+        }
+        for source, expected in (
+            ("original_transcript", "原视频中文"),
+            ("project_script", "Odoo script"),
+            ("keywords", "product keywords"),
+        ):
+            task["content_source"] = source
+            self.assertEqual(Worker.selected_content_text(task), expected)
+
+    def test_empty_selected_content_source_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "原视频中文.*为空"):
+            Worker.selected_content_text({
+                "content_source": "original_transcript",
+                "video_script": "Do not silently use this fallback",
+            })
+
     def test_subtitles_can_be_disabled(self):
         worker = NoTranslationWorker(self.config())
         task = {"subtitle_mode": "none", "target_language": "English"}
