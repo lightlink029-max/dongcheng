@@ -4,7 +4,7 @@
         <field name="name">psc.social.publishing.account.list</field>
         <field name="model">psc.social.publishing.account</field>
         <field name="arch" type="xml">
-            <list decoration-muted="not active" decoration-success="last_validation_state == 'passed'" decoration-danger="last_validation_state == 'failed'">
+            <list decoration-muted="account_state in ('replaced', 'suspended')" decoration-success="account_state == 'available'" decoration-danger="account_state in ('unavailable', 'replacement_pending')">
                 <field name="name"/><field name="product_line_id"/><field name="channel_id"/><field name="platform"/>
                 <field name="target_market_id"/><field name="username"/><field name="account_state" widget="badge"/><field name="worker_node_id"/>
                 <field name="bitbrowser_environment_id"/><field name="expected_ip"/><field name="expected_country_id"/>
@@ -17,6 +17,14 @@
         <field name="model">psc.social.publishing.account</field>
         <field name="arch" type="xml">
             <form>
+                <header>
+                    <button name="action_mark_unavailable" type="object" string="标记不可用" class="btn-danger" invisible="account_state != 'available'"/>
+                    <button name="action_create_replacement" type="object" string="替换账号" class="btn-primary" invisible="account_state not in ('available', 'unavailable', 'replacement_pending')"/>
+                    <button name="action_suspend" type="object" string="暂停发布" invisible="account_state != 'available'"/>
+                    <button name="action_restore_available" type="object" string="恢复可发布" invisible="account_state not in ('unavailable', 'suspended')"/>
+                    <button name="action_open_account_history" type="object" string="查看替换历史"/>
+                    <field name="account_state" widget="statusbar"/>
+                </header>
                 <sheet>
                     <div class="oe_title"><h1><field name="name"/></h1></div>
                     <group>
@@ -24,11 +32,12 @@
                             <field name="product_line_id"/><field name="channel_id"/><field name="platform"/>
                             <field name="target_market_id"/><field name="username"/><field name="platform_account_id"/>
                             <field name="profile_url" widget="url"/><field name="email_asset_id"/><field name="registration_task_id"/>
-                            <field name="account_state" widget="badge"/><field name="active"/>
+                            <field name="slot_id" readonly="1"/><field name="replaces_account_id"/><field name="replaced_by_account_id"/>
+                            <field name="active"/>
                         </group>
                         <group string="本地发布环境">
                             <field name="worker_node_id"/><field name="bitbrowser_environment_id" options="{'no_create': True}"/>
-                            <field name="bitbrowser_id"/><field name="expected_ip"/><field name="expected_country_id"/>
+                            <field name="bitbrowser_id"/><field name="expected_ip"/><field name="expected_country_id"/><field name="expected_timezone"/>
                             <field name="daily_publish_limit"/>
                         </group>
                     </group>
@@ -36,9 +45,18 @@
                         <field name="last_validation_state" widget="badge"/><field name="last_validation_at"/>
                         <field name="last_validation_message"/>
                     </group>
+                    <group string="不可用与替换"><field name="unavailable_reason" placeholder="先填写原因，再点击“标记不可用”或“替换账号”"/><field name="unavailable_at"/><field name="replaced_at"/></group>
                 </sheet>
             </form>
         </field>
+    </record>
+    <record id="view_psc_social_account_slot_list" model="ir.ui.view">
+        <field name="name">psc.social.account.slot.list</field><field name="model">psc.social.account.slot</field>
+        <field name="arch" type="xml"><list decoration-success="state == 'active'" decoration-warning="state == 'replacing'" decoration-muted="state == 'suspended'"><field name="name"/><field name="product_line_id"/><field name="target_market_id"/><field name="channel_id"/><field name="platform"/><field name="worker_node_id"/><field name="bitbrowser_environment_id"/><field name="expected_ip"/><field name="expected_country_id"/><field name="expected_timezone"/><field name="current_account_id"/><field name="state" widget="badge"/></list></field>
+    </record>
+    <record id="view_psc_social_account_slot_form" model="ir.ui.view">
+        <field name="name">psc.social.account.slot.form</field><field name="model">psc.social.account.slot</field>
+        <field name="arch" type="xml"><form><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group><field name="product_line_id"/><field name="target_market_id"/><field name="channel_id"/><field name="platform"/><field name="state"/></group><group><field name="worker_node_id"/><field name="bitbrowser_environment_id"/><field name="expected_ip"/><field name="expected_country_id"/><field name="expected_timezone"/><field name="current_account_id"/></group></group><field name="account_ids" readonly="1"><list decoration-success="account_state == 'available'" decoration-muted="account_state == 'replaced'"><field name="name"/><field name="username"/><field name="email_asset_id"/><field name="account_state" widget="badge"/><field name="unavailable_at"/><field name="replaced_at"/><field name="profile_url"/></list></field></sheet></form></field>
     </record>
     <record id="view_psc_local_worker_node_list" model="ir.ui.view">
         <field name="name">psc.local.worker.node.list</field><field name="model">psc.local.worker.node</field>
@@ -54,6 +72,9 @@
     </record>
     <record id="action_psc_social_publishing_accounts" model="ir.actions.act_window">
         <field name="name">社媒账号</field><field name="res_model">psc.social.publishing.account</field><field name="view_mode">list,form</field>
+    </record>
+    <record id="action_psc_social_account_slots" model="ir.actions.act_window">
+        <field name="name">社媒账号槽位</field><field name="res_model">psc.social.account.slot</field><field name="view_mode">list,form</field>
     </record>
     <record id="action_psc_local_worker_nodes" model="ir.actions.act_window">
         <field name="name">Windows 工作节点</field><field name="res_model">psc.local.worker.node</field><field name="view_mode">list,form</field>

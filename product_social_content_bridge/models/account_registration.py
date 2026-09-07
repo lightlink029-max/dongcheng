@@ -33,7 +33,14 @@ class SocialRegistrationTask(models.Model):
     _order = "create_date desc, id desc"
 
     name = fields.Char(string="任务名称", required=True, default=lambda self: _("社媒账号注册"))
-    email_asset_id = fields.Many2one("psc.email.asset", string="注册邮箱", required=True, ondelete="restrict")
+    task_mode = fields.Selection([
+        ("new", "新注册"), ("replace", "替换账号"),
+    ], string="任务类型", required=True, default="new")
+    email_asset_id = fields.Many2one("psc.email.asset", string="注册邮箱", ondelete="restrict")
+    slot_id = fields.Many2one("psc.social.account.slot", string="账号槽位", readonly=True, ondelete="restrict")
+    replacement_account_id = fields.Many2one(
+        "psc.social.publishing.account", string="待替换账号", readonly=True, ondelete="restrict",
+    )
     channel_id = fields.Many2one("psc.publishing.channel", string="平台/渠道", required=True)
     platform = fields.Selection(related="channel_id.platform", store=True, readonly=True)
     product_line_id = fields.Many2one(related="email_asset_id.product_line_id", store=True, readonly=True)
@@ -79,6 +86,17 @@ class SocialRegistrationTask(models.Model):
 
     def action_submit(self):
         for task in self:
+            if not task.email_asset_id:
+                raise UserError(_("请先选择新账号使用的邮箱资产。"))
+            if task.task_mode == "replace" and (not task.replacement_account_id or not task.slot_id):
+                raise UserError(_("替换任务必须从原社媒账号的“替换账号”按钮创建。"))
+            if task.task_mode == "replace" and task.email_asset_id == task.replacement_account_id.email_asset_id:
+                raise UserError(_("替换账号必须选择与旧账号不同的邮箱资产。"))
+            if task.task_mode == "replace" and (
+                task.email_asset_id.product_line_id != task.slot_id.product_line_id
+                or task.email_asset_id.target_market_id != task.slot_id.target_market_id
+            ):
+                raise UserError(_("新邮箱资产必须与账号槽位属于同一品牌/产品线和目标市场。"))
             if task.platform not in ("facebook", "instagram", "tiktok", "linkedin"):
                 raise UserError(_("第一期只支持 Facebook、Instagram、TikTok 和 LinkedIn 注册。"))
             if task.bitbrowser_environment_id.worker_node_id != task.worker_node_id:

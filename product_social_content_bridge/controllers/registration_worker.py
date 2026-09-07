@@ -32,6 +32,8 @@ class RegistrationWorkerController(LocalWorkerController):
         return request.make_json_response({"tasks": [{
             "id": task.id,
             "name": task.name,
+            "task_mode": task.task_mode,
+            "replacement_username": task.replacement_account_id.username or "",
             "state": task.state,
             "platform": task.platform,
             "email": task.email_asset_id.email,
@@ -118,40 +120,79 @@ class RegistrationWorkerController(LocalWorkerController):
         screenshot_data = upload.read(10 * 1024 * 1024 + 1)
         if len(screenshot_data) > 10 * 1024 * 1024:
             return request.make_json_response({"error": "screenshot_too_large"}, status=413)
+        account_model = request.env["psc.social.publishing.account"].sudo()
+        slot_model = request.env["psc.social.account.slot"].sudo()
+        slot = task.slot_id or slot_model.search([
+            ("bitbrowser_environment_id", "=", task.bitbrowser_environment_id.id),
+            ("channel_id", "=", task.channel_id.id),
+        ], limit=1)
+        if not slot:
+            slot = slot_model.create({
+                "name": "%s · %s" % (task.bitbrowser_environment_id.name, task.channel_id.name),
+                "product_line_id": task.product_line_id.id,
+                "channel_id": task.channel_id.id,
+                "target_market_id": task.target_market_id.id,
+                "worker_node_id": task.worker_node_id.id,
+                "bitbrowser_environment_id": task.bitbrowser_environment_id.id,
+                "expected_ip": task.expected_ip,
+                "expected_country_id": task.expected_country_id.id,
+                "expected_timezone": task.expected_timezone,
+            })
+        request.env.cr.execute(
+            "SELECT id FROM psc_social_account_slot WHERE id = %s FOR UPDATE",
+            [slot.id],
+        )
+        slot.invalidate_recordset(["current_account_id", "account_ids"])
+        if task.task_mode == "new" and slot.current_account_id:
+            return request.make_json_response({"error": "slot_already_has_current_account"}, status=409)
+        if task.task_mode == "new" and slot.account_ids:
+            return request.make_json_response({"error": "slot_requires_replacement_task"}, status=409)
+        old_account = task.replacement_account_id if task.task_mode == "replace" else account_model
+        if old_account and old_account.slot_id and old_account.slot_id != slot:
+            return request.make_json_response({"error": "replacement_slot_mismatch"}, status=409)
+        if old_account and slot.current_account_id and slot.current_account_id != old_account:
+            return request.make_json_response({"error": "replacement_already_completed"}, status=409)
+        product_line = slot.product_line_id if task.task_mode == "replace" else task.product_line_id
+        target_market = slot.target_market_id if task.task_mode == "replace" else task.target_market_id
         attachment = request.env["ir.attachment"].sudo().create({
             "name": upload.filename or ("registration-%s.png" % task.id),
             "raw": screenshot_data, "mimetype": upload.mimetype,
             "res_model": "psc.social.registration.task", "res_id": task.id,
         })
-        account_model = request.env["psc.social.publishing.account"].sudo()
-        account = account_model.search([("bitbrowser_environment_id", "=", task.bitbrowser_environment_id.id)], limit=1)
         account_values = {
             "name": task.display_name or username,
-            "product_line_id": task.product_line_id.id,
+            "product_line_id": product_line.id,
             "channel_id": task.channel_id.id,
-            "target_market_id": task.target_market_id.id,
+            "target_market_id": target_market.id,
             "username": username, "profile_url": profile_url,
-            "platform_account_id": platform_account_id,
+            "platform_account_id": platform_account_id or False,
             "email_asset_id": task.email_asset_id.id,
             "registration_task_id": task.id,
+            "slot_id": slot.id,
+            "replaces_account_id": old_account.id if old_account else False,
             "worker_node_id": task.worker_node_id.id,
             "bitbrowser_environment_id": task.bitbrowser_environment_id.id,
             "expected_ip": task.expected_ip,
             "expected_country_id": task.expected_country_id.id,
+            "expected_timezone": task.expected_timezone,
             "account_state": "available", "active": True,
             "last_validation_at": fields.Datetime.now(), "last_validation_state": "passed",
             "last_validation_message": "注册完成；IP %s，国家 %s，时区 %s" % (
                 task.actual_ip, task.actual_country_code, task.actual_timezone,
             ),
         }
-        if account:
-            account.write(account_values)
-        else:
-            account = account_model.create(account_values)
+        account = account_model.create(account_values)
+        if old_account:
+            old_account.write({
+                "account_state": "replaced", "replaced_by_account_id": account.id,
+                "replaced_at": fields.Datetime.now(),
+            })
+        slot.write({"current_account_id": account.id, "state": "active"})
         task.write({
             "state": "done", "platform_account_id": platform_account_id,
             "registered_username": username, "profile_url": profile_url,
             "screenshot_attachment_id": attachment.id, "social_account_id": account.id,
+            "slot_id": slot.id,
             "status_message": "注册资料已确认，账号可发布", "error_message": False,
             "finished_at": fields.Datetime.now(),
         })

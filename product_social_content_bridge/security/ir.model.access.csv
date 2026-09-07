@@ -12,3 +12,4 @@ access_psc_bitbrowser_environment_user,psc.bitbrowser.environment user,model_psc
 access_psc_social_publishing_account_user,psc.social.publishing.account user,model_psc_social_publishing_account,base.group_user,1,1,1,1
 access_psc_email_asset_user,psc.email.asset user,model_psc_email_asset,base.group_user,1,1,1,1
 access_psc_social_registration_task_user,psc.social.registration.task user,model_psc_social_registration_task,base.group_user,1,1,1,1
+access_psc_social_account_slot_user,psc.social.account.slot user,model_psc_social_account_slot,base.group_user,1,1,1,0

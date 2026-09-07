@@ -217,15 +217,15 @@ class MediaWorkerApp(tk.Tk):
         ).pack(side="left")
         ttk.Button(registration_header, text="刷新 Odoo 注册任务", command=self.refresh_registration_tasks).pack(side="right")
         registration_columns = (
-            "id", "platform", "email", "environment", "expected_ip", "country", "timezone", "state", "status",
+            "id", "mode", "platform", "email", "environment", "expected_ip", "country", "timezone", "state", "status",
         )
         self.registration_tree = ttk.Treeview(
             registration_tab, columns=registration_columns, show="headings", selectmode="browse",
         )
         for column, title, width in zip(
             registration_columns,
-            ("任务ID", "平台", "邮箱", "比特环境", "预期IP", "国家", "时区", "状态", "说明"),
-            (70, 90, 190, 170, 130, 60, 150, 130, 260),
+            ("任务ID", "类型", "平台", "新邮箱", "比特环境", "预期IP", "国家", "时区", "状态", "说明"),
+            (70, 80, 90, 190, 170, 130, 60, 150, 130, 260),
         ):
             self.registration_tree.heading(column, text=title)
             self.registration_tree.column(column, width=width, anchor="w")
@@ -679,7 +679,8 @@ class MediaWorkerApp(tk.Tk):
         }
         for task in tasks:
             self.registration_tree.insert("", "end", values=(
-                task.get("id"), task.get("platform", ""), task.get("email", ""),
+                task.get("id"), "替换账号" if task.get("task_mode") == "replace" else "新注册",
+                task.get("platform", ""), task.get("email", ""),
                 task.get("environment_name", task.get("environment_id", "")),
                 task.get("expected_ip", ""), task.get("expected_country_code", ""),
                 task.get("expected_timezone", ""), state_labels.get(task.get("state"), task.get("state", "")),
