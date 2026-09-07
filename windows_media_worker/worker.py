@@ -203,6 +203,7 @@ class Worker:
             "original_transcript": task.get("original_transcript") or "",
             "translated_script": task.get("translated_script") or "",
             "project_script": task.get("video_script") or task.get("prompt") or "",
+            "custom_script": task.get("custom_script") or "",
             "keywords": task.get("keywords") or "",
         }
         if source in choices:
@@ -212,6 +213,7 @@ class Worker:
                     "original_transcript": "原视频中文",
                     "translated_script": "人工校验译文",
                     "project_script": "Odoo/项目脚本",
+                    "custom_script": "自写中文文案",
                     "keywords": "Odoo/项目关键词",
                 }
                 raise ValueError("选定的文案来源“%s”为空，请先编辑内容" % labels[source])
@@ -220,6 +222,30 @@ class Worker:
             task.get("video_script") or task.get("prompt") or
             task.get("keywords") or task.get("original_transcript") or ""
         ).strip()
+
+    @classmethod
+    def prepare_edit_workflow(cls, task, clip_count):
+        """Apply the supported single-video or multi-video workflow."""
+        if clip_count < 1:
+            raise ValueError("请先选择至少一个视频素材")
+        prepared = dict(task)
+        prepared.update({
+            "edit_mode": "sequence",
+            "subtitle_mode": "script",
+            "audio_mode": "mute",
+            "target_language": prepared.get("target_language") or "English",
+        })
+        source = prepared.get("content_source") or "project_script"
+        if clip_count > 1 and source == "original_transcript":
+            raise ValueError("多条视频模式不能使用原视频识别文案，请选择 Odoo 文案、自写中文或人工校验译文")
+        cls.selected_content_text(prepared)
+        if (prepared.get("tts_provider") or "none") == "none":
+            raise ValueError("英文合成需要先选择配音服务和音色")
+        prepared["translate_subtitles"] = source != "translated_script"
+        prepared["workflow_mode"] = (
+            "single_voice_translation" if clip_count == 1 else "multi_sequence_script"
+        )
+        return prepared
 
     def make_srt(self, task, job_dir, source_video=None):
         subtitle_mode = task.get("subtitle_mode")
@@ -290,10 +316,12 @@ class Worker:
             task.get("tts_volume") or 1.0,
         )
 
-    def sync_voiceover_subtitles(self, srt, voiceover):
+    def sync_voiceover_subtitles(self, srt, voiceover, max_duration=None):
         """Split project text into readable cues timed to the generated narration."""
         text = re.sub(r"\s+", " ", self.subtitle_text(srt)).strip()
         duration = self.probe_duration(voiceover)
+        if max_duration:
+            duration = min(duration, float(max_duration))
         if not text or duration <= 0:
             return srt
 
@@ -403,6 +431,15 @@ class Worker:
         concat.write_text("".join(concat_lines), encoding="utf-8")
         output = job_dir / "output.mp4"
         duration = max(3, int(task.get("duration_seconds") or 15))
+        if task.get("workflow_mode") in ("single_voice_translation", "multi_sequence_script"):
+            source_duration = 0.0
+            for item in clip_specs:
+                clip_duration = self.probe_duration(item["path"])
+                start = max(0.0, float(item.get("trim_start") or 0))
+                end = float(item.get("trim_end") or 0)
+                source_duration += max(0.0, (end if end > 0 else clip_duration) - start)
+            if source_duration > 0:
+                duration = source_duration
         speech_source = clip_specs[0]["path"]
         if task.get("subtitle_mode") == "transcribe" and asr_available(self.config.get("local_ai", {})):
             speech_source = job_dir / "speech-source.wav"
@@ -413,8 +450,14 @@ class Worker:
         srt = self.make_srt(task, job_dir, speech_source)
         voiceover = self.make_voiceover(task, srt, job_dir)
         if srt and voiceover:
-            duration = max(duration, self.probe_duration(voiceover))
-            srt = self.sync_voiceover_subtitles(srt, voiceover)
+            preserve_source_duration = task.get("workflow_mode") in (
+                "single_voice_translation", "multi_sequence_script",
+            )
+            if not preserve_source_duration:
+                duration = max(duration, self.probe_duration(voiceover))
+            srt = self.sync_voiceover_subtitles(
+                srt, voiceover, duration if preserve_source_duration else None,
+            )
         ratio = task.get("aspect_ratio", "9:16")
         width, height = {"9:16": (1080, 1920), "4:5": (1080, 1350), "1:1": (1080, 1080)}.get(ratio, (1080, 1920))
         filters = [
@@ -446,7 +489,7 @@ class Worker:
                 "-map", "0:v", "-map", "[a]", "-c:a", "aac",
             ]
         elif voiceover:
-            command += ["-map", "0:v", "-map", "1:a", "-c:a", "aac", "-shortest"]
+            command += ["-map", "0:v", "-map", "1:a", "-c:a", "aac"]
         elif music.is_file() and task.get("audio_mode") != "mute":
             command += [
                 "-filter_complex", f"[0:a]volume=0.65[o];[1:a]volume={float(task.get('music_volume') or 0.2)}[m];"

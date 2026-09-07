@@ -148,16 +148,53 @@ class WorkerLeaseTests(unittest.TestCase):
             "original_transcript": "原视频中文",
             "translated_script": "Verified English translation",
             "video_script": "Odoo script",
+            "custom_script": "自写中文文案",
             "keywords": "product keywords",
         }
         for source, expected in (
             ("original_transcript", "原视频中文"),
             ("translated_script", "Verified English translation"),
             ("project_script", "Odoo script"),
+            ("custom_script", "自写中文文案"),
             ("keywords", "product keywords"),
         ):
             task["content_source"] = source
             self.assertEqual(Worker.selected_content_text(task), expected)
+
+    def test_single_video_workflow_uses_selected_copy_and_replaces_original_audio(self):
+        prepared = Worker.prepare_edit_workflow({
+            "content_source": "original_transcript",
+            "original_transcript": "原声中文",
+            "tts_provider": "sherpa",
+            "target_language": "English",
+        }, 1)
+        self.assertEqual(prepared["workflow_mode"], "single_voice_translation")
+        self.assertEqual(prepared["edit_mode"], "sequence")
+        self.assertEqual(prepared["audio_mode"], "mute")
+        self.assertTrue(prepared["translate_subtitles"])
+
+    def test_multi_video_workflow_rejects_original_transcript(self):
+        with self.assertRaisesRegex(ValueError, "多条视频模式"):
+            Worker.prepare_edit_workflow({
+                "content_source": "original_transcript",
+                "original_transcript": "不应使用",
+                "tts_provider": "sherpa",
+            }, 2)
+
+    def test_multi_video_workflow_accepts_custom_copy(self):
+        prepared = Worker.prepare_edit_workflow({
+            "content_source": "custom_script",
+            "custom_script": "自写中文",
+            "tts_provider": "volcengine",
+        }, 2)
+        self.assertEqual(prepared["workflow_mode"], "multi_sequence_script")
+        self.assertEqual(prepared["edit_mode"], "sequence")
+
+    def test_voiceover_is_required_for_translation_workflows(self):
+        with self.assertRaisesRegex(ValueError, "配音服务和音色"):
+            Worker.prepare_edit_workflow({
+                "content_source": "project_script", "video_script": "中文文案",
+            }, 2)
 
     def test_empty_selected_content_source_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "原视频中文.*为空"):
@@ -269,6 +306,32 @@ class WorkerLeaseTests(unittest.TestCase):
         command = run.call_args.args[0]
         self.assertEqual(command[command.index("-t") + 1], "34.2")
         self.assertNotIn("atempo", " ".join(command))
+
+    def test_translation_workflow_preserves_source_video_duration(self):
+        config = self.config()
+        config["ffmpeg"] = "C:/test/ffmpeg.exe"
+        worker = Worker(config)
+        folder = Path(self.work_dir.name) / "preserved-duration"
+        folder.mkdir()
+        srt = folder / "subtitle.srt"
+        srt.write_text(
+            "1\n00:00:00,000 --> 00:00:20,000\nTranslated narration.\n",
+            encoding="utf-8",
+        )
+        voiceover = folder / "voiceover.wav"
+        voiceover.write_bytes(b"audio")
+        with mock.patch.object(worker, "make_srt", return_value=srt), \
+                mock.patch.object(worker, "make_voiceover", return_value=voiceover), \
+                mock.patch.object(worker, "probe_duration", side_effect=[20.0, 30.0]), \
+                mock.patch("worker.subprocess.run") as run:
+            worker.compose_video({
+                "workflow_mode": "single_voice_translation",
+                "duration_seconds": 15, "audio_mode": "mute",
+            }, [{"path": Path("single.mp4")}], folder)
+        command = run.call_args.args[0]
+        self.assertEqual(command[command.index("-t") + 1], "20.0")
+        self.assertNotIn("-shortest", command)
+        self.assertIn("00:00:20,000", srt.read_text(encoding="utf-8"))
 
     def test_clip_order_can_be_reversed(self):
         worker = Worker(self.config())

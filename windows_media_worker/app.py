@@ -526,16 +526,22 @@ class MediaWorkerApp(tk.Tk):
                     self._task_event("task_done", {"task": task, "output": "已同步 %s 条视频链接" % data["saved"]})
                 elif event == "selection_changed":
                     self._refresh_selection_tree()
-                elif event == "transcript_ready":
-                    task = data["task"]
-                    if task["id"] in self.pending_selections:
-                        self.pending_selections[task["id"]] = task
-                    self.selection_busy = False
-                    self._refresh_selection_tasks()
-                    self.write_log("已自动识别并保存 %s 个视频的中文" % data["count"])
-                    self.selection_workflow.select(0)
-                    self._project_dialog(task)
                 elif event == "project_translation":
+                    button = data["button"]
+                    try:
+                        if button.winfo_exists():
+                            button.config(state="normal")
+                        editor = data["editor"]
+                        if editor.winfo_exists() and not data.get("error"):
+                            editor.delete("1.0", "end")
+                            editor.insert("1.0", data["text"])
+                            if data.get("source_var"):
+                                data["source_var"].set("人工校验后的目标语译文")
+                    except tk.TclError:
+                        pass
+                    if data.get("error"):
+                        messagebox.showerror(APP_TITLE, data["error"])
+                elif event == "project_transcript":
                     button = data["button"]
                     try:
                         if button.winfo_exists():
@@ -653,20 +659,12 @@ class MediaWorkerApp(tk.Tk):
 
     def _project_dialog(self, task=None):
         existing = task or {}
-        edit_choices = {
-            "sequence": "顺序拼接", "reverse": "倒序拼接",
-            "random": "随机排序", "ai": "本地 AI 剪辑程序",
-        }
-        subtitle_choices = {
-            "none": "不添加字幕", "script": "使用选定文案",
-        }
         content_choices = {
             "original_transcript": "原视频中文",
             "translated_script": "人工校验后的目标语译文",
-            "project_script": "Odoo/项目脚本",
-            "keywords": "Odoo/项目关键词",
+            "project_script": "Odoo 传入文案",
+            "custom_script": "自写中文文案",
         }
-        audio_choices = {"original": "保留原声", "mute": "静音"}
         tts_choices = {
             "none": "不生成配音", "sherpa": "sherpa-onnx 本地音色",
             "volcengine": "火山引擎音色",
@@ -699,15 +697,9 @@ class MediaWorkerApp(tk.Tk):
             "target_language": tk.StringVar(value=existing.get("target_language") or "English"),
             "duration_seconds": tk.StringVar(value=str(existing.get("duration_seconds") or 15)),
             "aspect_ratio": tk.StringVar(value=existing.get("aspect_ratio") or "9:16"),
-            "edit_mode": tk.StringVar(value=edit_choices.get(existing.get("edit_mode") or "sequence")),
-            "subtitle_mode": tk.StringVar(value=subtitle_choices.get(existing.get("subtitle_mode"), subtitle_choices["script"])),
             "content_source": tk.StringVar(value=content_choices.get(
-                existing.get("content_source") or (
-                    "original_transcript" if existing.get("subtitle_mode") == "transcribe"
-                    else "project_script"
-                ),
+                existing.get("content_source"), content_choices["project_script"],
             )),
-            "audio_mode": tk.StringVar(value=audio_choices.get(existing.get("audio_mode") or "original")),
             "export_preset": tk.StringVar(value=preset_choices.get(existing.get("export_preset") or "douyin")),
             "transition": tk.StringVar(value="淡入淡出" if existing.get("transition") == "fade" else "无转场"),
             "tts_provider": tk.StringVar(value=tts_choices.get(
@@ -731,9 +723,6 @@ class MediaWorkerApp(tk.Tk):
         )
         output_rows = (
             ("画面比例", "aspect_ratio", ("9:16", "4:5", "1:1")),
-            ("剪辑方式", "edit_mode", tuple(edit_choices.values())),
-            ("字幕来源", "subtitle_mode", tuple(subtitle_choices.values())),
-            ("原视频声音", "audio_mode", tuple(audio_choices.values())),
             ("导出预设", "export_preset", tuple(preset_choices.values())),
             ("转场", "transition", ("无转场", "淡入淡出")),
             ("配音服务", "tts_provider", tuple(tts_choices.values())),
@@ -822,40 +811,105 @@ class MediaWorkerApp(tk.Tk):
         )
         widgets["content_source"].grid(row=0, column=1, columnspan=2, sticky="ew", pady=7)
         ttk.Label(content_form, text="原视频中文", width=20).grid(row=1, column=0, sticky="nw", pady=7)
-        original_transcript = tk.Text(content_form, height=7, wrap="word")
+        original_transcript = tk.Text(content_form, height=5, wrap="word")
         original_transcript.grid(row=1, column=1, columnspan=2, sticky="nsew", pady=7)
         original_transcript.insert("1.0", existing.get("original_transcript") or "")
 
-        translated_script = tk.Text(content_form, height=7, wrap="word")
+        translated_script = tk.Text(content_form, height=5, wrap="word")
         translated_script.grid(row=2, column=1, columnspan=2, sticky="nsew", pady=7)
         translated_script.insert("1.0", existing.get("translated_script") or "")
         ttk.Label(content_form, text="目标语人工校验译文", width=20).grid(row=2, column=0, sticky="nw", pady=7)
 
-        translate_button = ttk.Button(content_form, text="翻译原视频中文 → 目标语言")
-        translate_button.grid(row=3, column=1, sticky="w", pady=5)
+        transcript_button = ttk.Button(content_form, text="识别单条视频原声")
+        transcript_button.grid(row=3, column=1, sticky="w", pady=5)
+        translate_button = ttk.Button(content_form, text="翻译选定中文文案 → 目标语言")
+        translate_button.grid(row=3, column=2, sticky="e", pady=5)
 
-        ttk.Label(content_form, text="Odoo/项目脚本", width=20).grid(row=4, column=0, sticky="nw", pady=7)
-        script = tk.Text(content_form, height=7, wrap="word")
+        ttk.Label(content_form, text="Odoo 传入文案", width=20).grid(row=4, column=0, sticky="nw", pady=7)
+        script = tk.Text(content_form, height=5, wrap="word")
         script.grid(row=4, column=1, columnspan=2, sticky="nsew", pady=7)
         script.insert("1.0", existing.get("video_script") or existing.get("prompt") or "")
-        ttk.Label(content_form, text="Odoo/项目关键词", width=20).grid(row=5, column=0, sticky="w", pady=7)
-        ttk.Entry(content_form, textvariable=values["keywords"]).grid(row=5, column=1, columnspan=2, sticky="ew", pady=7)
+        ttk.Label(content_form, text="自写中文文案", width=20).grid(row=5, column=0, sticky="nw", pady=7)
+        custom_script = tk.Text(content_form, height=5, wrap="word")
+        custom_script.grid(row=5, column=1, columnspan=2, sticky="nsew", pady=7)
+        custom_script.insert("1.0", existing.get("custom_script") or "")
         ttk.Checkbutton(
             content_form, text="生成时将选定文案翻译为目标语言（人工校验译文不会重复翻译）", variable=translate,
         ).grid(row=6, column=1, columnspan=2, sticky="w", pady=5)
         ttk.Label(
             content_form,
-            text="下载完成后会自动识别原视频中文；翻译结果可继续人工修改，确认后再生成审核稿。",
+            text="单条视频可点击识别原声；多条视频固定按素材列表顺序拼接。翻译后人工校验，再生成配音字幕审核稿。",
             foreground="#666",
         ).grid(row=7, column=0, columnspan=3, sticky="w", pady=5)
         content_form.rowconfigure(1, weight=1)
         content_form.rowconfigure(2, weight=1)
         content_form.rowconfigure(4, weight=1)
+        content_form.rowconfigure(5, weight=1)
+
+        if existing.get("id") and existing.get("id") == self.selection_task_id:
+            task_rows = self.selection_store.get_many(self._selection_ids(default_all=True))
+        else:
+            task_rows = self.selection_store.list(existing["id"]) if existing.get("id") else []
+        workflow_label = (
+            "单条原声翻译" if len(task_rows) == 1 else
+            "多条顺序拼接" if len(task_rows) > 1 else "添加素材后自动判断"
+        )
+        project_notebook.tab(content_form, text="文案校验 · " + workflow_label)
+        if len(task_rows) != 1:
+            transcript_button.config(state="disabled")
+        if len(task_rows) > 1:
+            widgets["content_source"]["values"] = (
+                content_choices["project_script"], content_choices["custom_script"],
+                content_choices["translated_script"],
+            )
+            if values["content_source"].get() == content_choices["original_transcript"]:
+                values["content_source"].set(content_choices["project_script"])
+
+        def recognize_single_video():
+            rows = task_rows
+            if len(rows) != 1:
+                messagebox.showerror(APP_TITLE, "原声识别仅用于单条视频模式", parent=dialog)
+                return
+            transcript_button.config(state="disabled")
+            current = dict(existing)
+            current["source_language"] = values["source_language"].get().strip() or "Chinese"
+
+            def run_recognition():
+                try:
+                    updated, _count = self._recognize_task_rows(
+                        self.worker or Worker(self.config()), current, rows,
+                    )
+                    self.events.put(("project_transcript", {
+                        "button": transcript_button, "editor": original_transcript,
+                        "text": updated.get("original_transcript") or "",
+                    }))
+                except Exception as exc:
+                    self.events.put(("project_transcript", {
+                        "button": transcript_button, "editor": original_transcript,
+                        "error": str(exc),
+                    }))
+
+            threading.Thread(target=run_recognition, daemon=True).start()
+
+        transcript_button.config(command=recognize_single_video)
 
         def translate_original_text():
-            text = original_transcript.get("1.0", "end").strip()
+            source_key = next(
+                key for key, label in content_choices.items()
+                if label == values["content_source"].get()
+            )
+            candidates = {
+                "original_transcript": original_transcript.get("1.0", "end").strip(),
+                "project_script": script.get("1.0", "end").strip(),
+                "custom_script": custom_script.get("1.0", "end").strip(),
+                "translated_script": translated_script.get("1.0", "end").strip(),
+            }
+            if source_key == "translated_script":
+                messagebox.showinfo(APP_TITLE, "当前已选择人工校验译文，无需重复翻译", parent=dialog)
+                return
+            text = candidates.get(source_key, "")
             if not text:
-                messagebox.showerror(APP_TITLE, "原视频中文为空，请先下载视频并等待自动识别", parent=dialog)
+                messagebox.showerror(APP_TITLE, "选定的中文文案为空，请先填写或识别", parent=dialog)
                 return
             translate_button.config(state="disabled")
 
@@ -866,7 +920,7 @@ class MediaWorkerApp(tk.Tk):
                     )
                     self.events.put(("project_translation", {
                         "button": translate_button, "editor": translated_script,
-                        "text": result,
+                        "text": result, "source_var": values["content_source"],
                     }))
                 except Exception as exc:
                     self.events.put(("project_translation", {
@@ -904,10 +958,10 @@ class MediaWorkerApp(tk.Tk):
                     "source_language": values["source_language"].get().strip() or "Chinese",
                     "target_language": values["target_language"].get().strip() or "English",
                     "duration_seconds": duration, "aspect_ratio": preset_ratio,
-                    "edit_mode": next(key for key, label in edit_choices.items() if label == values["edit_mode"].get()),
-                    "subtitle_mode": next(key for key, label in subtitle_choices.items() if label == values["subtitle_mode"].get()),
+                    "edit_mode": "sequence",
+                    "subtitle_mode": "script",
                     "content_source": next(key for key, label in content_choices.items() if label == values["content_source"].get()),
-                    "audio_mode": next(key for key, label in audio_choices.items() if label == values["audio_mode"].get()),
+                    "audio_mode": "mute",
                     "export_preset": preset_key,
                     "transition": "fade" if values["transition"].get() == "淡入淡出" else "none",
                     "tts_provider": next(key for key, label in tts_choices.items() if label == values["tts_provider"].get()),
@@ -927,16 +981,17 @@ class MediaWorkerApp(tk.Tk):
                     "original_transcript": original_transcript.get("1.0", "end").strip(),
                     "translated_script": translated_script.get("1.0", "end").strip(),
                     "video_script": script.get("1.0", "end").strip(),
-                    "source_mode": next(
-                        key for key, label in content_choices.items()
-                        if label == values["content_source"].get()
-                    ),
+                    "custom_script": custom_script.get("1.0", "end").strip(),
                     "source_image_path": image_path,
                     "source_urls": [line.strip() for line in urls.get("1.0", "end").splitlines() if line.strip()],
                     "local_files": local_files,
                 })
                 if generate_review:
-                    Worker.selected_content_text(project)
+                    if existing.get("id"):
+                        clip_count = len(self._selection_ids(default_all=True))
+                    else:
+                        clip_count = len(set(project["source_urls"])) + len(set(local_files))
+                    project = Worker.prepare_edit_workflow(project, clip_count)
                 self.selection_store.update_task(project, status=existing.get("local_status") or "draft")
                 self.selection_store.add_text(task_id, "\n".join(project["source_urls"]))
                 self.selection_store.add_local_files(task_id, local_files)
@@ -1457,6 +1512,8 @@ class MediaWorkerApp(tk.Tk):
                     self.selection_store.update(row["id"], status="failed", error=str(exc))
                     raise
             if mix_after:
+                task = Worker.prepare_edit_workflow(task, len(rows))
+                self.selection_store.update_task(task)
                 for row in rows:
                     self.selection_store.update(row["id"], status="mixing", error="")
                 self.events.put(("selection_changed", {}))
@@ -1474,15 +1531,10 @@ class MediaWorkerApp(tk.Tk):
                     self.selection_store.update(row["id"], status="ready_review", error="")
                 self.events.put(("selection_mix_ready", {"task": task, "output": str(output)}))
             else:
-                try:
-                    updated, count = self._recognize_task_rows(
-                        worker, task, self.selection_store.list(task["id"]),
-                    )
-                    self.events.put(("transcript_ready", {"task": updated, "count": count}))
-                except Exception as exc:
-                    self.events.put(("selection_operation_error", {
-                        "error": "视频已下载，但自动识别中文失败：%s" % exc,
-                    }))
+                self.events.put(("selection_operation_done", {}))
+                self.events.put(("log", {
+                    "message": "视频下载完成；单条视频可在文案页面点击原声识别",
+                }))
         except Exception as exc:
             self.events.put(("log", {"message": "选片处理失败：" + str(exc)}))
             self.events.put(("selection_operation_error", {"error": str(exc)}))
