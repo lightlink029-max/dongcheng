@@ -345,6 +345,29 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertNotIn("-shortest", command)
         self.assertIn("00:00:20,000", srt.read_text(encoding="utf-8"))
 
+    def test_multi_video_resets_each_trimmed_clip_timestamp_before_concat(self):
+        config = self.config()
+        config["ffmpeg"] = "C:/test/ffmpeg.exe"
+        worker = Worker(config)
+        folder = Path(self.work_dir.name) / "normalized-sequence"
+        folder.mkdir()
+        with mock.patch.object(worker, "make_srt", return_value=None), \
+                mock.patch.object(worker, "probe_duration", side_effect=[12.0, 20.0, 12.0, 20.0]), \
+                mock.patch("worker.subprocess.run") as run:
+            worker.compose_video({
+                "workflow_mode": "multi_sequence_script",
+                "duration_seconds": 5, "audio_mode": "mute", "aspect_ratio": "9:16",
+            }, [
+                {"path": Path("one.mp4"), "trim_start": 2, "trim_end": 8},
+                {"path": Path("two.mp4"), "trim_start": 1, "trim_end": 0},
+            ], folder)
+        segment_commands = [call.args[0] for call in run.call_args_list[:2]]
+        self.assertIn("trim=start=2.000:end=8.000,setpts=PTS-STARTPTS", segment_commands[0][segment_commands[0].index("-vf") + 1])
+        self.assertIn("trim=start=1.000:end=20.000,setpts=PTS-STARTPTS", segment_commands[1][segment_commands[1].index("-vf") + 1])
+        final_command = run.call_args_list[-1].args[0]
+        self.assertIn(str(folder / "normalized-source.mp4"), final_command)
+        self.assertEqual(final_command[final_command.index("-t") + 1], "25.0")
+
     def test_clip_order_can_be_reversed(self):
         worker = Worker(self.config())
         clips = [Path("one.mp4"), Path("two.mp4")]
@@ -524,6 +547,10 @@ class WorkerLeaseTests(unittest.TestCase):
             task_id, output.with_name("output-v5.mp4"), status="ready_review", version_no=5,
         )
         self.assertEqual(store.next_render_version(task_id), 6)
+        latest = store.list_versions(task_id)[0]
+        store.delete_version(task_id, latest["id"])
+        self.assertEqual([item["version_no"] for item in store.list_versions(task_id)], [2, 1])
+        self.assertEqual(store.get_task(task_id)["result_path"], str(output.with_name("output-v2.mp4")))
 
     def test_clip_timeline_and_copyright_are_persisted(self):
         store = SelectionStore(Path(self.work_dir.name) / "timeline.db")

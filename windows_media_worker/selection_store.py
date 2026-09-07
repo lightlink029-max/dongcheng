@@ -248,6 +248,33 @@ class SelectionStore:
             result.append(value)
         return result
 
+    def delete_version(self, task_id, version_id):
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        with self._connect() as connection:
+            deleted = connection.execute(
+                "SELECT * FROM render_version WHERE id = ? AND task_id = ?",
+                (int(version_id), int(task_id)),
+            ).fetchone()
+            if not deleted:
+                return None
+            connection.execute("DELETE FROM render_version WHERE id = ?", (int(version_id),))
+            latest = connection.execute(
+                "SELECT * FROM render_version WHERE task_id = ? ORDER BY version_no DESC LIMIT 1",
+                (int(task_id),),
+            ).fetchone()
+            connection.execute(
+                """UPDATE selection_task
+                      SET result_path = ?, subtitle_path = ?, status = ?, updated_at = ?
+                    WHERE task_id = ?""",
+                (
+                    latest["result_path"] if latest else "",
+                    latest["subtitle_path"] if latest else "",
+                    "ready_review" if latest else "downloaded",
+                    now, int(task_id),
+                ),
+            )
+        return dict(deleted)
+
     def delete_task(self, task_id):
         with self._connect() as connection:
             connection.execute("DELETE FROM selected_video WHERE task_id = ?", (int(task_id),))

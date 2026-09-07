@@ -252,6 +252,12 @@ class MediaWorkerApp(tk.Tk):
             foreground="#666",
         ).pack(side="left", padx=18)
 
+        project_actions = ttk.LabelFrame(review_page, text="项目文件管理", padding=8)
+        project_actions.pack(fill="x", pady=(0, 10))
+        ttk.Button(project_actions, text="打开项目目录", command=self.open_project_folder).pack(side="left", padx=5)
+        ttk.Button(project_actions, text="删除本地项目", command=self.delete_local_project).pack(side="left", padx=5)
+        ttk.Label(project_actions, text="独立本地项目只保存在本机，不会自动上传。", foreground="#666").pack(side="left", padx=18)
+
         review_sources = ttk.LabelFrame(review_page, text="当前项目使用的视频素材", padding=8)
         review_sources.pack(fill="both", expand=True)
         self.review_source_tree = ttk.Treeview(
@@ -284,12 +290,8 @@ class MediaWorkerApp(tk.Tk):
         review_actions = ttk.Frame(review_versions)
         review_actions.pack(fill="x", pady=(8, 0))
         ttk.Button(review_actions, text="预览所选版本", command=self.preview_selected_version).pack(side="left", padx=5)
+        ttk.Button(review_actions, text="删除所选审核稿", command=self.delete_selected_version).pack(side="left", padx=5)
         ttk.Button(review_actions, text="确认回传最新审核稿", command=self.upload_result).pack(side="left", padx=5)
-        project_actions = ttk.LabelFrame(review_page, text="项目文件", padding=8)
-        project_actions.pack(fill="x", pady=(10, 0))
-        ttk.Button(project_actions, text="打开项目目录", command=self.open_project_folder).pack(side="left", padx=5)
-        ttk.Button(project_actions, text="删除本地项目", command=self.delete_local_project).pack(side="left", padx=5)
-        ttk.Label(project_actions, text="独立本地项目只保存在本机，不会自动上传。", foreground="#666").pack(side="left", padx=18)
 
         self.log = tk.Text(log_tab, wrap="word", state="disabled", font=("Consolas", 10))
         self.log.pack(fill="both", expand=True, padx=10, pady=10)
@@ -1430,6 +1432,48 @@ class MediaWorkerApp(tk.Tk):
                 self._open_local_path(version["result_path"])
             except Exception as exc:
                 messagebox.showerror(APP_TITLE, str(exc))
+
+    def delete_selected_version(self):
+        task = self._active_selection_task()
+        selected = self.render_tree.selection()
+        if not task or len(selected) != 1:
+            messagebox.showerror(APP_TITLE, "请先选择一份要删除的审核稿")
+            return
+        version = next(
+            (item for item in self.selection_store.list_versions(task["id"])
+             if item["id"] == int(selected[0])),
+            None,
+        )
+        if not version:
+            messagebox.showerror(APP_TITLE, "所选审核稿记录已不存在")
+            return
+        if not messagebox.askyesno(
+            APP_TITLE,
+            "确定永久删除 V%s 审核稿及其生成文件？" % version["version_no"],
+        ):
+            return
+        try:
+            result = Path(version["result_path"]).expanduser().resolve()
+            version_dir = result.parent
+            task_dir = (
+                Path(self.vars["work_dir"].get()).expanduser().resolve()
+                / str(int(task["id"]))
+            )
+            valid_name = (
+                version_dir.name == "mix-output"
+                or (
+                    version_dir.name.startswith("mix-output-v")
+                    and version_dir.name.removeprefix("mix-output-v").isdigit()
+                )
+            )
+            if result.exists():
+                if version_dir.parent != task_dir or not valid_name:
+                    raise RuntimeError("审核稿目录不在当前项目范围内，已中止删除")
+                shutil.rmtree(version_dir)
+            self.selection_store.delete_version(task["id"], version["id"])
+            self._refresh_selection_tree()
+        except Exception as exc:
+            messagebox.showerror(APP_TITLE, "删除审核稿失败：%s" % exc)
 
     def show_versions(self):
         task = self._active_selection_task()

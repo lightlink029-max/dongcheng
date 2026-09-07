@@ -426,6 +426,10 @@ class Worker:
         concat.write_text("".join(concat_lines), encoding="utf-8")
         output = job_dir / "output.mp4"
         duration = max(3, int(task.get("duration_seconds") or 15))
+        ratio = task.get("aspect_ratio", "9:16")
+        width, height = {
+            "9:16": (1080, 1920), "4:5": (1080, 1350), "1:1": (1080, 1080),
+        }.get(ratio, (1080, 1920))
         if task.get("workflow_mode") in ("single_voice_translation", "multi_sequence_script"):
             source_duration = 0.0
             for item in clip_specs:
@@ -435,6 +439,47 @@ class Worker:
                 source_duration += max(0.0, (end if end > 0 else clip_duration) - start)
             if source_duration > 0:
                 duration = source_duration
+
+        # The concat demuxer's inpoint/outpoint keeps source MP4 timestamps. With
+        # multiple trimmed clips that shifts burned subtitles and can corrupt the
+        # first frames at clip boundaries. Normalize each silent segment first so
+        # every clip starts at PTS 0 and has identical video parameters.
+        normalized_video = None
+        normalized_artifacts = []
+        if len(clip_specs) > 1 and task.get("audio_mode") == "mute":
+            normalized = []
+            for index, item in enumerate(clip_specs, 1):
+                clip_duration = self.probe_duration(item["path"])
+                start = max(0.0, float(item.get("trim_start") or 0))
+                requested_end = float(item.get("trim_end") or 0)
+                end = min(requested_end, clip_duration) if requested_end > 0 else clip_duration
+                if end <= start:
+                    raise ValueError("第 %s 条视频的出点必须大于入点" % index)
+                segment = job_dir / ("normalized-%02d.mp4" % index)
+                video_filter = (
+                    "trim=start=%.3f:end=%.3f,setpts=PTS-STARTPTS," % (start, end)
+                    + "scale=%s:%s:force_original_aspect_ratio=decrease," % (width, height)
+                    + "pad=%s:%s:(ow-iw)/2:(oh-ih)/2:black," % (width, height)
+                    + "setsar=1,fps=30,format=yuv420p"
+                )
+                subprocess.run([
+                    self.ffmpeg(), "-y", "-i", str(item["path"]), "-vf", video_filter,
+                    "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
+                    "-movflags", "+faststart", str(segment),
+                ], check=True, capture_output=True)
+                normalized.append(segment)
+                normalized_artifacts.append(segment)
+            normalized_list = job_dir / "normalized-concat.txt"
+            normalized_list.write_text("".join(
+                "file '%s'\n" % str(path.resolve()).replace(chr(39), chr(39) * 2)
+                for path in normalized
+            ), encoding="utf-8")
+            normalized_video = job_dir / "normalized-source.mp4"
+            normalized_artifacts.extend((normalized_list, normalized_video))
+            subprocess.run([
+                self.ffmpeg(), "-y", "-f", "concat", "-safe", "0",
+                "-i", str(normalized_list), "-c", "copy", str(normalized_video),
+            ], check=True, capture_output=True)
         speech_source = clip_specs[0]["path"]
         if task.get("subtitle_mode") == "transcribe" and asr_available(self.config.get("local_ai", {})):
             speech_source = job_dir / "speech-source.wav"
@@ -453,9 +498,7 @@ class Worker:
             srt = self.sync_voiceover_subtitles(
                 srt, voiceover, duration if preserve_source_duration else None,
             )
-        ratio = task.get("aspect_ratio", "9:16")
-        width, height = {"9:16": (1080, 1920), "4:5": (1080, 1350), "1:1": (1080, 1080)}.get(ratio, (1080, 1920))
-        filters = [
+        filters = [] if normalized_video else [
             f"scale={width}:{height}:force_original_aspect_ratio=decrease",
             f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black",
         ]
@@ -468,8 +511,12 @@ class Worker:
                 "force_style='FontName=Arial,FontSize=10,Outline=1.5,Shadow=0,"
                 "Alignment=8,MarginV=55'"
             )
-        vf = ",".join(filters)
-        command = [self.ffmpeg(), "-y", "-f", "concat", "-safe", "0", "-i", str(concat)]
+        vf = ",".join(filters) or "null"
+        command = [self.ffmpeg(), "-y"]
+        if normalized_video:
+            command += ["-i", str(normalized_video)]
+        else:
+            command += ["-f", "concat", "-safe", "0", "-i", str(concat)]
         if voiceover:
             command += ["-i", str(voiceover)]
         music = Path(task.get("background_music") or "").expanduser()
@@ -497,6 +544,8 @@ class Worker:
             command += ["-an"] if task.get("audio_mode") == "mute" else ["-c:a", "aac"]
         command.append(str(output))
         subprocess.run(command, check=True)
+        for artifact in normalized_artifacts:
+            artifact.unlink(missing_ok=True)
         return output, srt
 
     def video(self, task, job_dir):
