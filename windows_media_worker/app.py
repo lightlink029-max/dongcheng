@@ -274,6 +274,7 @@ class MediaWorkerApp(tk.Tk):
             self.render_tree.column(name, width=width, anchor="w")
         self.render_tree.pack(fill="both", expand=True)
         self.render_tree.bind("<Double-1>", lambda _event: self.preview_selected_version())
+        self.render_tree.bind("<<TreeviewSelect>>", lambda _event: self._refresh_review_sources())
         review_actions = ttk.Frame(review_versions)
         review_actions.pack(fill="x", pady=(8, 0))
         ttk.Button(review_actions, text="预览所选版本", command=self.preview_selected_version).pack(side="left", padx=5)
@@ -1047,9 +1048,31 @@ class MediaWorkerApp(tk.Tk):
                 tree.delete(item)
         if not task:
             return
-        rows = self.selection_store.list(task["id"])
         versions = self.selection_store.list_versions(task["id"])
-        source_ids = set(versions[0].get("source_video_ids") or []) if versions else set()
+        for version in versions:
+            self.render_tree.insert("", "end", iid=str(version["id"]), values=(
+                "V%s" % version["version_no"],
+                version["created_at"].replace("T", " ")[:19],
+                version["result_path"],
+            ))
+        if versions:
+            self.render_tree.selection_set(str(versions[0]["id"]))
+        self._refresh_review_sources()
+
+    def _refresh_review_sources(self):
+        for item in self.review_source_tree.get_children():
+            self.review_source_tree.delete(item)
+        task = self._active_selection_task()
+        if not task:
+            return
+        rows = self.selection_store.list(task["id"])
+        selected = self.render_tree.selection()
+        versions = self.selection_store.list_versions(task["id"])
+        version = next(
+            (item for item in versions if selected and item["id"] == int(selected[0])),
+            versions[0] if versions else None,
+        )
+        source_ids = set(version.get("source_video_ids") or []) if version else set()
         if not source_ids:
             source_ids = {row["id"] for row in rows}
         labels = {
@@ -1063,12 +1086,6 @@ class MediaWorkerApp(tk.Tk):
                     labels.get(row["status"], row["status"]),
                     row["url"],
                 ))
-        for version in versions:
-            self.render_tree.insert("", "end", iid=str(version["id"]), values=(
-                "V%s" % version["version_no"],
-                version["created_at"].replace("T", " ")[:19],
-                version["result_path"],
-            ))
 
     def _refresh_selection_summary(self):
         self.selection_summary.set("%s 条，选中 %s 条" % (
