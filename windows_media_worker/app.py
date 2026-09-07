@@ -735,7 +735,12 @@ class MediaWorkerApp(tk.Tk):
             page.columnconfigure(1, weight=1)
 
         def voice_label(profile):
-            return f"{profile['name']}（ID {profile['voice_id']}）"
+            details = []
+            for value in (profile.get("language"), profile.get("description")):
+                value = str(value or "").strip()
+                if value and value not in details:
+                    details.append(value)
+            return " · ".join([profile["name"], *details])
 
         existing_voice_profile = next((
             profile for profile in self._voice_profiles()
@@ -1033,10 +1038,7 @@ class MediaWorkerApp(tk.Tk):
                  if item["provider"] == provider_key and voice_label(item) == selected_label),
                 None,
             )
-            voice_hint.set(
-                "%s · %s" % (profile["name"], profile.get("description") or profile.get("language") or "")
-                if profile else ""
-            )
+            voice_hint.set(f"音色 ID：{profile['voice_id']}" if profile else "")
 
         quick_voice.bind("<<ComboboxSelected>>", update_voice_hint)
         widgets["tts_voice"].bind("<<ComboboxSelected>>", update_voice_hint)
