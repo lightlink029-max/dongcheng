@@ -79,6 +79,22 @@ class WorkerLeaseTests(unittest.TestCase):
             "heartbeat_seconds": 1,
         }
 
+    def test_bitbrowser_sync_only_uploads_allowlisted_metadata(self):
+        worker = Worker(self.config())
+        response = mock.Mock()
+        response.json.return_value = {"ok": True, "saved": 1}
+        with mock.patch.object(worker, "api", return_value=response) as api:
+            result = worker.sync_bitbrowser_environments([{
+                "id": "browser-1", "seq": 1, "name": "TikTok US",
+                "userName": "seller", "password": "must-not-upload",
+                "cookie": "must-not-upload",
+            }])
+        payload = api.call_args.kwargs["json"]
+        self.assertEqual(result["saved"], 1)
+        self.assertEqual(payload["worker_id"], "media-test-01")
+        self.assertNotIn("password", payload["environments"][0])
+        self.assertNotIn("cookie", payload["environments"][0])
+
     def test_worker_identity_is_sent_with_every_request(self):
         worker = Worker(self.config())
         self.assertEqual(worker.headers["X-LightLink-Worker-ID"], "media-test-01")

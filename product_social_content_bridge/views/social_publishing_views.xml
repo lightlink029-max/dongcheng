@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_psc_social_publishing_account_list" model="ir.ui.view">
+        <field name="name">psc.social.publishing.account.list</field>
+        <field name="model">psc.social.publishing.account</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="not active" decoration-success="last_validation_state == 'passed'" decoration-danger="last_validation_state == 'failed'">
+                <field name="name"/><field name="product_line_id"/><field name="channel_id"/><field name="platform"/>
+                <field name="target_market_id"/><field name="username"/><field name="worker_node_id"/>
+                <field name="bitbrowser_environment_id"/><field name="expected_ip"/><field name="expected_country_id"/>
+                <field name="last_validation_state" widget="badge"/><field name="active"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_psc_social_publishing_account_form" model="ir.ui.view">
+        <field name="name">psc.social.publishing.account.form</field>
+        <field name="model">psc.social.publishing.account</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group string="账号与渠道">
+                            <field name="product_line_id"/><field name="channel_id"/><field name="platform"/>
+                            <field name="target_market_id"/><field name="username"/><field name="profile_url" widget="url"/><field name="active"/>
+                        </group>
+                        <group string="本地发布环境">
+                            <field name="worker_node_id"/><field name="bitbrowser_environment_id" options="{'no_create': True}"/>
+                            <field name="bitbrowser_id"/><field name="expected_ip"/><field name="expected_country_id"/>
+                            <field name="daily_publish_limit"/>
+                        </group>
+                    </group>
+                    <group string="最后校验">
+                        <field name="last_validation_state" widget="badge"/><field name="last_validation_at"/>
+                        <field name="last_validation_message"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_psc_local_worker_node_list" model="ir.ui.view">
+        <field name="name">psc.local.worker.node.list</field><field name="model">psc.local.worker.node</field>
+        <field name="arch" type="xml"><list create="false"><field name="name"/><field name="last_seen_at"/><field name="active"/></list></field>
+    </record>
+    <record id="view_psc_local_worker_node_form" model="ir.ui.view">
+        <field name="name">psc.local.worker.node.form</field><field name="model">psc.local.worker.node</field>
+        <field name="arch" type="xml"><form create="false"><sheet><group><field name="name"/><field name="last_seen_at"/><field name="active"/></group><field name="bitbrowser_environment_ids"><list create="false" delete="false"><field name="sequence"/><field name="name"/><field name="platform"/><field name="username"/><field name="state" widget="badge"/><field name="available"/><field name="environment_id"/><field name="last_synced_at"/></list></field></sheet></form></field>
+    </record>
+    <record id="view_psc_bitbrowser_environment_list" model="ir.ui.view">
+        <field name="name">psc.bitbrowser.environment.list</field><field name="model">psc.bitbrowser.environment</field>
+        <field name="arch" type="xml"><list create="false" delete="false"><field name="worker_node_id"/><field name="sequence"/><field name="name"/><field name="platform"/><field name="username"/><field name="state" widget="badge"/><field name="available"/><field name="environment_id"/><field name="last_synced_at"/></list></field>
+    </record>
+    <record id="action_psc_social_publishing_accounts" model="ir.actions.act_window">
+        <field name="name">社媒账号</field><field name="res_model">psc.social.publishing.account</field><field name="view_mode">list,form</field>
+    </record>
+    <record id="action_psc_local_worker_nodes" model="ir.actions.act_window">
+        <field name="name">Windows 工作节点</field><field name="res_model">psc.local.worker.node</field><field name="view_mode">list,form</field>
+    </record>
+    <record id="action_psc_bitbrowser_environments" model="ir.actions.act_window">
+        <field name="name">比特浏览器环境</field><field name="res_model">psc.bitbrowser.environment</field><field name="view_mode">list</field>
+    </record>
+</odoo>

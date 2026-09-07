@@ -547,11 +547,20 @@ class MediaWorkerApp(tk.Tk):
         except Exception as exc:
             messagebox.showerror(APP_TITLE, str(exc))
             return
+        worker_config = self.config()
+        worker = Worker(worker_config) if worker_config.get("worker_token") else None
         def run():
             try:
                 environments = client.list_browsers()
+                odoo_error = ""
+                if worker:
+                    try:
+                        worker.sync_bitbrowser_environments(environments)
+                    except Exception as exc:
+                        odoo_error = str(exc)
                 self.events.put(("bitbrowser_sync", {
                     "ok": True, "environments": environments, "quiet": quiet,
+                    "odoo_error": odoo_error, "odoo_synced": bool(worker and not odoo_error),
                 }))
             except Exception as exc:
                 self.events.put(("bitbrowser_sync", {
@@ -695,8 +704,18 @@ class MediaWorkerApp(tk.Tk):
                     if data["ok"]:
                         self._render_bitbrowser_environments(data["environments"])
                         self.write_log("已同步 %s 个比特浏览器环境" % len(data["environments"]))
+                        if data.get("odoo_synced"):
+                            self.write_log("比特环境已同步到 Odoo")
+                        elif data.get("odoo_error"):
+                            self.write_log("比特环境同步到 Odoo 失败：" + data["odoo_error"])
                         if not data.get("quiet"):
-                            messagebox.showinfo(APP_TITLE, "环境同步完成，共 %s 个" % len(data["environments"]))
+                            suffix = "\n已同步到 Odoo" if data.get("odoo_synced") else (
+                                "\n本地已同步，但 Odoo 同步失败：" + data["odoo_error"]
+                                if data.get("odoo_error") else ""
+                            )
+                            messagebox.showinfo(APP_TITLE, "环境同步完成，共 %s 个%s" % (
+                                len(data["environments"]), suffix,
+                            ))
                     elif not data.get("quiet"):
                         messagebox.showerror(APP_TITLE, data.get("error") or "比特环境同步失败")
                     else:

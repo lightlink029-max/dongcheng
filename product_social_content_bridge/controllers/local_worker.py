@@ -36,10 +36,79 @@ class LocalWorkerController(http.Controller):
             raise Forbidden()
         return task
 
+    def _touch_worker_node(self, worker_id):
+        if not worker_id:
+            return request.env["psc.local.worker.node"]
+        model = request.env["psc.local.worker.node"].sudo()
+        node = model.search([("name", "=", worker_id)], limit=1)
+        values = {"last_seen_at": fields.Datetime.now(), "active": True}
+        if node:
+            node.write(values)
+        else:
+            node = model.create({"name": worker_id, **values})
+        return node
+
     @http.route("/psc/local-worker/ping", type="http", auth="none", methods=["GET"], csrf=False)
     def ping(self, **kwargs):
         self._authorize()
+        self._touch_worker_node(self._worker_id())
         return request.make_json_response({"ok": True})
+
+    @http.route("/psc/local-worker/bitbrowser/environments", type="http", auth="none", methods=["POST"], csrf=False)
+    def sync_bitbrowser_environments(self, **kwargs):
+        self._authorize()
+        payload = request.httprequest.get_json(silent=True) or {}
+        worker_id = self._worker_id() or str(payload.get("worker_id") or "").strip()[:128]
+        if not worker_id:
+            raise Forbidden()
+        environments = payload.get("environments") or []
+        if not isinstance(environments, list) or len(environments) > 500:
+            return request.make_json_response({"error": "invalid_environments"}, status=400)
+        node = self._touch_worker_node(worker_id)
+        model = request.env["psc.bitbrowser.environment"].sudo()
+        incoming_ids = []
+        now = fields.Datetime.now()
+        for item in environments:
+            if not isinstance(item, dict):
+                continue
+            environment_id = str(item.get("id") or item.get("browserId") or "").strip()[:128]
+            if not environment_id:
+                continue
+            environment = model.search([("environment_id", "=", environment_id)], limit=1)
+            if environment and environment.worker_node_id != node:
+                return request.make_json_response({
+                    "error": "environment_worker_conflict", "environment_id": environment_id,
+                }, status=409)
+            raw_state = item.get("isOpen", item.get("opened", item.get("status", "")))
+            opened = raw_state is True or str(raw_state).lower() in (
+                "1", "true", "open", "opened", "running",
+            )
+            try:
+                sequence = int(item.get("seq") or 0)
+            except (TypeError, ValueError):
+                sequence = 0
+            values = {
+                "name": str(item.get("name") or ("比特环境 %s" % (sequence or environment_id[:8])))[:256],
+                "environment_id": environment_id,
+                "sequence": sequence,
+                "worker_node_id": node.id,
+                "platform": str(item.get("platform") or item.get("platformName") or "")[:256],
+                "username": str(item.get("userName") or item.get("username") or "")[:256],
+                "state": "open" if opened else "closed",
+                "available": True,
+                "last_synced_at": now,
+            }
+            if environment:
+                environment.write(values)
+            else:
+                model.create(values)
+            incoming_ids.append(environment_id)
+        missing = node.bitbrowser_environment_ids.filtered(
+            lambda environment: environment.environment_id not in incoming_ids
+        )
+        if missing:
+            missing.write({"available": False, "state": "unknown", "last_synced_at": now})
+        return request.make_json_response({"ok": True, "saved": len(incoming_ids)})
 
     @http.route("/psc/local-worker/claim", type="http", auth="none", methods=["POST"], csrf=False)
     def claim(self, **kwargs):
@@ -48,6 +117,7 @@ class LocalWorkerController(http.Controller):
         worker_id = self._worker_id() or str(payload.get("worker_id") or "")[:128]
         if not worker_id:
             raise Forbidden()
+        self._touch_worker_node(worker_id)
         task_model = request.env["psc.local.production.task"].sudo()
         now = fields.Datetime.now()
         stale_tasks = task_model.search([

@@ -93,6 +93,20 @@ class Worker:
     def health(self):
         return self.api("GET", "/psc/local-worker/ping").json()
 
+    def sync_bitbrowser_environments(self, environments):
+        safe_environments = []
+        for item in environments:
+            if not isinstance(item, dict):
+                continue
+            safe_environments.append({key: item.get(key) for key in (
+                "id", "browserId", "seq", "name", "platform", "platformName",
+                "userName", "username", "isOpen", "opened", "status",
+            ) if key in item})
+        return self.api(
+            "POST", "/psc/local-worker/bitbrowser/environments",
+            json={"worker_id": self.worker_id, "environments": safe_environments},
+        ).json()
+
     def progress(self, task_id, progress, message):
         self.api("POST", f"/psc/local-worker/tasks/{task_id}/progress",
                  json={"progress": progress, "message": message})
