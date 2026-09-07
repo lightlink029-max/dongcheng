@@ -21,6 +21,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk
 
+from bitbrowser_adapter import BitBrowserClient
 from douyin_adapter import _dpapi, capture_login, has_login, open_keyword_search, self_test
 from mumu_adapter import MumuBridge, check_mumu, install_selector_apk
 from selection_store import SelectionStore
@@ -120,6 +121,10 @@ class MediaWorkerApp(tk.Tk):
                 ("mumu_player", "MuMu 主程序（可自动检测）", ""),
                 ("mumu_serial", "MuMu ADB 地址（留空自动检测）", ""),
             ]),
+            ("比特浏览器", [
+                ("bitbrowser_url", "Local API 地址", "http://127.0.0.1:54345"),
+                ("bitbrowser_token", "API Token（可选）", ""),
+            ]),
         ]
         config_notebook = ttk.Notebook(config_tab)
         config_notebook.pack(fill="both", expand=True, padx=20, pady=(20, 5))
@@ -132,7 +137,7 @@ class MediaWorkerApp(tk.Tk):
                 ttk.Label(form, text=label, width=24).grid(row=row, column=0, sticky="w", pady=8)
                 var = tk.StringVar(value=default)
                 self.vars[key] = var
-                show = "*" if key in ("worker_token", "volc_api_key") else ""
+                show = "*" if key in ("worker_token", "volc_api_key", "bitbrowser_token") else ""
                 ttk.Entry(form, textvariable=var, show=show).grid(row=row, column=1, sticky="ew", pady=8)
                 if key == "work_dir":
                     ttk.Button(form, text="选择", command=self._choose_dir).grid(row=row, column=2, padx=8)
@@ -160,6 +165,25 @@ class MediaWorkerApp(tk.Tk):
         mumu_actions.grid(row=3, column=1, sticky="w", pady=8)
         ttk.Button(mumu_actions, text="检测MuMu", command=self.test_mumu).pack(side="left", padx=(0, 8))
         ttk.Button(mumu_actions, text="安装/更新选片APK", command=self.install_selector).pack(side="left")
+        bitbrowser_form = config_frames["比特浏览器"]
+        bitbrowser_actions = ttk.Frame(bitbrowser_form)
+        bitbrowser_actions.grid(row=2, column=1, sticky="w", pady=(8, 12))
+        ttk.Button(bitbrowser_actions, text="测试连接", command=self.test_bitbrowser).pack(side="left", padx=(0, 8))
+        ttk.Button(bitbrowser_actions, text="同步环境", command=self.sync_bitbrowser_environments).pack(side="left", padx=(0, 8))
+        ttk.Button(bitbrowser_actions, text="启动所选环境", command=self.open_bitbrowser_environment).pack(side="left", padx=(0, 8))
+        ttk.Button(bitbrowser_actions, text="关闭所选环境", command=self.close_bitbrowser_environment).pack(side="left")
+        self.bitbrowser_tree = ttk.Treeview(
+            bitbrowser_form, columns=("seq", "name", "platform", "username", "status", "id"),
+            show="headings", height=10, selectmode="browse",
+        )
+        for name, title, width in (
+            ("seq", "序号", 60), ("name", "环境名称", 170), ("platform", "平台", 170),
+            ("username", "账号", 150), ("status", "状态", 80), ("id", "环境 ID", 260),
+        ):
+            self.bitbrowser_tree.heading(name, text=title)
+            self.bitbrowser_tree.column(name, width=width, anchor="w")
+        self.bitbrowser_tree.grid(row=3, column=0, columnspan=3, sticky="nsew", pady=(0, 8))
+        bitbrowser_form.rowconfigure(3, weight=1)
         controls = ttk.Frame(config_tab, padding=(20, 5))
         controls.pack(fill="x")
         ttk.Button(controls, text="保存配置", command=self.save).pack(side="left", padx=4)
@@ -343,6 +367,10 @@ class MediaWorkerApp(tk.Tk):
             "mumu_adb": self.vars["mumu_adb"].get().strip(),
             "mumu_player": self.vars["mumu_player"].get().strip(),
             "mumu_serial": self.vars["mumu_serial"].get().strip(),
+            "bitbrowser": {
+                "url": self.vars["bitbrowser_url"].get().strip(),
+                "token": self.vars["bitbrowser_token"].get().strip(),
+            },
             "selector_port": self.selector_bridge.port,
             "selector_token": self.selector_token,
             "local_ai": {"ollama_url": self.vars["ollama_url"].get().strip(),
@@ -375,6 +403,13 @@ class MediaWorkerApp(tk.Tk):
                     _dpapi(api_key.encode("utf-8"), True)
                 ).decode("ascii")
             persisted["speech"] = speech
+            bitbrowser = dict(persisted.get("bitbrowser", {}))
+            bitbrowser_token = bitbrowser.pop("token", "")
+            if bitbrowser_token:
+                bitbrowser["token_dpapi"] = base64.b64encode(
+                    _dpapi(bitbrowser_token.encode("utf-8"), True)
+                ).decode("ascii")
+            persisted["bitbrowser"] = bitbrowser
             CONFIG_PATH.write_text(json.dumps(persisted, ensure_ascii=False, indent=2), encoding="utf-8")
             self._set_autostart(self.autostart.get())
             if not quiet: messagebox.showinfo(APP_TITLE, "配置已保存")
@@ -398,7 +433,15 @@ class MediaWorkerApp(tk.Tk):
                 encrypted = speech.get("volc_api_key_dpapi")
                 if encrypted:
                     speech["volc_api_key"] = _dpapi(base64.b64decode(encrypted), False).decode("utf-8")
+                bitbrowser = dict(data.get("bitbrowser", {}))
+                bitbrowser_token = bitbrowser.get("token_dpapi")
+                if bitbrowser_token:
+                    bitbrowser["token"] = _dpapi(
+                        base64.b64decode(bitbrowser_token), False,
+                    ).decode("utf-8")
                 flat = dict(data); flat.update(data.get("local_ai", {})); flat.update(speech)
+                flat.update({"bitbrowser_url": bitbrowser.get("url", ""),
+                             "bitbrowser_token": bitbrowser.get("token", "")})
                 for key, var in self.vars.items():
                     if key in flat: var.set(str(flat[key]))
             except Exception as exc: self.write_log("配置读取失败：" + str(exc))
@@ -476,6 +519,100 @@ class MediaWorkerApp(tk.Tk):
                 self.events.put(("mumu", {"ok": False, "error": str(exc)}))
         threading.Thread(target=run, daemon=True).start()
 
+    def _bitbrowser_client(self):
+        return BitBrowserClient(
+            self.vars["bitbrowser_url"].get().strip(),
+            self.vars["bitbrowser_token"].get().strip(),
+        )
+
+    def test_bitbrowser(self):
+        if not self.save(quiet=True): return
+        try:
+            client = self._bitbrowser_client()
+        except Exception as exc:
+            messagebox.showerror(APP_TITLE, str(exc))
+            return
+        def run():
+            try:
+                client.health()
+                self.events.put(("bitbrowser_connection", {"ok": True}))
+            except Exception as exc:
+                self.events.put(("bitbrowser_connection", {"ok": False, "error": str(exc)}))
+        threading.Thread(target=run, daemon=True).start()
+
+    def sync_bitbrowser_environments(self, quiet=False):
+        if not self.save(quiet=True): return
+        try:
+            client = self._bitbrowser_client()
+        except Exception as exc:
+            messagebox.showerror(APP_TITLE, str(exc))
+            return
+        def run():
+            try:
+                environments = client.list_browsers()
+                self.events.put(("bitbrowser_sync", {
+                    "ok": True, "environments": environments, "quiet": quiet,
+                }))
+            except Exception as exc:
+                self.events.put(("bitbrowser_sync", {
+                    "ok": False, "error": str(exc), "quiet": quiet,
+                }))
+        threading.Thread(target=run, daemon=True).start()
+
+    def _selected_bitbrowser_id(self):
+        selected = self.bitbrowser_tree.selection()
+        if len(selected) != 1:
+            raise ValueError("请先在列表中选择一个比特环境")
+        return str(self.bitbrowser_tree.item(selected[0], "values")[-1])
+
+    def _run_bitbrowser_environment_action(self, operation):
+        try:
+            browser_id = self._selected_bitbrowser_id()
+        except ValueError as exc:
+            messagebox.showerror(APP_TITLE, str(exc))
+            return
+        if not self.save(quiet=True): return
+        try:
+            client = self._bitbrowser_client()
+        except Exception as exc:
+            messagebox.showerror(APP_TITLE, str(exc))
+            return
+        def run():
+            try:
+                result = (
+                    client.open_browser(browser_id) if operation == "open"
+                    else client.close_browser(browser_id)
+                )
+                self.events.put(("bitbrowser_action", {
+                    "ok": True, "operation": operation, "id": browser_id, "result": result,
+                }))
+            except Exception as exc:
+                self.events.put(("bitbrowser_action", {
+                    "ok": False, "operation": operation, "id": browser_id, "error": str(exc),
+                }))
+        threading.Thread(target=run, daemon=True).start()
+
+    def open_bitbrowser_environment(self):
+        self._run_bitbrowser_environment_action("open")
+
+    def close_bitbrowser_environment(self):
+        self._run_bitbrowser_environment_action("close")
+
+    def _render_bitbrowser_environments(self, environments):
+        self.bitbrowser_tree.delete(*self.bitbrowser_tree.get_children())
+        for browser in environments:
+            raw_status = browser.get("isOpen", browser.get("opened", browser.get("status", "")))
+            opened = raw_status is True or str(raw_status).lower() in (
+                "1", "true", "open", "opened", "running",
+            )
+            self.bitbrowser_tree.insert("", "end", values=(
+                browser.get("seq", ""), browser.get("name", ""),
+                browser.get("platform", browser.get("platformName", "")),
+                browser.get("userName", browser.get("username", "")),
+                "已启动" if opened else "已关闭",
+                browser.get("id", browser.get("browserId", "")),
+            ))
+
     def install_selector(self):
         if not self.save(quiet=True): return
         base = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]
@@ -549,6 +686,33 @@ class MediaWorkerApp(tk.Tk):
                         messagebox.showinfo(APP_TITLE, "MuMu连接成功\nADB：%s\n设备：%s" % (result["adb"], result["serial"]))
                     else:
                         messagebox.showerror(APP_TITLE, data.get("error") or "MuMu连接失败")
+                elif event == "bitbrowser_connection":
+                    if data["ok"]:
+                        messagebox.showinfo(APP_TITLE, "比特 Local API 连接成功")
+                    else:
+                        messagebox.showerror(APP_TITLE, data.get("error") or "比特 Local API 连接失败")
+                elif event == "bitbrowser_sync":
+                    if data["ok"]:
+                        self._render_bitbrowser_environments(data["environments"])
+                        self.write_log("已同步 %s 个比特浏览器环境" % len(data["environments"]))
+                        if not data.get("quiet"):
+                            messagebox.showinfo(APP_TITLE, "环境同步完成，共 %s 个" % len(data["environments"]))
+                    elif not data.get("quiet"):
+                        messagebox.showerror(APP_TITLE, data.get("error") or "比特环境同步失败")
+                    else:
+                        self.write_log("比特环境同步失败：" + (data.get("error") or "未知错误"))
+                elif event == "bitbrowser_action":
+                    if data["ok"]:
+                        action = "启动" if data["operation"] == "open" else "关闭"
+                        result_data = data.get("result", {}).get("data", {})
+                        endpoint = result_data.get("http") or result_data.get("ws") or ""
+                        self.write_log("比特环境 %s 已%s%s" % (
+                            data["id"], action, ("，调试地址：" + endpoint) if endpoint else "",
+                        ))
+                        messagebox.showinfo(APP_TITLE, "比特环境已%s" % action)
+                        self.sync_bitbrowser_environments(quiet=True)
+                    else:
+                        messagebox.showerror(APP_TITLE, data.get("error") or "比特环境操作失败")
                 elif event == "selector_installed":
                     if data["ok"]:
                         messagebox.showinfo(APP_TITLE, "LightLink 选片 APK 已安装/更新到 MuMu")
