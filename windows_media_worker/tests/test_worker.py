@@ -551,6 +551,12 @@ class WorkerLeaseTests(unittest.TestCase):
         store.delete_version(task_id, latest["id"])
         self.assertEqual([item["version_no"] for item in store.list_versions(task_id)], [2, 1])
         self.assertEqual(store.get_task(task_id)["result_path"], str(output.with_name("output-v2.mp4")))
+        remaining = store.list_versions(task_id)
+        deleted = store.delete_versions(task_id, [item["id"] for item in remaining])
+        self.assertEqual(len(deleted), 2)
+        self.assertEqual(store.list_versions(task_id), [])
+        self.assertEqual(store.get_task(task_id)["result_path"], "")
+        self.assertEqual(store.get_task(task_id)["local_status"], "downloaded")
 
     def test_clip_timeline_and_copyright_are_persisted(self):
         store = SelectionStore(Path(self.work_dir.name) / "timeline.db")

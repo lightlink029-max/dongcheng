@@ -248,16 +248,23 @@ class SelectionStore:
             result.append(value)
         return result
 
-    def delete_version(self, task_id, version_id):
+    def delete_versions(self, task_id, version_ids):
+        values = sorted({int(value) for value in version_ids})
+        if not values:
+            return []
         now = datetime.now().astimezone().isoformat(timespec="seconds")
         with self._connect() as connection:
+            placeholders = ",".join("?" for _value in values)
             deleted = connection.execute(
-                "SELECT * FROM render_version WHERE id = ? AND task_id = ?",
-                (int(version_id), int(task_id)),
-            ).fetchone()
+                f"SELECT * FROM render_version WHERE task_id = ? AND id IN ({placeholders})",
+                (int(task_id), *values),
+            ).fetchall()
             if not deleted:
-                return None
-            connection.execute("DELETE FROM render_version WHERE id = ?", (int(version_id),))
+                return []
+            connection.execute(
+                f"DELETE FROM render_version WHERE task_id = ? AND id IN ({placeholders})",
+                (int(task_id), *values),
+            )
             latest = connection.execute(
                 "SELECT * FROM render_version WHERE task_id = ? ORDER BY version_no DESC LIMIT 1",
                 (int(task_id),),
@@ -273,7 +280,11 @@ class SelectionStore:
                     now, int(task_id),
                 ),
             )
-        return dict(deleted)
+        return [dict(row) for row in deleted]
+
+    def delete_version(self, task_id, version_id):
+        deleted = self.delete_versions(task_id, [version_id])
+        return deleted[0] if deleted else None
 
     def delete_task(self, task_id):
         with self._connect() as connection:

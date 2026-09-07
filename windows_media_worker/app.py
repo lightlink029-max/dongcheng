@@ -279,10 +279,15 @@ class MediaWorkerApp(tk.Tk):
         review_actions = ttk.Frame(review_versions)
         review_actions.pack(fill="x", pady=(0, 8))
         ttk.Button(review_actions, text="预览所选版本", command=self.preview_selected_version).pack(side="left", padx=5)
-        ttk.Button(review_actions, text="删除所选审核稿", command=self.delete_selected_version).pack(side="left", padx=5)
+        ttk.Button(
+            review_actions, text="全选审核稿",
+            command=lambda: self.render_tree.selection_set(self.render_tree.get_children()),
+        ).pack(side="left", padx=5)
+        ttk.Button(review_actions, text="批量删除所选审核稿", command=self.delete_selected_version).pack(side="left", padx=5)
         ttk.Button(review_actions, text="确认回传最新审核稿", command=self.upload_result).pack(side="left", padx=5)
         self.render_tree = ttk.Treeview(
-            review_versions, columns=("version", "time", "path"), show="headings", height=5,
+            review_versions, columns=("version", "time", "path"), show="headings",
+            selectmode="extended", height=5,
         )
         for name, title, width in (
             ("version", "版本", 90), ("time", "生成时间", 180), ("path", "成片文件", 740),
@@ -1436,41 +1441,44 @@ class MediaWorkerApp(tk.Tk):
     def delete_selected_version(self):
         task = self._active_selection_task()
         selected = self.render_tree.selection()
-        if not task or len(selected) != 1:
-            messagebox.showerror(APP_TITLE, "请先选择一份要删除的审核稿")
+        if not task or not selected:
+            messagebox.showerror(APP_TITLE, "请先选择要删除的审核稿；可按 Ctrl 或 Shift 多选")
             return
-        version = next(
-            (item for item in self.selection_store.list_versions(task["id"])
-             if item["id"] == int(selected[0])),
-            None,
-        )
-        if not version:
+        selected_ids = {int(value) for value in selected}
+        versions = [
+            item for item in self.selection_store.list_versions(task["id"])
+            if item["id"] in selected_ids
+        ]
+        if not versions:
             messagebox.showerror(APP_TITLE, "所选审核稿记录已不存在")
             return
+        version_names = "、".join("V%s" % item["version_no"] for item in versions)
         if not messagebox.askyesno(
             APP_TITLE,
-            "确定永久删除 V%s 审核稿及其生成文件？" % version["version_no"],
+            "确定永久删除以下 %s 份审核稿及其生成文件？\n%s" %
+            (len(versions), version_names),
         ):
             return
         try:
-            result = Path(version["result_path"]).expanduser().resolve()
-            version_dir = result.parent
-            task_dir = (
+            task_dirs = {
                 Path(self.vars["work_dir"].get()).expanduser().resolve()
-                / str(int(task["id"]))
-            )
-            valid_name = (
-                version_dir.name == "mix-output"
-                or (
-                    version_dir.name.startswith("mix-output-v")
-                    and version_dir.name.removeprefix("mix-output-v").isdigit()
-                )
-            )
-            if result.exists():
-                if version_dir.parent != task_dir or not valid_name:
+                / str(int(task["id"])),
+                (app_dir() / "jobs" / str(int(task["id"]))).resolve(),
+            }
+            version_dirs = set()
+            for version in versions:
+                result = Path(version["result_path"]).expanduser().resolve()
+                version_dir = result.parent
+                if result.exists() and (
+                    version_dir.parent not in task_dirs
+                    or not version_dir.name.startswith("mix-output")
+                ):
                     raise RuntimeError("审核稿目录不在当前项目范围内，已中止删除")
+                if result.exists():
+                    version_dirs.add(version_dir)
+            for version_dir in version_dirs:
                 shutil.rmtree(version_dir)
-            self.selection_store.delete_version(task["id"], version["id"])
+            self.selection_store.delete_versions(task["id"], selected_ids)
             self._refresh_selection_tree()
         except Exception as exc:
             messagebox.showerror(APP_TITLE, "删除审核稿失败：%s" % exc)
