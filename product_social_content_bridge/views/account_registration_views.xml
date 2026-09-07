@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_psc_email_asset_list" model="ir.ui.view">
+        <field name="name">psc.email.asset.list</field><field name="model">psc.email.asset</field>
+        <field name="arch" type="xml"><list><field name="email"/><field name="provider"/><field name="product_line_id"/><field name="target_market_id"/><field name="user_id"/><field name="recovery_email_configured"/><field name="recovery_phone_configured"/><field name="two_factor_state" widget="badge"/><field name="active"/></list></field>
+    </record>
+    <record id="view_psc_email_asset_form" model="ir.ui.view">
+        <field name="name">psc.email.asset.form</field><field name="model">psc.email.asset</field>
+        <field name="arch" type="xml"><form><sheet><div class="oe_title"><h1><field name="email" placeholder="name@example.com"/></h1></div><group><group string="归属"><field name="provider"/><field name="product_line_id"/><field name="target_market_id"/><field name="user_id"/><field name="active"/></group><group string="安全状态（只记录状态）"><field name="recovery_email_configured"/><field name="recovery_phone_configured"/><field name="two_factor_state"/></group></group><group string="备注（禁止填写密码、Cookie、手机号和 2FA 密钥）"><field name="notes" placeholder="只填写非敏感说明"/></group><field name="registration_task_ids" readonly="1"><list><field name="name"/><field name="channel_id"/><field name="state" widget="badge"/><field name="create_date"/></list></field></sheet></form></field>
+    </record>
+    <record id="view_psc_social_registration_task_list" model="ir.ui.view">
+        <field name="name">psc.social.registration.task.list</field><field name="model">psc.social.registration.task</field>
+        <field name="arch" type="xml"><list decoration-success="state == 'done'" decoration-danger="state in ('failed', 'environment_mismatch')"><field name="name"/><field name="email_asset_id"/><field name="channel_id"/><field name="worker_node_id"/><field name="bitbrowser_environment_id"/><field name="expected_ip"/><field name="expected_country_id"/><field name="expected_timezone"/><field name="state" widget="badge"/></list></field>
+    </record>
+    <record id="view_psc_social_registration_task_form" model="ir.ui.view">
+        <field name="name">psc.social.registration.task.form</field><field name="model">psc.social.registration.task</field>
+        <field name="arch" type="xml"><form><header><button name="action_submit" string="提交到 Windows" type="object" class="btn-primary" invisible="state != 'draft'"/><button name="action_retry" string="重新执行" type="object" invisible="state not in ('failed', 'environment_mismatch')"/><field name="state" widget="statusbar" statusbar_visible="draft,ready,environment_check,awaiting_verification,done"/></header><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group string="账号资料"><field name="email_asset_id"/><field name="channel_id"/><field name="platform"/><field name="display_name"/><field name="desired_username"/></group><group string="强制环境"><field name="worker_node_id"/><field name="bitbrowser_environment_id" options="{'no_create': True}"/><field name="expected_ip"/><field name="expected_country_id"/><field name="expected_timezone"/></group></group><group string="执行结果"><group><field name="actual_ip"/><field name="actual_country_code"/><field name="actual_timezone"/><field name="worker_id"/></group><group><field name="platform_account_id"/><field name="registered_username"/><field name="profile_url" widget="url"/><field name="screenshot_attachment_id"/><field name="social_account_id"/></group></group><group><field name="status_message"/><field name="error_message"/></group></sheet></form></field>
+    </record>
+    <record id="action_psc_email_assets" model="ir.actions.act_window"><field name="name">邮箱资产</field><field name="res_model">psc.email.asset</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_social_registration_tasks" model="ir.actions.act_window"><field name="name">社媒注册任务</field><field name="res_model">psc.social.registration.task</field><field name="view_mode">list,form</field></record>
+</odoo>

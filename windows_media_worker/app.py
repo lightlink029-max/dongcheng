@@ -18,10 +18,11 @@ if getattr(sys, "frozen", False):
     os.environ["TK_LIBRARY"] = str(runtime / "_tk_data")
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 from PIL import Image, ImageTk
 
 from bitbrowser_adapter import BitBrowserClient
+from registration_assistant import EnvironmentMismatch, capture_current_page, prepare_registration
 from douyin_adapter import _dpapi, capture_login, has_login, open_keyword_search, self_test
 from mumu_adapter import MumuBridge, check_mumu, install_selector_apk
 from selection_store import SelectionStore
@@ -71,6 +72,8 @@ class MediaWorkerApp(tk.Tk):
         self.selection_metadata_pending = set()
         self.last_clipboard = ""
         self.vars = {}
+        self.registration_tasks = {}
+        self.registration_results = {}
         self._build()
         self._load()
         self.protocol("WM_DELETE_WINDOW", self._close_app)
@@ -81,9 +84,10 @@ class MediaWorkerApp(tk.Tk):
         notebook = ttk.Notebook(self)
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
         config_tab, tasks_tab = ttk.Frame(notebook), ttk.Frame(notebook)
-        selection_tab, log_tab = ttk.Frame(notebook), ttk.Frame(notebook)
+        registration_tab, selection_tab, log_tab = ttk.Frame(notebook), ttk.Frame(notebook), ttk.Frame(notebook)
         notebook.add(config_tab, text="连接与配置")
         notebook.add(tasks_tab, text="任务列表")
+        notebook.add(registration_tab, text="社媒账号注册")
         notebook.add(selection_tab, text="抖音选片与混剪")
         notebook.add(log_tab, text="运行日志")
         self.notebook = notebook
@@ -204,6 +208,40 @@ class MediaWorkerApp(tk.Tk):
         task_controls.pack(fill="x")
         ttk.Button(task_controls, text="打开选片管理", command=self.open_selection_manager).pack(side="left")
         ttk.Label(task_controls, text="选片明细和处理状态仅保存在本机，Odoo只接收最终成片。", foreground="#666").pack(side="left", padx=12)
+
+        registration_header = ttk.Frame(registration_tab, padding=10)
+        registration_header.pack(fill="x")
+        ttk.Label(
+            registration_header,
+            text="先强制校验固定 IP、国家和时区；通过后只填写邮箱、名称等非敏感资料。验证码和协议由人工处理。",
+        ).pack(side="left")
+        ttk.Button(registration_header, text="刷新 Odoo 注册任务", command=self.refresh_registration_tasks).pack(side="right")
+        registration_columns = (
+            "id", "platform", "email", "environment", "expected_ip", "country", "timezone", "state", "status",
+        )
+        self.registration_tree = ttk.Treeview(
+            registration_tab, columns=registration_columns, show="headings", selectmode="browse",
+        )
+        for column, title, width in zip(
+            registration_columns,
+            ("任务ID", "平台", "邮箱", "比特环境", "预期IP", "国家", "时区", "状态", "说明"),
+            (70, 90, 190, 170, 130, 60, 150, 130, 260),
+        ):
+            self.registration_tree.heading(column, text=title)
+            self.registration_tree.column(column, width=width, anchor="w")
+        registration_scroll = ttk.Scrollbar(registration_tab, orient="horizontal", command=self.registration_tree.xview)
+        self.registration_tree.configure(xscrollcommand=registration_scroll.set)
+        self.registration_tree.pack(fill="both", expand=True, padx=10)
+        registration_scroll.pack(fill="x", padx=10)
+        registration_actions = ttk.Frame(registration_tab, padding=10)
+        registration_actions.pack(fill="x")
+        ttk.Button(registration_actions, text="① 校验环境并打开注册页", command=self.prepare_selected_registration).pack(side="left", padx=(0, 8))
+        ttk.Button(registration_actions, text="② 人工验证完成，确认账号", command=self.complete_selected_registration).pack(side="left", padx=(0, 8))
+        ttk.Button(registration_actions, text="标记失败", command=self.fail_selected_registration).pack(side="left")
+        ttk.Label(
+            registration_actions, text="本工具不会读取或上传邮箱密码、Cookie、手机号和 2FA 密钥。",
+            foreground="#666",
+        ).pack(side="right")
 
         selection_header = ttk.Frame(selection_tab, padding=10)
         selection_header.pack(fill="x")
@@ -622,6 +660,129 @@ class MediaWorkerApp(tk.Tk):
                 browser.get("id", browser.get("browserId", "")),
             ))
 
+    def _selected_registration_task(self):
+        selected = self.registration_tree.selection()
+        if len(selected) != 1:
+            raise ValueError("请先选择一个社媒账号注册任务")
+        task_id = int(self.registration_tree.item(selected[0], "values")[0])
+        task = self.registration_tasks.get(task_id)
+        if not task:
+            raise ValueError("任务已刷新，请重新选择")
+        return task
+
+    def _render_registration_tasks(self, tasks):
+        self.registration_tree.delete(*self.registration_tree.get_children())
+        self.registration_tasks = {int(task["id"]): task for task in tasks}
+        state_labels = {
+            "ready": "待执行", "environment_check": "环境检查",
+            "awaiting_verification": "等待人工验证",
+        }
+        for task in tasks:
+            self.registration_tree.insert("", "end", values=(
+                task.get("id"), task.get("platform", ""), task.get("email", ""),
+                task.get("environment_name", task.get("environment_id", "")),
+                task.get("expected_ip", ""), task.get("expected_country_code", ""),
+                task.get("expected_timezone", ""), state_labels.get(task.get("state"), task.get("state", "")),
+                task.get("status_message", ""),
+            ))
+
+    def refresh_registration_tasks(self, quiet=False):
+        if not self.save(quiet=True):
+            return
+        if not self.vars["worker_token"].get().strip():
+            if not quiet:
+                messagebox.showerror(APP_TITLE, "请先配置 Odoo 工作节点令牌")
+            return
+        def run():
+            try:
+                tasks = Worker(self.config()).registration_tasks()
+                self.events.put(("registration_tasks", {"ok": True, "tasks": tasks, "quiet": quiet}))
+            except Exception as exc:
+                self.events.put(("registration_tasks", {"ok": False, "error": str(exc), "quiet": quiet}))
+        threading.Thread(target=run, daemon=True).start()
+
+    def prepare_selected_registration(self):
+        try:
+            task = self._selected_registration_task()
+        except ValueError as exc:
+            messagebox.showerror(APP_TITLE, str(exc))
+            return
+        if not self.save(quiet=True):
+            return
+        worker_config = self.config()
+        bitbrowser_url = self.vars["bitbrowser_url"].get().strip()
+        bitbrowser_token = self.vars["bitbrowser_token"].get().strip()
+        def run():
+            worker = Worker(worker_config)
+            try:
+                worker.start_registration(task["id"])
+                screenshot = app_dir() / "registration" / ("task-%s-prepared.png" % task["id"])
+                actual = prepare_registration(
+                    BitBrowserClient(bitbrowser_url, bitbrowser_token), task, screenshot,
+                )
+                worker.report_registration_environment(task["id"], actual)
+                self.events.put(("registration_prepared", {"ok": True, "task": task, "actual": actual}))
+            except EnvironmentMismatch as exc:
+                try:
+                    worker.report_registration_environment(task["id"], exc.actual)
+                except Exception:
+                    pass
+                self.events.put(("registration_prepared", {"ok": False, "error": str(exc)}))
+            except Exception as exc:
+                self.events.put(("registration_prepared", {"ok": False, "error": str(exc)}))
+        threading.Thread(target=run, daemon=True).start()
+
+    def complete_selected_registration(self):
+        try:
+            task = self._selected_registration_task()
+        except ValueError as exc:
+            messagebox.showerror(APP_TITLE, str(exc))
+            return
+        if task.get("state") != "awaiting_verification" and task["id"] not in self.registration_results:
+            messagebox.showerror(APP_TITLE, "请先完成环境校验并在浏览器中完成人工验证码、协议和身份验证")
+            return
+        username = simpledialog.askstring(APP_TITLE, "请输入注册成功后的平台用户名：", parent=self)
+        if not username:
+            return
+        profile_url = simpledialog.askstring(APP_TITLE, "请输入账号主页链接：", parent=self)
+        if not profile_url:
+            return
+        platform_account_id = simpledialog.askstring(APP_TITLE, "请输入平台账号 ID（可留空）：", parent=self) or ""
+        worker_config = self.config()
+        bitbrowser_url = self.vars["bitbrowser_url"].get().strip()
+        bitbrowser_token = self.vars["bitbrowser_token"].get().strip()
+        def run():
+            try:
+                screenshot = app_dir() / "registration" / ("task-%s-complete.png" % task["id"])
+                capture_current_page(
+                    BitBrowserClient(bitbrowser_url, bitbrowser_token), task["environment_id"], screenshot,
+                )
+                Worker(worker_config).complete_registration(
+                    task["id"], username, profile_url, platform_account_id, screenshot,
+                )
+                self.events.put(("registration_completed", {"ok": True, "task": task}))
+            except Exception as exc:
+                self.events.put(("registration_completed", {"ok": False, "error": str(exc)}))
+        threading.Thread(target=run, daemon=True).start()
+
+    def fail_selected_registration(self):
+        try:
+            task = self._selected_registration_task()
+        except ValueError as exc:
+            messagebox.showerror(APP_TITLE, str(exc))
+            return
+        reason = simpledialog.askstring(APP_TITLE, "请输入失败原因：", parent=self)
+        if not reason:
+            return
+        worker_config = self.config()
+        def run():
+            try:
+                Worker(worker_config).fail_registration(task["id"], reason)
+                self.events.put(("registration_failed", {"ok": True}))
+            except Exception as exc:
+                self.events.put(("registration_failed", {"ok": False, "error": str(exc)}))
+        threading.Thread(target=run, daemon=True).start()
+
     def install_selector(self):
         if not self.save(quiet=True): return
         base = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]
@@ -732,6 +893,43 @@ class MediaWorkerApp(tk.Tk):
                         self.sync_bitbrowser_environments(quiet=True)
                     else:
                         messagebox.showerror(APP_TITLE, data.get("error") or "比特环境操作失败")
+                elif event == "registration_tasks":
+                    if data["ok"]:
+                        self._render_registration_tasks(data["tasks"])
+                        if not data.get("quiet"):
+                            self.write_log("已读取 %s 个待处理社媒注册任务" % len(data["tasks"]))
+                    elif not data.get("quiet"):
+                        messagebox.showerror(APP_TITLE, data.get("error") or "读取注册任务失败")
+                elif event == "registration_prepared":
+                    if data["ok"]:
+                        task = data["task"]
+                        self.registration_results[task["id"]] = data["actual"]
+                        actual = data["actual"]
+                        messagebox.showinfo(
+                            APP_TITLE,
+                            "环境校验通过，注册页已打开并填写非敏感资料。\n"
+                            "实际 IP：%s\n国家：%s\n时区：%s\n\n"
+                            "请人工处理验证码、协议确认和身份验证。" % (
+                                actual["ip"], actual["country"], actual["timezone"],
+                            ),
+                        )
+                        self.refresh_registration_tasks(quiet=True)
+                    else:
+                        messagebox.showerror(APP_TITLE, data.get("error") or "注册页准备失败")
+                        self.refresh_registration_tasks(quiet=True)
+                elif event == "registration_completed":
+                    if data["ok"]:
+                        self.registration_results.pop(data["task"]["id"], None)
+                        messagebox.showinfo(APP_TITLE, "注册结果已回传 Odoo，账号状态已设为“可发布”")
+                        self.refresh_registration_tasks(quiet=True)
+                    else:
+                        messagebox.showerror(APP_TITLE, data.get("error") or "注册结果回传失败")
+                elif event == "registration_failed":
+                    if data["ok"]:
+                        messagebox.showinfo(APP_TITLE, "任务已标记失败")
+                        self.refresh_registration_tasks(quiet=True)
+                    else:
+                        messagebox.showerror(APP_TITLE, data.get("error") or "失败状态回传失败")
                 elif event == "selector_installed":
                     if data["ok"]:
                         messagebox.showinfo(APP_TITLE, "LightLink 选片 APK 已安装/更新到 MuMu")

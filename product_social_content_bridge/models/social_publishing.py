@@ -53,6 +53,12 @@ class SocialPublishingAccount(models.Model):
     target_market_id = fields.Many2one("psc.target.market", string="目标市场", required=True)
     username = fields.Char(string="平台用户名", required=True)
     profile_url = fields.Char(string="账号主页")
+    platform_account_id = fields.Char(string="平台账号 ID")
+    email_asset_id = fields.Many2one("psc.email.asset", string="注册邮箱", ondelete="restrict")
+    registration_task_id = fields.Many2one("psc.social.registration.task", string="注册任务", readonly=True)
+    account_state = fields.Selection([
+        ("pending", "待校验"), ("available", "可发布"), ("suspended", "停用"),
+    ], string="账号状态", required=True, default="pending")
     worker_node_id = fields.Many2one("psc.local.worker.node", string="Windows 工作节点", required=True)
     bitbrowser_environment_id = fields.Many2one(
         "psc.bitbrowser.environment", string="比特环境", required=True,

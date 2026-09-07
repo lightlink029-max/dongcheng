@@ -107,6 +107,32 @@ class Worker:
             json={"worker_id": self.worker_id, "environments": safe_environments},
         ).json()
 
+    def registration_tasks(self):
+        return self.api("GET", "/psc/local-worker/registration/tasks").json().get("tasks", [])
+
+    def start_registration(self, task_id):
+        return self.api("POST", f"/psc/local-worker/registration/tasks/{task_id}/start").json()
+
+    def report_registration_environment(self, task_id, actual):
+        return self.api("POST", f"/psc/local-worker/registration/tasks/{task_id}/environment", json={
+            "actual_ip": actual.get("ip", ""),
+            "actual_country_code": actual.get("country", ""),
+            "actual_timezone": actual.get("timezone", ""),
+        }).json()
+
+    def complete_registration(self, task_id, username, profile_url, platform_account_id, screenshot):
+        with Path(screenshot).open("rb") as stream:
+            return self.api(
+                "POST", f"/psc/local-worker/registration/tasks/{task_id}/complete",
+                data={"username": username, "profile_url": profile_url,
+                      "platform_account_id": platform_account_id},
+                files={"screenshot": (Path(screenshot).name, stream, "image/png")},
+            ).json()
+
+    def fail_registration(self, task_id, error):
+        return self.api("POST", f"/psc/local-worker/registration/tasks/{task_id}/fail",
+                        json={"error": str(error)}).json()
+
     def progress(self, task_id, progress, message):
         self.api("POST", f"/psc/local-worker/tasks/{task_id}/progress",
                  json={"progress": progress, "message": message})

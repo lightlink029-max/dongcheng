@@ -6,7 +6,7 @@
         <field name="arch" type="xml">
             <list decoration-muted="not active" decoration-success="last_validation_state == 'passed'" decoration-danger="last_validation_state == 'failed'">
                 <field name="name"/><field name="product_line_id"/><field name="channel_id"/><field name="platform"/>
-                <field name="target_market_id"/><field name="username"/><field name="worker_node_id"/>
+                <field name="target_market_id"/><field name="username"/><field name="account_state" widget="badge"/><field name="worker_node_id"/>
                 <field name="bitbrowser_environment_id"/><field name="expected_ip"/><field name="expected_country_id"/>
                 <field name="last_validation_state" widget="badge"/><field name="active"/>
             </list>
@@ -22,7 +22,9 @@
                     <group>
                         <group string="账号与渠道">
                             <field name="product_line_id"/><field name="channel_id"/><field name="platform"/>
-                            <field name="target_market_id"/><field name="username"/><field name="profile_url" widget="url"/><field name="active"/>
+                            <field name="target_market_id"/><field name="username"/><field name="platform_account_id"/>
+                            <field name="profile_url" widget="url"/><field name="email_asset_id"/><field name="registration_task_id"/>
+                            <field name="account_state" widget="badge"/><field name="active"/>
                         </group>
                         <group string="本地发布环境">
                             <field name="worker_node_id"/><field name="bitbrowser_environment_id" options="{'no_create': True}"/>

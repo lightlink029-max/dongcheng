@@ -100,6 +100,21 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertEqual(worker.headers["X-LightLink-Worker-ID"], "media-test-01")
         self.assertEqual(worker.headers["Authorization"], "Bearer test-token")
 
+    def test_registration_environment_uploads_only_validation_result(self):
+        worker = Worker(self.config())
+        response = mock.Mock()
+        response.json.return_value = {"ok": True}
+        with mock.patch.object(worker, "api", return_value=response) as api:
+            worker.report_registration_environment(7, {
+                "ip": "203.0.113.7", "country": "US", "timezone": "America/New_York",
+                "password": "must-not-upload", "cookie": "must-not-upload", "two_factor_secret": "must-not-upload",
+            })
+        payload = api.call_args.kwargs["json"]
+        self.assertEqual(payload, {
+            "actual_ip": "203.0.113.7", "actual_country_code": "US",
+            "actual_timezone": "America/New_York",
+        })
+
     def test_heartbeat_loop_renews_the_claim(self):
         worker = RecordingWorker(self.config())
         worker.heartbeat_loop(42, StopAfterFirstHeartbeat())
