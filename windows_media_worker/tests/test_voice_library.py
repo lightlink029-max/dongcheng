@@ -5,7 +5,12 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from voice_library import default_voice_profiles, load_voice_profiles, save_voice_profiles
+from voice_library import (
+    VOLCENGINE_TTS_2_ENGLISH_VOICES,
+    default_voice_profiles,
+    load_voice_profiles,
+    save_voice_profiles,
+)
 
 
 class VoiceLibraryTests(unittest.TestCase):
@@ -26,6 +31,16 @@ class VoiceLibraryTests(unittest.TestCase):
         ))
         self.assertTrue(all(item["source_url"] for item in profiles))
         self.assertTrue(all(not item["editable"] for item in profiles))
+
+    def test_official_tts_2_english_voices_are_available(self):
+        self.assertEqual(len(VOLCENGINE_TTS_2_ENGLISH_VOICES), 84)
+        voice_ids = [item[1] for item in VOLCENGINE_TTS_2_ENGLISH_VOICES]
+        self.assertEqual(len(voice_ids), len(set(voice_ids)))
+        self.assertIn("ICL_uranus_en_male_michael_tob", voice_ids)
+        self.assertIn("en_female_skye_uranus_bigtts", voice_ids)
+        profiles = default_voice_profiles()
+        available_ids = {item["voice_id"] for item in profiles}
+        self.assertTrue(set(voice_ids).issubset(available_ids))
 
     def test_profiles_round_trip_with_source(self):
         with TemporaryDirectory() as folder:
