@@ -191,11 +191,9 @@ class MediaWorkerApp(tk.Tk):
         selection_workflow = ttk.Notebook(selection_tab)
         selection_workflow.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         source_page = ttk.Frame(selection_workflow, padding=10)
-        content_page = ttk.Frame(selection_workflow, padding=18)
-        review_page = ttk.Frame(selection_workflow, padding=18)
-        selection_workflow.add(source_page, text="① 项目与视频素材")
-        selection_workflow.add(content_page, text="② 文案与生成")
-        selection_workflow.add(review_page, text="③ 成片审核与回传")
+        review_page = ttk.Frame(selection_workflow, padding=10)
+        selection_workflow.add(source_page, text="① 素材与生成")
+        selection_workflow.add(review_page, text="② 成片审核与回传")
         self.selection_workflow = selection_workflow
         self.selection_review_page = review_page
 
@@ -224,7 +222,7 @@ class MediaWorkerApp(tk.Tk):
         self.selection_tree.bind("<Double-1>", lambda _event: self.preview_selected_video())
 
         selection_controls = ttk.LabelFrame(source_page, text="视频素材管理", padding=10)
-        selection_controls.pack(fill="x")
+        selection_controls.pack(fill="x", before=self.selection_tree, pady=(0, 8))
         ttk.Button(selection_controls, text="全选", command=self.select_all_videos).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="从剪贴板添加", command=self.add_selection_from_clipboard).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="手工添加链接", command=self.add_selection_manually).pack(side="left", padx=3)
@@ -236,40 +234,52 @@ class MediaWorkerApp(tk.Tk):
         self.selection_summary = tk.StringVar(value="0 条")
         ttk.Label(selection_controls, textvariable=self.selection_summary).pack(side="right")
 
-        ttk.Label(
-            content_page, text="文案翻译与人工校验", font=("Microsoft YaHei UI", 14, "bold"),
-        ).pack(anchor="w", pady=(5, 8))
-        ttk.Label(
-            content_page,
-            text="查看自动识别的原视频中文，一键翻译到目标语言，并人工修改译文。\n"
-                 "确认最终文案来源、字幕和音色后，在编辑窗口直接生成审核稿。",
-            foreground="#555", justify="left",
-        ).pack(anchor="w", pady=(0, 18))
-        content_actions = ttk.LabelFrame(content_page, text="文案与配音", padding=18)
+        content_actions = ttk.LabelFrame(source_page, text="文案与生成", padding=10)
         content_actions.pack(fill="x")
         ttk.Button(
             content_actions, text="打开文案翻译与校验", command=self.edit_active_project,
         ).pack(side="left", padx=5)
         ttk.Button(content_actions, text="管理和试听音色", command=self.open_voice_manager).pack(side="left", padx=5)
         ttk.Label(
-            content_actions, text="生成审核稿按钮位于文案校验窗口底部。", foreground="#666",
+            content_actions,
+            text="自动识别完成后校验文案和音色，在校验窗口底部确认生成审核稿。",
+            foreground="#666",
         ).pack(side="left", padx=18)
 
-        ttk.Label(
-            review_page, text="成片审核与回传", font=("Microsoft YaHei UI", 14, "bold"),
-        ).pack(anchor="w", pady=(5, 8))
-        ttk.Label(
-            review_page,
-            text="先预览审核稿；不满意可返回文案与生成模块修改并生成新版本，满意后再回传 Odoo。",
-            foreground="#555",
-        ).pack(anchor="w", pady=(0, 18))
-        review_actions = ttk.LabelFrame(review_page, text="审核与版本", padding=18)
-        review_actions.pack(fill="x")
-        ttk.Button(review_actions, text="预览成片", command=self.preview_result).pack(side="left", padx=5)
-        ttk.Button(review_actions, text="历史版本", command=self.show_versions).pack(side="left", padx=5)
-        ttk.Button(review_actions, text="确认回传 Odoo", command=self.upload_result).pack(side="left", padx=5)
-        project_actions = ttk.LabelFrame(review_page, text="本地项目文件", padding=18)
-        project_actions.pack(fill="x", pady=(16, 0))
+        review_sources = ttk.LabelFrame(review_page, text="当前项目使用的视频素材", padding=8)
+        review_sources.pack(fill="both", expand=True)
+        self.review_source_tree = ttk.Treeview(
+            review_sources, columns=("video_id", "status", "url"), show="headings", height=8,
+        )
+        for name, title, width in (
+            ("video_id", "视频ID", 190), ("status", "处理状态", 120), ("url", "来源链接/本地文件", 700),
+        ):
+            self.review_source_tree.heading(name, text=title)
+            self.review_source_tree.column(name, width=width, anchor="w")
+        self.review_source_tree.pack(fill="both", expand=True)
+        self.review_source_tree.bind("<Double-1>", lambda _event: self.preview_review_source())
+        ttk.Button(
+            review_sources, text="预览所选源视频", command=self.preview_review_source,
+        ).pack(anchor="w", pady=(8, 0))
+
+        review_versions = ttk.LabelFrame(review_page, text="审核稿与历史版本", padding=8)
+        review_versions.pack(fill="both", expand=True, pady=(10, 0))
+        self.render_tree = ttk.Treeview(
+            review_versions, columns=("version", "time", "path"), show="headings", height=6,
+        )
+        for name, title, width in (
+            ("version", "版本", 90), ("time", "生成时间", 180), ("path", "成片文件", 740),
+        ):
+            self.render_tree.heading(name, text=title)
+            self.render_tree.column(name, width=width, anchor="w")
+        self.render_tree.pack(fill="both", expand=True)
+        self.render_tree.bind("<Double-1>", lambda _event: self.preview_selected_version())
+        review_actions = ttk.Frame(review_versions)
+        review_actions.pack(fill="x", pady=(8, 0))
+        ttk.Button(review_actions, text="预览所选版本", command=self.preview_selected_version).pack(side="left", padx=5)
+        ttk.Button(review_actions, text="确认回传最新审核稿", command=self.upload_result).pack(side="left", padx=5)
+        project_actions = ttk.LabelFrame(review_page, text="项目文件", padding=8)
+        project_actions.pack(fill="x", pady=(10, 0))
         ttk.Button(project_actions, text="打开项目目录", command=self.open_project_folder).pack(side="left", padx=5)
         ttk.Button(project_actions, text="删除本地项目", command=self.delete_local_project).pack(side="left", padx=5)
         ttk.Label(project_actions, text="独立本地项目只保存在本机，不会自动上传。", foreground="#666").pack(side="left", padx=18)
@@ -522,7 +532,7 @@ class MediaWorkerApp(tk.Tk):
                     self.selection_busy = False
                     self._refresh_selection_tasks()
                     self.write_log("已自动识别并保存 %s 个视频的中文" % data["count"])
-                    self.selection_workflow.select(1)
+                    self.selection_workflow.select(0)
                     self._project_dialog(task)
                 elif event == "project_translation":
                     button = data["button"]
@@ -1007,6 +1017,7 @@ class MediaWorkerApp(tk.Tk):
         task = self._active_selection_task()
         for item in self.selection_tree.get_children():
             self.selection_tree.delete(item)
+        self._refresh_review_lists(task)
         if not task:
             self.selection_title.set("当前没有等待处理的抖音选片任务")
             self.selection_summary.set("0 条")
@@ -1029,6 +1040,35 @@ class MediaWorkerApp(tk.Tk):
             task.get("local_status") or "处理中",
         ))
         self._refresh_selection_summary()
+
+    def _refresh_review_lists(self, task):
+        for tree in (self.review_source_tree, self.render_tree):
+            for item in tree.get_children():
+                tree.delete(item)
+        if not task:
+            return
+        rows = self.selection_store.list(task["id"])
+        versions = self.selection_store.list_versions(task["id"])
+        source_ids = set(versions[0].get("source_video_ids") or []) if versions else set()
+        if not source_ids:
+            source_ids = {row["id"] for row in rows}
+        labels = {
+            "selected": "已选择", "downloading": "下载中", "downloaded": "已下载",
+            "mixing": "混剪中", "ready_review": "待审核", "done": "已完成", "failed": "失败",
+        }
+        for row in rows:
+            if row["id"] in source_ids:
+                self.review_source_tree.insert("", "end", iid=str(row["id"]), values=(
+                    row["video_id"] or "待下载解析",
+                    labels.get(row["status"], row["status"]),
+                    row["url"],
+                ))
+        for version in versions:
+            self.render_tree.insert("", "end", iid=str(version["id"]), values=(
+                "V%s" % version["version_no"],
+                version["created_at"].replace("T", " ")[:19],
+                version["result_path"],
+            ))
 
     def _refresh_selection_summary(self):
         self.selection_summary.set("%s 条，选中 %s 条" % (
@@ -1215,6 +1255,34 @@ class MediaWorkerApp(tk.Tk):
         ttk.Button(buttons, text="取消", command=dialog.destroy).pack(side="left", padx=4)
         render_frame()
 
+    def preview_review_source(self):
+        selected = self.review_source_tree.selection()
+        if not selected:
+            messagebox.showerror(APP_TITLE, "请先选择要预览的源视频")
+            return
+        row = self.selection_store.get_many([int(selected[0])])[0]
+        try:
+            self._open_local_path(row.get("local_path"))
+        except Exception as exc:
+            messagebox.showerror(APP_TITLE, "源视频尚未下载或文件不可用：%s" % exc)
+
+    def preview_selected_version(self):
+        task = self._active_selection_task()
+        selected = self.render_tree.selection()
+        if not task or not selected:
+            self.preview_result()
+            return
+        version = next(
+            (item for item in self.selection_store.list_versions(task["id"])
+             if item["id"] == int(selected[0])),
+            None,
+        )
+        if version:
+            try:
+                self._open_local_path(version["result_path"])
+            except Exception as exc:
+                messagebox.showerror(APP_TITLE, str(exc))
+
     def show_versions(self):
         task = self._active_selection_task()
         if not task:
@@ -1383,6 +1451,7 @@ class MediaWorkerApp(tk.Tk):
                 self.selection_store.set_task_result(
                     task["id"], output, subtitle or "", status="ready_review",
                     version_no=version_no,
+                    source_video_ids=[row["id"] for row in rows],
                 )
                 for row in rows:
                     self.selection_store.update(row["id"], status="ready_review", error="")

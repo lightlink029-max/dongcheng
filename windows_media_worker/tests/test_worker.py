@@ -435,13 +435,16 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertEqual(preserved["status"], "downloaded")
         self.assertEqual(Path(preserved["local_path"]), video)
         output = Path(self.work_dir.name) / "output.mp4"
-        store.set_task_result(task_id, output, status="ready_review")
+        store.set_task_result(
+            task_id, output, status="ready_review", source_video_ids=[row["id"]],
+        )
         saved = store.get_task(task_id)
         self.assertEqual(saved["local_status"], "ready_review")
         self.assertEqual(saved["result_path"], str(output))
         store.set_task_result(task_id, output.with_name("output-v2.mp4"), status="ready_review")
         versions = store.list_versions(task_id)
         self.assertEqual([item["version_no"] for item in versions], [2, 1])
+        self.assertEqual(versions[1]["source_video_ids"], [row["id"]])
         store.set_task_result(
             task_id, output.with_name("output-v5.mp4"), status="ready_review", version_no=5,
         )

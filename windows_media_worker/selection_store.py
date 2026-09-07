@@ -81,10 +81,21 @@ class SelectionStore:
                     version_no INTEGER NOT NULL,
                     result_path TEXT NOT NULL,
                     subtitle_path TEXT NOT NULL DEFAULT '',
+                    source_video_ids TEXT NOT NULL DEFAULT '[]',
                     created_at TEXT NOT NULL,
                     UNIQUE(task_id, version_no)
                 )
             """)
+            render_columns = {
+                row["name"] for row in connection.execute(
+                    "PRAGMA table_info(render_version)"
+                ).fetchall()
+            }
+            if "source_video_ids" not in render_columns:
+                connection.execute(
+                    "ALTER TABLE render_version ADD COLUMN source_video_ids "
+                    "TEXT NOT NULL DEFAULT '[]'"
+                )
             video_columns = {
                 row["name"] for row in connection.execute(
                     "PRAGMA table_info(selected_video)"
@@ -184,6 +195,7 @@ class SelectionStore:
 
     def set_task_result(
         self, task_id, result_path, subtitle_path="", status="ready_review", version_no=None,
+        source_video_ids=None,
     ):
         now = datetime.now().astimezone().isoformat(timespec="seconds")
         with self._connect() as connection:
@@ -201,10 +213,10 @@ class SelectionStore:
                 version_no = row["next_version"]
             connection.execute(
                 """INSERT INTO render_version
-                   (task_id, version_no, result_path, subtitle_path, created_at)
-                   VALUES (?, ?, ?, ?, ?)""",
+                   (task_id, version_no, result_path, subtitle_path, source_video_ids, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
                 (int(task_id), int(version_no), str(result_path or ""),
-                 str(subtitle_path or ""), now),
+                 str(subtitle_path or ""), json.dumps(source_video_ids or []), now),
             )
 
     def next_render_version(self, task_id):
@@ -221,7 +233,15 @@ class SelectionStore:
                 "SELECT * FROM render_version WHERE task_id = ? ORDER BY version_no DESC",
                 (int(task_id),),
             ).fetchall()
-        return [dict(row) for row in rows]
+        result = []
+        for row in rows:
+            value = dict(row)
+            try:
+                value["source_video_ids"] = json.loads(value.get("source_video_ids") or "[]")
+            except (TypeError, ValueError):
+                value["source_video_ids"] = []
+            result.append(value)
+        return result
 
     def delete_task(self, task_id):
         with self._connect() as connection:
