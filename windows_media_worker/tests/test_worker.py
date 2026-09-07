@@ -154,6 +154,10 @@ class WorkerLeaseTests(unittest.TestCase):
             [row["id"] for row in store.get_many([row["id"] for row in moved])],
             [row["id"] for row in moved],
         )
+        selected = store.list_selected(task_id, [moved[0]["id"], moved[2]["id"]])
+        self.assertEqual(
+            [row["id"] for row in selected], [moved[0]["id"], moved[2]["id"]],
+        )
 
     def test_target_language_video_script_skips_ollama(self):
         worker = NoTranslationWorker(self.config())

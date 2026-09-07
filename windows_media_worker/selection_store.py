@@ -314,6 +314,13 @@ class SelectionStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def list_selected(self, task_id, ids=None):
+        rows = self.list(task_id)
+        if ids is None:
+            return rows
+        selected = {int(value) for value in ids}
+        return [row for row in rows if row["id"] in selected]
+
     def move(self, task_id, ids, direction):
         selected = {int(value) for value in ids}
         rows = self.list(task_id)

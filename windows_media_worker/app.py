@@ -940,6 +940,7 @@ class MediaWorkerApp(tk.Tk):
 
         def save_project(open_search=False, generate_review=False):
             try:
+                generation_ids = []
                 duration = max(3, int(values["duration_seconds"].get()))
                 preset_key = next(key for key, label in preset_choices.items() if label == values["export_preset"].get())
                 preset_ratio = {"douyin": "9:16", "reels": "9:16", "feed": "4:5", "square": "1:1"}[preset_key]
@@ -994,13 +995,16 @@ class MediaWorkerApp(tk.Tk):
                 })
                 if generate_review:
                     if existing.get("id"):
-                        clip_count = len(self._selection_ids(default_all=True))
+                        generation_ids = [row["id"] for row in task_rows]
+                        clip_count = len(generation_ids)
                     else:
                         clip_count = len(set(project["source_urls"])) + len(set(local_files))
                     project = Worker.prepare_edit_workflow(project, clip_count)
                 self.selection_store.update_task(project, status=existing.get("local_status") or "draft")
                 self.selection_store.add_text(task_id, "\n".join(project["source_urls"]))
                 self.selection_store.add_local_files(task_id, local_files)
+                if generate_review and not generation_ids:
+                    generation_ids = [row["id"] for row in self.selection_store.list(task_id)]
                 if task_id in self.pending_selections:
                     self.pending_selections[task_id] = project
                 self.selection_task_id = task_id
@@ -1011,7 +1015,7 @@ class MediaWorkerApp(tk.Tk):
                 if open_search:
                     self._open_project_search(project)
                 elif generate_review:
-                    self.after(100, self.mix_selected_videos)
+                    self.after(100, lambda ids=generation_ids: self.mix_selected_videos(ids))
             except Exception as exc:
                 messagebox.showerror(APP_TITLE, str(exc), parent=dialog)
 
@@ -1581,16 +1585,19 @@ class MediaWorkerApp(tk.Tk):
         self.selection_busy = True
         threading.Thread(target=self._run_downloads, args=(task, rows, False), daemon=True).start()
 
-    def mix_selected_videos(self):
+    def mix_selected_videos(self, selected_ids=None):
         task = self._active_selection_task()
-        ids = self._selection_ids(default_all=True)
+        ids = selected_ids if selected_ids is not None else self._selection_ids(default_all=True)
         if not task or not ids:
             messagebox.showerror(APP_TITLE, "请先加入至少一个抖音视频")
             return
         if self.selection_busy:
             messagebox.showinfo(APP_TITLE, "已有选片处理正在运行")
             return
-        rows = self.selection_store.get_many(ids)
+        rows = self.selection_store.list_selected(task["id"], ids)
+        if not rows:
+            messagebox.showerror(APP_TITLE, "选中的视频已不存在，请重新选择")
+            return
         self.selection_busy = True
         threading.Thread(target=self._run_downloads, args=(task, rows, True), daemon=True).start()
 
