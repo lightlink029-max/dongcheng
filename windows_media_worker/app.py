@@ -1262,16 +1262,19 @@ class MediaWorkerApp(tk.Tk):
         duration = max(0.1, worker.probe_duration(path))
         dialog = tk.Toplevel(self)
         dialog.title("内嵌预览、时间轴与版权")
-        dialog.geometry("760x700")
+        dialog.geometry("900x720")
+        dialog.minsize(760, 620)
         dialog.transient(self)
+        control_panel = ttk.Frame(dialog, padding=(15, 8, 15, 12))
+        control_panel.pack(side="bottom", fill="x")
         preview = ttk.Label(dialog, text="正在读取预览…", anchor="center")
-        preview.pack(fill="both", expand=True, padx=15, pady=15)
+        preview.pack(fill="both", expand=True, padx=15, pady=(15, 5))
         position = tk.DoubleVar(value=float(row.get("trim_start") or 0))
-        timeline = ttk.Scale(dialog, from_=0, to=duration, variable=position)
-        timeline.pack(fill="x", padx=20)
+        timeline = ttk.Scale(control_panel, from_=0, to=duration, variable=position)
+        timeline.pack(fill="x", padx=5)
         position_label = tk.StringVar()
-        ttk.Label(dialog, textvariable=position_label).pack(pady=(3, 8))
-        fields = ttk.Frame(dialog, padding=(20, 0))
+        ttk.Label(control_panel, textvariable=position_label).pack(pady=(3, 8))
+        fields = ttk.Frame(control_panel)
         fields.pack(fill="x")
         trim_start = tk.StringVar(value=str(row.get("trim_start") or 0))
         trim_end = tk.StringVar(value=str(row.get("trim_end") or round(duration, 3)))
@@ -1296,7 +1299,8 @@ class MediaWorkerApp(tk.Tk):
             try:
                 subprocess.run([
                     worker.ffmpeg(), "-y", "-ss", str(current), "-i", str(path),
-                    "-frames:v", "1", "-vf", "scale=700:-2", str(frame_path),
+                    "-frames:v", "1", "-vf",
+                    "scale=700:380:force_original_aspect_ratio=decrease", str(frame_path),
                 ], check=True, capture_output=True)
                 image = Image.open(frame_path)
                 photo = ImageTk.PhotoImage(image)
@@ -1309,7 +1313,7 @@ class MediaWorkerApp(tk.Tk):
         def set_point(variable):
             variable.set("%.3f" % float(position.get()))
 
-        point_controls = ttk.Frame(dialog)
+        point_controls = ttk.Frame(control_panel)
         point_controls.pack(pady=8)
         ttk.Button(point_controls, text="当前位置设为入点", command=lambda: set_point(trim_start)).pack(side="left", padx=4)
         ttk.Button(point_controls, text="当前位置设为出点", command=lambda: set_point(trim_end)).pack(side="left", padx=4)
@@ -1327,7 +1331,7 @@ class MediaWorkerApp(tk.Tk):
             dialog.destroy()
             self._refresh_selection_tree()
 
-        buttons = ttk.Frame(dialog)
+        buttons = ttk.Frame(control_panel)
         buttons.pack(pady=10)
         ttk.Button(buttons, text="保存", command=save_clip).pack(side="left", padx=4)
         ttk.Button(buttons, text="取消", command=dialog.destroy).pack(side="left", padx=4)
