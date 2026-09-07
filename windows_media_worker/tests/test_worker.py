@@ -162,54 +162,51 @@ class WorkerLeaseTests(unittest.TestCase):
     def test_target_language_video_script_skips_ollama(self):
         worker = NoTranslationWorker(self.config())
         task = {
-            "video_script": "Ready-to-use English subtitle",
-            "source_mode": "auto", "target_language": "English", "duration_seconds": 15,
+            "content_source": "odoo_translation",
+            "odoo_translation": "Ready-to-use English subtitle",
+            "target_language": "English", "duration_seconds": 15,
         }
         srt = worker.make_srt(task, Path(self.work_dir.name))
         self.assertIn("Ready-to-use English subtitle", srt.read_text(encoding="utf-8"))
 
     def test_operator_can_choose_each_editable_content_source(self):
         task = {
-            "original_transcript": "原视频中文",
-            "translated_script": "Verified English translation",
-            "video_script": "Odoo script",
-            "custom_script": "自写中文文案",
-            "keywords": "product keywords",
+            "original_translation": "Original video translation",
+            "odoo_translation": "Odoo translation",
+            "custom_translation": "Custom translation",
         }
         for source, expected in (
-            ("original_transcript", "原视频中文"),
-            ("translated_script", "Verified English translation"),
-            ("project_script", "Odoo script"),
-            ("custom_script", "自写中文文案"),
-            ("keywords", "product keywords"),
+            ("original_translation", "Original video translation"),
+            ("odoo_translation", "Odoo translation"),
+            ("custom_translation", "Custom translation"),
         ):
             task["content_source"] = source
             self.assertEqual(Worker.selected_content_text(task), expected)
 
     def test_single_video_workflow_uses_selected_copy_and_replaces_original_audio(self):
         prepared = Worker.prepare_edit_workflow({
-            "content_source": "original_transcript",
-            "original_transcript": "原声中文",
+            "content_source": "original_translation",
+            "original_translation": "Translated original narration",
             "tts_provider": "sherpa",
             "target_language": "English",
         }, 1)
         self.assertEqual(prepared["workflow_mode"], "single_voice_translation")
         self.assertEqual(prepared["edit_mode"], "sequence")
         self.assertEqual(prepared["audio_mode"], "mute")
-        self.assertTrue(prepared["translate_subtitles"])
+        self.assertFalse(prepared["translate_subtitles"])
 
     def test_multi_video_workflow_rejects_original_transcript(self):
         with self.assertRaisesRegex(ValueError, "多条视频模式"):
             Worker.prepare_edit_workflow({
-                "content_source": "original_transcript",
-                "original_transcript": "不应使用",
+                "content_source": "original_translation",
+                "original_translation": "Should not be used",
                 "tts_provider": "sherpa",
             }, 2)
 
     def test_multi_video_workflow_accepts_custom_copy(self):
         prepared = Worker.prepare_edit_workflow({
-            "content_source": "custom_script",
-            "custom_script": "自写中文",
+            "content_source": "custom_translation",
+            "custom_translation": "Custom English copy",
             "tts_provider": "volcengine",
         }, 2)
         self.assertEqual(prepared["workflow_mode"], "multi_sequence_script")
@@ -218,21 +215,21 @@ class WorkerLeaseTests(unittest.TestCase):
     def test_voiceover_is_required_for_translation_workflows(self):
         with self.assertRaisesRegex(ValueError, "配音服务和音色"):
             Worker.prepare_edit_workflow({
-                "content_source": "project_script", "video_script": "中文文案",
+                "content_source": "odoo_translation", "odoo_translation": "English copy",
             }, 2)
 
     def test_empty_selected_content_source_is_rejected(self):
-        with self.assertRaisesRegex(ValueError, "原视频中文.*为空"):
+        with self.assertRaisesRegex(ValueError, "原视频目标语译文.*为空"):
             Worker.selected_content_text({
-                "content_source": "original_transcript",
-                "video_script": "Do not silently use this fallback",
+                "content_source": "original_translation",
+                "original_translation": "",
             })
 
     def test_verified_translation_is_not_translated_twice(self):
         worker = NoTranslationWorker(self.config())
         task = {
-            "content_source": "translated_script",
-            "translated_script": "Human-approved English copy",
+            "content_source": "odoo_translation",
+            "odoo_translation": "Human-approved English copy",
             "translate_subtitles": True,
             "target_language": "English", "duration_seconds": 15,
         }
@@ -244,21 +241,11 @@ class WorkerLeaseTests(unittest.TestCase):
         task = {"subtitle_mode": "none", "target_language": "English"}
         self.assertIsNone(worker.make_srt(task, Path(self.work_dir.name)))
 
-    def test_missing_asr_falls_back_to_project_script(self):
-        worker = NoTranslationWorker(self.config())
-        task = {
-            "video_script": "Ready target-language copy", "subtitle_mode": "transcribe",
-            "translate_subtitles": False, "target_language": "English",
-        }
-        source = Path(self.work_dir.name) / "source.wav"
-        source.write_bytes(b"audio")
-        srt = worker.make_srt(task, Path(self.work_dir.name), source)
-        self.assertIn("Ready target-language copy", srt.read_text(encoding="utf-8"))
-
     def test_srt_timestamp_supports_more_than_one_minute(self):
         worker = NoTranslationWorker(self.config())
         task = {
-            "video_script": "Long video", "subtitle_mode": "script",
+            "content_source": "odoo_translation", "odoo_translation": "Long video",
+            "subtitle_mode": "script",
             "translate_subtitles": False, "target_language": "English",
             "duration_seconds": 75,
         }

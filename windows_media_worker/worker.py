@@ -200,28 +200,21 @@ class Worker:
     def selected_content_text(task):
         source = task.get("content_source")
         choices = {
-            "original_transcript": task.get("original_transcript") or "",
-            "translated_script": task.get("translated_script") or "",
-            "project_script": task.get("video_script") or task.get("prompt") or "",
-            "custom_script": task.get("custom_script") or "",
-            "keywords": task.get("keywords") or "",
+            "original_translation": task.get("original_translation") or "",
+            "odoo_translation": task.get("odoo_translation") or "",
+            "custom_translation": task.get("custom_translation") or "",
         }
         if source in choices:
             text = choices[source].strip()
             if not text:
                 labels = {
-                    "original_transcript": "原视频中文",
-                    "translated_script": "人工校验译文",
-                    "project_script": "Odoo/项目脚本",
-                    "custom_script": "自写中文文案",
-                    "keywords": "Odoo/项目关键词",
+                    "original_translation": "原视频目标语译文",
+                    "odoo_translation": "Odoo文案目标语译文",
+                    "custom_translation": "自写文案目标语译文",
                 }
                 raise ValueError("选定的文案来源“%s”为空，请先编辑内容" % labels[source])
             return text
-        return (
-            task.get("video_script") or task.get("prompt") or
-            task.get("keywords") or task.get("original_transcript") or ""
-        ).strip()
+        raise ValueError("请选择最终使用的目标语言译文")
 
     @classmethod
     def prepare_edit_workflow(cls, task, clip_count):
@@ -235,13 +228,13 @@ class Worker:
             "audio_mode": "mute",
             "target_language": prepared.get("target_language") or "English",
         })
-        source = prepared.get("content_source") or "project_script"
-        if clip_count > 1 and source == "original_transcript":
-            raise ValueError("多条视频模式不能使用原视频识别文案，请选择 Odoo 文案、自写中文或人工校验译文")
+        source = prepared.get("content_source")
+        if clip_count > 1 and source == "original_translation":
+            raise ValueError("多条视频模式不能使用原视频译文，请选择 Odoo 文案或自写文案译文")
         cls.selected_content_text(prepared)
         if (prepared.get("tts_provider") or "none") == "none":
             raise ValueError("英文合成需要先选择配音服务和音色")
-        prepared["translate_subtitles"] = source != "translated_script"
+        prepared["translate_subtitles"] = False
         prepared["workflow_mode"] = (
             "single_voice_translation" if clip_count == 1 else "multi_sequence_script"
         )
@@ -273,10 +266,12 @@ class Worker:
 
         text = self.selected_content_text(task)
         translate_subtitles = task.get("translate_subtitles")
-        if task.get("content_source") == "translated_script":
+        if task.get("content_source") in (
+            "original_translation", "odoo_translation", "custom_translation",
+        ):
             translate_subtitles = False
         if translate_subtitles is None:
-            translate_subtitles = task.get("content_source") in ("original_transcript", "keywords")
+            translate_subtitles = False
         translated = self.translate(text, task["target_language"]) if translate_subtitles else text
         duration = max(3, int(task.get("duration_seconds") or 15))
         srt = job_dir / "subtitle.srt"
