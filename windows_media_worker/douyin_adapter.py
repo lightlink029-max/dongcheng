@@ -227,6 +227,33 @@ async def _download(url, output_dir, cookies, proxy):
     return str(parsed.get("aweme_id") or parsed.get("item_id") or parsed.get("id") or "")
 
 
+async def _video_metadata(url, cookies, proxy):
+    _enable_vendor()
+    from core import DouyinAPIClient, URLParser
+    from utils.validators import is_short_url, normalize_short_url
+
+    async with DouyinAPIClient(cookies, proxy=proxy or "") as api_client:
+        if is_short_url(url):
+            url = await api_client.resolve_short_url(normalize_short_url(url))
+        parsed = URLParser.parse(url) if url else None
+        if not parsed or not parsed.get("aweme_id"):
+            raise RuntimeError("Douyin Downloader 无法解析该抖音链接")
+        detail = await api_client.get_video_detail(parsed["aweme_id"])
+    if not detail:
+        raise RuntimeError("抖音详情接口暂未返回有效数据")
+    return {
+        "video_id": str(detail.get("aweme_id") or parsed["aweme_id"]),
+        "caption": (detail.get("desc") or "").strip(),
+    }
+
+
+def get_video_metadata(url, cookie_store, proxy=""):
+    cookies = load_cookies(cookie_store)
+    if not cookies:
+        raise RuntimeError("尚未登录抖音，请先在工具中点击“登录/更新抖音登录”")
+    return asyncio.run(_video_metadata(url, cookies, proxy))
+
+
 def download_video(url, target, cookie_store, proxy="", return_video_id=False):
     cookies = load_cookies(cookie_store)
     if not cookies:

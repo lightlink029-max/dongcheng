@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 import requests
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from douyin_adapter import download_video
+from douyin_adapter import download_video, get_video_metadata
 from mumu_adapter import MumuBridge
 from speech import asr_available, synthesize, transcribe
 
@@ -66,6 +66,17 @@ class Worker:
         if not match:
             return 0.0
         return int(match.group(1)) * 3600 + int(match.group(2)) * 60 + float(match.group(3))
+
+    def create_video_cover(self, path, target):
+        duration = self.probe_duration(path)
+        target = Path(target)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        seek = min(1.0, max(0.0, duration / 3))
+        result = subprocess.run([
+            self.ffmpeg(), "-y", "-ss", str(seek), "-i", str(path),
+            "-frames:v", "1", "-vf", "scale=180:-2", str(target),
+        ], capture_output=True)
+        return duration, target if result.returncode == 0 and target.is_file() else None
 
     def api(self, method, path, **kwargs):
         headers = dict(self.headers)
@@ -147,6 +158,15 @@ class Worker:
             url, target, cookie_store,
             (self.config.get("download_proxy") or "").strip(),
             return_video_id=True,
+        )
+
+    def douyin_video_metadata(self, url):
+        cookie_store = self.config.get("douyin_cookie_store") or str(
+            Path(os.environ.get("LOCALAPPDATA", Path.home()))
+            / "LightLinkMediaWorker" / "secrets.json"
+        )
+        return get_video_metadata(
+            url, cookie_store, (self.config.get("download_proxy") or "").strip(),
         )
 
     def download_url(self, url, target_dir, index):

@@ -508,8 +508,18 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertEqual(rows[0]["video_id"], "7531234567890123456")
         self.assertTrue(rows[0]["selected_at"])
         self.assertEqual(rows[0]["status"], "selected")
-        store.update(rows[0]["id"], status="downloaded", local_path="D:/video.mp4")
-        self.assertEqual(store.list(101)[0]["status"], "downloaded")
+        store.update(
+            rows[0]["id"], status="downloaded", local_path="D:/video.mp4",
+            cover_path="D:/cover.jpg", caption="视频原文案", duration=12.5,
+            caption_checked=1, media_checked=1,
+        )
+        saved_video = store.list(101)[0]
+        self.assertEqual(saved_video["status"], "downloaded")
+        self.assertEqual(saved_video["cover_path"], "D:/cover.jpg")
+        self.assertEqual(saved_video["caption"], "视频原文案")
+        self.assertEqual(saved_video["duration"], 12.5)
+        self.assertEqual(saved_video["caption_checked"], 1)
+        self.assertEqual(saved_video["media_checked"], 1)
         store.save_task({"id": 101, "keywords": "鞋子", "target_language": "English"})
         self.assertEqual(store.get_task(101)["keywords"], "鞋子")
         store.set_task_status(101, "done")
@@ -528,6 +538,7 @@ class WorkerLeaseTests(unittest.TestCase):
         row = store.list(task_id)[0]
         self.assertEqual(row["status"], "downloaded")
         self.assertEqual(Path(row["local_path"]), video)
+        self.assertEqual(row["caption"], "clip")
         store.reset_download([row["id"]])
         preserved = store.list(task_id)[0]
         self.assertEqual(preserved["status"], "downloaded")

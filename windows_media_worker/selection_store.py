@@ -71,6 +71,11 @@ class SelectionStore:
                     trim_end REAL NOT NULL DEFAULT 0,
                     copyright_status TEXT NOT NULL DEFAULT 'unreviewed',
                     copyright_note TEXT NOT NULL DEFAULT '',
+                    cover_path TEXT NOT NULL DEFAULT '',
+                    caption TEXT NOT NULL DEFAULT '',
+                    caption_checked INTEGER NOT NULL DEFAULT 0,
+                    duration REAL NOT NULL DEFAULT 0,
+                    media_checked INTEGER NOT NULL DEFAULT 0,
                     sort_order INTEGER NOT NULL DEFAULT 0,
                     UNIQUE(task_id, url)
                 )
@@ -107,6 +112,11 @@ class SelectionStore:
                 "trim_end": "REAL NOT NULL DEFAULT 0",
                 "copyright_status": "TEXT NOT NULL DEFAULT 'unreviewed'",
                 "copyright_note": "TEXT NOT NULL DEFAULT ''",
+                "cover_path": "TEXT NOT NULL DEFAULT ''",
+                "caption": "TEXT NOT NULL DEFAULT ''",
+                "caption_checked": "INTEGER NOT NULL DEFAULT 0",
+                "duration": "REAL NOT NULL DEFAULT 0",
+                "media_checked": "INTEGER NOT NULL DEFAULT 0",
                 "sort_order": "INTEGER NOT NULL DEFAULT 0",
             }
             for name, definition in video_additions.items():
@@ -325,9 +335,9 @@ class SelectionStore:
                 ).fetchone()["next_order"]
                 cursor = connection.execute(
                     """INSERT OR IGNORE INTO selected_video
-                       (task_id, url, video_id, selected_at, status, local_path, sort_order)
-                       VALUES (?, ?, ?, ?, 'downloaded', ?, ?)""",
-                    (int(task_id), url, path.stem, now, str(path), order),
+                       (task_id, url, video_id, selected_at, status, local_path, caption, sort_order)
+                       VALUES (?, ?, ?, ?, 'downloaded', ?, ?, ?)""",
+                    (int(task_id), url, path.stem, now, str(path), path.stem, order),
                 )
                 added += cursor.rowcount
         return added
@@ -381,7 +391,9 @@ class SelectionStore:
     def update(self, record_id, **values):
         allowed = {
             "video_id", "status", "local_path", "error", "trim_start", "trim_end",
-            "copyright_status", "copyright_note",
+            "copyright_status", "copyright_note", "cover_path", "caption",
+            "caption_checked", "duration",
+            "media_checked",
         }
         values = {key: value for key, value in values.items() if key in allowed}
         if not values:
@@ -398,7 +410,10 @@ class SelectionStore:
             if row["url"].startswith("file:"):
                 self.update(row["id"], status="downloaded", error="")
             else:
-                self.update(row["id"], status="selected", local_path="", error="")
+                self.update(
+                    row["id"], status="selected", local_path="", error="",
+                    caption_checked=0, media_checked=0,
+                )
 
     def delete(self, ids):
         values = [int(value) for value in ids]

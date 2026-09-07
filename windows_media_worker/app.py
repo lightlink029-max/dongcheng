@@ -66,6 +66,8 @@ class MediaWorkerApp(tk.Tk):
         self.selector_bridge.start()
         self.selection_task_id = None
         self.selection_busy = False
+        self.selection_cover_images = {}
+        self.selection_metadata_pending = set()
         self.last_clipboard = ""
         self.vars = {}
         self._build()
@@ -208,16 +210,31 @@ class MediaWorkerApp(tk.Tk):
             text="添加视频后先下载；选中1条走单条原声翻译，Ctrl选择多条则按页面顺序拼接。",
         ).pack(side="left")
 
-        selection_columns = ("video_id", "selected_at", "status", "trim", "copyright", "url", "error")
-        self.selection_tree = ttk.Treeview(
-            source_page, columns=selection_columns, show="headings", selectmode="extended",
+        ttk.Style(self).configure("Media.Treeview", rowheight=78)
+        selection_columns = (
+            "video_id", "caption", "duration", "selected_at", "status", "trim",
+            "copyright", "url", "error",
         )
-        titles = ("视频ID", "选择时间", "处理状态", "入点-出点", "版权", "分享链接", "错误")
-        widths = (140, 160, 100, 110, 100, 360, 220)
+        self.selection_tree = ttk.Treeview(
+            source_page, columns=selection_columns, show="tree headings",
+            selectmode="extended", style="Media.Treeview",
+        )
+        self.selection_tree.heading("#0", text="封面")
+        self.selection_tree.column("#0", width=100, minwidth=100, stretch=False, anchor="center")
+        titles = (
+            "视频ID", "原视频文案", "时长", "选择时间", "处理状态", "入点-出点",
+            "版权", "分享链接", "错误",
+        )
+        widths = (145, 300, 75, 145, 90, 100, 90, 280, 180)
         for column, title, width in zip(selection_columns, titles, widths):
             self.selection_tree.heading(column, text=title)
             self.selection_tree.column(column, width=width, anchor="w")
+        selection_scroll = ttk.Scrollbar(
+            source_page, orient="horizontal", command=self.selection_tree.xview,
+        )
+        self.selection_tree.configure(xscrollcommand=selection_scroll.set)
         self.selection_tree.pack(fill="both", expand=True, pady=(0, 10))
+        selection_scroll.pack(fill="x", pady=(0, 8))
         self.selection_tree.bind("<<TreeviewSelect>>", lambda _event: self._refresh_selection_summary())
         self.selection_tree.bind("<Double-1>", lambda _event: self.preview_selected_video())
 
@@ -1150,6 +1167,7 @@ class MediaWorkerApp(tk.Tk):
 
     def _refresh_selection_tree(self):
         task = self._active_selection_task()
+        self.selection_cover_images.clear()
         for item in self.selection_tree.get_children():
             self.selection_tree.delete(item)
         self._refresh_review_lists(task)
@@ -1163,18 +1181,95 @@ class MediaWorkerApp(tk.Tk):
             "mixing": "混剪中", "ready_review": "待审核", "done": "已完成", "failed": "失败",
         }
         for row in rows:
-            self.selection_tree.insert("", "end", iid=str(row["id"]), values=(
-                row["video_id"] or "待下载解析", row["selected_at"].replace("T", " ")[:19],
+            cover = self._selection_cover(row)
+            caption = row.get("caption") or (
+                "暂无文案" if row.get("caption_checked") else "待获取"
+            )
+            self.selection_tree.insert("", "end", iid=str(row["id"]), image=cover, values=(
+                row["video_id"] or "待下载解析", caption.replace("\n", " "),
+                self._format_duration(row.get("duration") or 0),
+                row["selected_at"].replace("T", " ")[:19],
                 labels.get(row["status"], row["status"]),
                 "%s-%s" % (row.get("trim_start") or 0, row.get("trim_end") or "结束"),
                 row.get("copyright_status") or "unreviewed", row["url"], row["error"],
             ))
+        self._schedule_selection_metadata(task, rows)
         kind = "本地项目" if task.get("local_only") else "Odoo任务"
         self.selection_title.set("%s %s · %s · %s" % (
             kind, task["id"], task.get("name") or task.get("keywords") or task.get("target_language") or "抖音选片",
             task.get("local_status") or "处理中",
         ))
         self._refresh_selection_summary()
+
+    @staticmethod
+    def _format_duration(seconds):
+        seconds = max(0, int(round(float(seconds or 0))))
+        if not seconds:
+            return "待获取"
+        minutes, seconds = divmod(seconds, 60)
+        return "%d:%02d" % (minutes, seconds)
+
+    def _selection_cover(self, row):
+        path = Path(row.get("cover_path") or "")
+        if not path.is_file():
+            return ""
+        try:
+            image = Image.open(path).convert("RGB")
+            image.thumbnail((82, 68), Image.Resampling.LANCZOS)
+            canvas = Image.new("RGB", (82, 68), "#eeeeee")
+            canvas.paste(image, ((82 - image.width) // 2, (68 - image.height) // 2))
+            photo = ImageTk.PhotoImage(canvas)
+            self.selection_cover_images[row["id"]] = photo
+            return photo
+        except (OSError, ValueError):
+            return ""
+
+    def _schedule_selection_metadata(self, task, rows):
+        missing = []
+        for row in rows:
+            local_path = Path(row.get("local_path") or "")
+            needs_local = local_path.is_file() and not row.get("media_checked")
+            needs_caption = (
+                local_path.is_file() and not row.get("caption_checked")
+                and row["url"].startswith("http")
+            )
+            if (needs_local or needs_caption) and row["id"] not in self.selection_metadata_pending:
+                self.selection_metadata_pending.add(row["id"])
+                missing.append(row)
+        if missing:
+            config = None if self.worker else self.config()
+            threading.Thread(
+                target=self._backfill_selection_metadata,
+                args=(task["id"], missing, config), daemon=True,
+            ).start()
+
+    def _backfill_selection_metadata(self, task_id, rows, config):
+        worker = self.worker or Worker(config)
+        for row in rows:
+            try:
+                path = Path(row["local_path"])
+                cover_path = worker.root / str(task_id) / "selected-videos" / ("cover-%s.jpg" % row["id"])
+                duration, cover = worker.create_video_cover(path, cover_path)
+                values = {"duration": duration, "media_checked": 1}
+                if cover:
+                    values["cover_path"] = str(cover)
+                self.selection_store.update(row["id"], **values)
+                if not row.get("caption_checked") and row["url"].startswith("http"):
+                    try:
+                        metadata = worker.douyin_video_metadata(row["url"])
+                        self.selection_store.update(
+                            row["id"], **metadata, caption_checked=1,
+                        )
+                    except Exception as exc:
+                        self.selection_store.update(row["id"], caption_checked=1)
+                        self.events.put(("log", {
+                            "message": "视频 %s 原文案获取失败：%s" % (row["id"], exc),
+                        }))
+            except Exception as exc:
+                self.events.put(("log", {"message": "视频 %s 信息补全失败：%s" % (row["id"], exc)}))
+            finally:
+                self.selection_metadata_pending.discard(row["id"])
+        self.events.put(("selection_changed", {}))
 
     def _refresh_review_lists(self, task):
         for tree in (self.review_source_tree, self.render_tree):
