@@ -261,7 +261,7 @@ class MediaWorkerApp(tk.Tk):
         review_sources = ttk.LabelFrame(review_page, text="当前项目使用的视频素材", padding=8)
         review_sources.pack(fill="both", expand=True)
         self.review_source_tree = ttk.Treeview(
-            review_sources, columns=("video_id", "status", "url"), show="headings", height=8,
+            review_sources, columns=("video_id", "status", "url"), show="headings", height=6,
         )
         for name, title, width in (
             ("video_id", "视频ID", 190), ("status", "处理状态", 120), ("url", "来源链接/本地文件", 700),
@@ -276,8 +276,13 @@ class MediaWorkerApp(tk.Tk):
 
         review_versions = ttk.LabelFrame(review_page, text="审核稿与历史版本", padding=8)
         review_versions.pack(fill="both", expand=True, pady=(10, 0))
+        review_actions = ttk.Frame(review_versions)
+        review_actions.pack(fill="x", pady=(0, 8))
+        ttk.Button(review_actions, text="预览所选版本", command=self.preview_selected_version).pack(side="left", padx=5)
+        ttk.Button(review_actions, text="删除所选审核稿", command=self.delete_selected_version).pack(side="left", padx=5)
+        ttk.Button(review_actions, text="确认回传最新审核稿", command=self.upload_result).pack(side="left", padx=5)
         self.render_tree = ttk.Treeview(
-            review_versions, columns=("version", "time", "path"), show="headings", height=6,
+            review_versions, columns=("version", "time", "path"), show="headings", height=5,
         )
         for name, title, width in (
             ("version", "版本", 90), ("time", "生成时间", 180), ("path", "成片文件", 740),
@@ -287,11 +292,6 @@ class MediaWorkerApp(tk.Tk):
         self.render_tree.pack(fill="both", expand=True)
         self.render_tree.bind("<Double-1>", lambda _event: self.preview_selected_version())
         self.render_tree.bind("<<TreeviewSelect>>", lambda _event: self._refresh_review_sources())
-        review_actions = ttk.Frame(review_versions)
-        review_actions.pack(fill="x", pady=(8, 0))
-        ttk.Button(review_actions, text="预览所选版本", command=self.preview_selected_version).pack(side="left", padx=5)
-        ttk.Button(review_actions, text="删除所选审核稿", command=self.delete_selected_version).pack(side="left", padx=5)
-        ttk.Button(review_actions, text="确认回传最新审核稿", command=self.upload_result).pack(side="left", padx=5)
 
         self.log = tk.Text(log_tab, wrap="word", state="disabled", font=("Consolas", 10))
         self.log.pack(fill="both", expand=True, padx=10, pady=10)
