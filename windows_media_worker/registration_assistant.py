@@ -46,9 +46,9 @@ def _fill_first(page, selectors, value):
     for selector in selectors:
         try:
             locator = page.locator(selector).first
-            if locator.count() and locator.is_visible(timeout=500):
-                locator.fill(value, timeout=2000)
-                return True
+            locator.wait_for(state="visible", timeout=1500)
+            locator.fill(value, timeout=2000)
+            return True
         except Exception:
             continue
     return False
@@ -85,11 +85,11 @@ def prepare_registration(client, task, screenshot_path):
         page.goto(SIGNUP_URLS[platform], wait_until="domcontentloaded", timeout=45000)
         _fill_first(page, (
             "input[type=email]", "input[name=email]", "input[name=reg_email__]",
-            "input[autocomplete=email]",
+            "input[name=emailOrPhone]", "input[id=email-or-phone]", "input[autocomplete=email]",
         ), task.get("email"))
         _fill_first(page, (
             "input[name=name]", "input[name=fullname]", "input[name=firstName]",
-            "input[name=firstname]", "input[autocomplete=name]",
+            "input[name=fullName]", "input[name=firstname]", "input[autocomplete=name]",
         ), task.get("display_name"))
         _fill_first(page, (
             "input[name=username]", "input[autocomplete=username]",
