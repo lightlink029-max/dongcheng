@@ -134,6 +134,27 @@ class WorkerLeaseTests(unittest.TestCase):
             worker.download_url("https://example.com/video", Path(self.work_dir.name), 1)
         self.assertEqual(worker.calls, [])
 
+    def test_video_order_can_be_moved_and_is_used_when_rows_are_loaded(self):
+        store = SelectionStore(Path(self.work_dir.name) / "selections.db")
+        task_id = -1
+        store.save_task({"id": task_id, "name": "排序测试"})
+        store.add_text(task_id, "\n".join((
+            "https://v.douyin.com/first/",
+            "https://v.douyin.com/second/",
+            "https://v.douyin.com/third/",
+        )))
+        rows = store.list(task_id)
+        store.move(task_id, [rows[2]["id"]], -1)
+        moved = store.list(task_id)
+        self.assertEqual(
+            [row["url"] for row in moved],
+            [rows[0]["url"], rows[2]["url"], rows[1]["url"]],
+        )
+        self.assertEqual(
+            [row["id"] for row in store.get_many([row["id"] for row in moved])],
+            [row["id"] for row in moved],
+        )
+
     def test_target_language_video_script_skips_ollama(self):
         worker = NoTranslationWorker(self.config())
         task = {

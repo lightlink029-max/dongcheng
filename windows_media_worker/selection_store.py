@@ -71,6 +71,7 @@ class SelectionStore:
                     trim_end REAL NOT NULL DEFAULT 0,
                     copyright_status TEXT NOT NULL DEFAULT 'unreviewed',
                     copyright_note TEXT NOT NULL DEFAULT '',
+                    sort_order INTEGER NOT NULL DEFAULT 0,
                     UNIQUE(task_id, url)
                 )
             """)
@@ -106,12 +107,16 @@ class SelectionStore:
                 "trim_end": "REAL NOT NULL DEFAULT 0",
                 "copyright_status": "TEXT NOT NULL DEFAULT 'unreviewed'",
                 "copyright_note": "TEXT NOT NULL DEFAULT ''",
+                "sort_order": "INTEGER NOT NULL DEFAULT 0",
             }
             for name, definition in video_additions.items():
                 if name not in video_columns:
                     connection.execute(
                         f"ALTER TABLE selected_video ADD COLUMN {name} {definition}"
                     )
+            connection.execute(
+                "UPDATE selected_video SET sort_order = id WHERE sort_order = 0"
+            )
             connection.execute("""
                 CREATE TABLE IF NOT EXISTS selection_task (
                     task_id INTEGER PRIMARY KEY,
@@ -254,10 +259,15 @@ class SelectionStore:
         now = datetime.now().astimezone().isoformat(timespec="seconds")
         with self._connect() as connection:
             for url in extract_douyin_urls(text):
+                order = connection.execute(
+                    "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order "
+                    "FROM selected_video WHERE task_id = ?", (int(task_id),),
+                ).fetchone()["next_order"]
                 cursor = connection.execute(
                     """INSERT OR IGNORE INTO selected_video
-                       (task_id, url, video_id, selected_at) VALUES (?, ?, ?, ?)""",
-                    (int(task_id), url, extract_video_id(url), now),
+                       (task_id, url, video_id, selected_at, sort_order)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (int(task_id), url, extract_video_id(url), now, order),
                 )
                 added += cursor.rowcount
         return added
@@ -271,11 +281,15 @@ class SelectionStore:
                 if not path.is_file():
                     continue
                 url = path.as_uri()
+                order = connection.execute(
+                    "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order "
+                    "FROM selected_video WHERE task_id = ?", (int(task_id),),
+                ).fetchone()["next_order"]
                 cursor = connection.execute(
                     """INSERT OR IGNORE INTO selected_video
-                       (task_id, url, video_id, selected_at, status, local_path)
-                       VALUES (?, ?, ?, ?, 'downloaded', ?)""",
-                    (int(task_id), url, path.stem, now, str(path)),
+                       (task_id, url, video_id, selected_at, status, local_path, sort_order)
+                       VALUES (?, ?, ?, ?, 'downloaded', ?, ?)""",
+                    (int(task_id), url, path.stem, now, str(path), order),
                 )
                 added += cursor.rowcount
         return added
@@ -283,7 +297,8 @@ class SelectionStore:
     def list(self, task_id):
         with self._connect() as connection:
             rows = connection.execute(
-                "SELECT * FROM selected_video WHERE task_id = ? ORDER BY id", (int(task_id),),
+                "SELECT * FROM selected_video WHERE task_id = ? ORDER BY sort_order, id",
+                (int(task_id),),
             ).fetchall()
         return [dict(row) for row in rows]
 
@@ -294,9 +309,29 @@ class SelectionStore:
         placeholders = ",".join("?" for _ in values)
         with self._connect() as connection:
             rows = connection.execute(
-                f"SELECT * FROM selected_video WHERE id IN ({placeholders}) ORDER BY id", values,
+                f"SELECT * FROM selected_video WHERE id IN ({placeholders}) ORDER BY sort_order, id",
+                values,
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def move(self, task_id, ids, direction):
+        selected = {int(value) for value in ids}
+        rows = self.list(task_id)
+        if not selected or direction not in (-1, 1):
+            return
+        if direction < 0:
+            for index in range(1, len(rows)):
+                if rows[index]["id"] in selected and rows[index - 1]["id"] not in selected:
+                    rows[index - 1], rows[index] = rows[index], rows[index - 1]
+        else:
+            for index in range(len(rows) - 2, -1, -1):
+                if rows[index]["id"] in selected and rows[index + 1]["id"] not in selected:
+                    rows[index], rows[index + 1] = rows[index + 1], rows[index]
+        with self._connect() as connection:
+            connection.executemany(
+                "UPDATE selected_video SET sort_order = ? WHERE id = ?",
+                [(index, row["id"]) for index, row in enumerate(rows, 1)],
+            )
 
     def update(self, record_id, **values):
         allowed = {

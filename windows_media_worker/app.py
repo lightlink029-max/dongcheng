@@ -205,7 +205,7 @@ class MediaWorkerApp(tk.Tk):
         ).pack(side="right")
         ttk.Label(
             source_header,
-            text="添加或选择视频后执行下载；下载成功会自动识别并保存原视频中文。",
+            text="添加视频后先下载；选中1条走单条原声翻译，Ctrl选择多条则按页面顺序拼接。",
         ).pack(side="left")
 
         selection_columns = ("video_id", "selected_at", "status", "trim", "copyright", "url", "error")
@@ -227,6 +227,12 @@ class MediaWorkerApp(tk.Tk):
         ttk.Button(selection_controls, text="从剪贴板添加", command=self.add_selection_from_clipboard).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="手工添加链接", command=self.add_selection_manually).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="添加本地视频", command=self.add_local_videos).pack(side="left", padx=3)
+        ttk.Button(
+            selection_controls, text="上移", command=lambda: self.move_selected_videos(-1),
+        ).pack(side="left", padx=3)
+        ttk.Button(
+            selection_controls, text="下移", command=lambda: self.move_selected_videos(1),
+        ).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="时间轴/版权", command=self.edit_selected_clip).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="删除所选", command=self.delete_selected_videos).pack(side="left", padx=3)
         ttk.Button(selection_controls, text="下载/重新下载", command=self.redownload_selected_videos).pack(side="left", padx=3)
@@ -242,7 +248,7 @@ class MediaWorkerApp(tk.Tk):
         ttk.Button(content_actions, text="管理和试听音色", command=self.open_voice_manager).pack(side="left", padx=5)
         ttk.Label(
             content_actions,
-            text="自动识别完成后校验文案和音色，在校验窗口底部确认生成审核稿。",
+            text="单条可识别原声；多条固定按列表顺序拼接，文案确认后生成审核稿。",
             foreground="#666",
         ).pack(side="left", padx=18)
 
@@ -1424,6 +1430,20 @@ class MediaWorkerApp(tk.Tk):
                 path.unlink()
         self.selection_store.delete(ids)
         self._refresh_selection_tree()
+
+    def move_selected_videos(self, direction):
+        task = self._active_selection_task()
+        ids = self._selection_ids()
+        if not task or not ids:
+            messagebox.showerror(APP_TITLE, "请先选择要移动的视频")
+            return
+        self.selection_store.move(task["id"], ids, direction)
+        self._refresh_selection_tree()
+        available = set(self.selection_tree.get_children())
+        self.selection_tree.selection_set([str(value) for value in ids if str(value) in available])
+        first = next((str(value) for value in ids if str(value) in available), None)
+        if first:
+            self.selection_tree.see(first)
 
     def _recognize_task_rows(self, worker, task, rows):
         sources = [
