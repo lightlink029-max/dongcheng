@@ -21,6 +21,7 @@ class SpeechTests(unittest.TestCase):
     def test_volcengine_v3_tts_writes_streamed_audio(self):
         response = mock.Mock()
         response.status_code = 200
+        response.headers = {"X-Tt-Logid": "test-log-id"}
         response.iter_lines.return_value = [
             "event: 352",
             "data: " + json.dumps({
@@ -47,6 +48,38 @@ class SpeechTests(unittest.TestCase):
         self.assertEqual(headers["X-Api-Resource-Id"], "seed-tts-2.0")
         self.assertTrue(post.call_args.kwargs["stream"])
         response.close.assert_called_once()
+
+    def test_volcengine_no_audio_reports_resource_voice_and_log_id(self):
+        response = mock.Mock()
+        response.status_code = 200
+        response.headers = {"X-Tt-Logid": "log-123"}
+        response.iter_lines.return_value = [
+            'data: {"code": 20000000, "message": "OK", "data": null}',
+        ]
+        with TemporaryDirectory() as folder, mock.patch("speech.requests.post", return_value=response):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "Resource ID=seed-tts-2.0；音色 ID=en_voice；Log ID=log-123",
+            ):
+                synthesize({
+                    "volc_api_key": "api-key", "volc_resource_id": "seed-tts-2.0",
+                }, "volcengine", "hello", Path(folder) / "voice.wav", "en_voice")
+
+    def test_volcengine_accepts_string_success_code(self):
+        response = mock.Mock()
+        response.status_code = 200
+        response.headers = {}
+        response.iter_lines.return_value = [
+            "data: " + json.dumps({
+                "code": "0", "data": base64.b64encode(b"audio").decode("ascii"),
+            }),
+            'data: {"code": "20000000", "message": "OK", "data": null}',
+        ]
+        with TemporaryDirectory() as folder, mock.patch("speech.requests.post", return_value=response):
+            result = synthesize({
+                "volc_api_key": "api-key", "volc_resource_id": "seed-tts-2.0",
+            }, "volcengine", "hello", Path(folder) / "voice.wav", "en_voice")
+            self.assertEqual(result.read_bytes(), b"audio")
 
     def test_volcengine_requires_new_api_key(self):
         with TemporaryDirectory() as folder, self.assertRaisesRegex(

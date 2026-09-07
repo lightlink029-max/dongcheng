@@ -1910,6 +1910,12 @@ class MediaWorkerApp(tk.Tk):
                 "volcengine": "新版火山引擎音色 ID 是已开通模型支持的 speaker；API Key 与 Resource ID 在连接与配置中填写。",
             }
             help_text.set(instructions.get(selected["provider"], "请从该音色的来源页面获取音色 ID。"))
+            language = selected.get("language", "")
+            preview_text.set(
+                "Hello, welcome to the LightLink voice preview. This is an English voice test."
+                if "英语" in language or "English" in language
+                else "你好，欢迎使用 LightLink 音色试听。这是一段中文音色测试。"
+            )
 
         provider_box.bind("<<ComboboxSelected>>", lambda _event: (refresh(), update_help()))
 
@@ -2042,7 +2048,7 @@ class MediaWorkerApp(tk.Tk):
 
         preview = ttk.LabelFrame(body, text="音色试听", padding=10)
         preview.pack(fill="x", pady=(10, 0))
-        preview_text = tk.StringVar(value="你好，欢迎使用 LightLink 音色试听。Hello, welcome to the voice preview.")
+        preview_text = tk.StringVar(value="你好，欢迎使用 LightLink 音色试听。这是一段中文音色测试。")
         ttk.Entry(preview, textvariable=preview_text).pack(side="left", fill="x", expand=True)
 
         def preview_voice():

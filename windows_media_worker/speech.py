@@ -119,17 +119,19 @@ def _volcengine_tts(config, text, output, voice="", speed=1.0, volume=1.0):
             },
         },
     }
+    request_id = str(uuid.uuid4())
     response = requests.post(
         config.get("volc_tts_url") or "https://openspeech.bytedance.com/api/v3/tts/unidirectional/sse",
         headers={
             "Content-Type": "application/json",
             "X-Api-Key": api_key,
             "X-Api-Resource-Id": resource_id,
-            "X-Api-Request-Id": str(uuid.uuid4()),
+            "X-Api-Request-Id": request_id,
         },
         json=payload, timeout=300, stream=True,
     )
     chunks = []
+    last_result = None
     try:
         if response.status_code >= 400:
             detail = (response.text or "").strip()[:500]
@@ -143,14 +145,21 @@ def _volcengine_tts(config, text, output, voice="", speed=1.0, volume=1.0):
             if not line or not line.startswith("data:"):
                 continue
             result = json.loads(line[5:].strip())
-            if result.get("code") not in (None, 0, 20000000):
+            last_result = result
+            code = result.get("code")
+            if str(code) not in ("None", "0", "20000000"):
                 raise RuntimeError("火山引擎配音失败：" + str(result.get("message") or result))
             if result.get("data"):
                 chunks.append(base64.b64decode(result["data"]))
     finally:
         response.close()
     if not chunks:
-        raise RuntimeError("火山引擎没有返回音频数据，请检查 Resource ID 和音色 ID 是否匹配")
+        log_id = response.headers.get("X-Tt-Logid", "")
+        detail = (last_result or {}).get("message") or "响应中没有音频分片"
+        raise RuntimeError(
+            f"火山引擎没有返回音频：{detail}；Resource ID={resource_id}；"
+            f"音色 ID={speaker}；Log ID={log_id or request_id}"
+        )
     output = Path(output).with_suffix(".mp3")
     output.write_bytes(b"".join(chunks))
     return output
