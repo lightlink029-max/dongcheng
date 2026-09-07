@@ -18,6 +18,29 @@ class SpeechTests(unittest.TestCase):
         ):
             synthesize({}, "sherpa", "hello", Path(folder) / "voice.wav")
 
+    def test_sherpa_kokoro_uses_model_local_files(self):
+        with TemporaryDirectory() as folder, mock.patch("speech.subprocess.run") as run:
+            root = Path(folder)
+            executable = root / "sherpa-onnx-offline-tts.exe"
+            model_dir = root / "kokoro-en-v0_19"
+            data_dir = model_dir / "espeak-ng-data"
+            data_dir.mkdir(parents=True)
+            executable.touch()
+            for name in ("model.onnx", "tokens.txt", "voices.bin"):
+                (model_dir / name).touch()
+            output = root / "voice.wav"
+            synthesize({
+                "sherpa_command": str(executable),
+                "sherpa_model": str(model_dir / "model.onnx"),
+                "sherpa_tokens": "wrong-tokens",
+                "sherpa_data_dir": "wrong-data",
+            }, "sherpa", "hello", output, "7")
+            command = run.call_args.args[0]
+            self.assertIn("--kokoro-model=" + str(model_dir / "model.onnx"), command)
+            self.assertIn("--kokoro-voices=" + str(model_dir / "voices.bin"), command)
+            self.assertIn("--kokoro-tokens=" + str(model_dir / "tokens.txt"), command)
+            self.assertIn("--sid=7", command)
+
     def test_volcengine_v3_tts_writes_streamed_audio(self):
         response = mock.Mock()
         response.status_code = 200

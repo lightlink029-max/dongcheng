@@ -734,6 +734,16 @@ class MediaWorkerApp(tk.Tk):
         for page in (source_form, content_form, output_form):
             page.columnconfigure(1, weight=1)
 
+        def voice_label(profile):
+            return f"{profile['name']}（ID {profile['voice_id']}）"
+
+        existing_voice_profile = next((
+            profile for profile in self._voice_profiles()
+            if profile["provider"] == (existing.get("tts_provider") or "none")
+            and profile["voice_id"] == (existing.get("tts_voice") or "")
+            and (not existing.get("tts_model_id") or profile.get("model_id") == existing.get("tts_model_id"))
+        ), None)
+
         values = {
             "name": tk.StringVar(value=existing.get("name") or "本地视频项目"),
             "keywords": tk.StringVar(value=existing.get("keywords") or ""),
@@ -751,7 +761,7 @@ class MediaWorkerApp(tk.Tk):
             "tts_provider": tk.StringVar(value=tts_choices.get(
                 existing.get("tts_provider") or "none", tts_choices["none"],
             )),
-            "tts_voice": tk.StringVar(value=existing.get("tts_voice") or ""),
+            "tts_voice": tk.StringVar(value=voice_label(existing_voice_profile) if existing_voice_profile else ""),
             "tts_speed": tk.StringVar(value=str(existing.get("tts_speed") or 1.0)),
             "tts_volume": tk.StringVar(value=str(existing.get("tts_volume") or 1.0)),
             "background_music": tk.StringVar(value=existing.get("background_music") or ""),
@@ -783,7 +793,8 @@ class MediaWorkerApp(tk.Tk):
                 if key == "tts_voice":
                     widget = ttk.Combobox(
                         page, textvariable=values[key],
-                        values=[profile["voice_id"] for profile in self._voice_profiles()],
+                        values=[voice_label(profile) for profile in self._voice_profiles()],
+                        state="readonly",
                     )
                 else:
                     widget = ttk.Combobox(
@@ -804,10 +815,10 @@ class MediaWorkerApp(tk.Tk):
                 if profile["provider"] == provider_key
             ]
             for voice_widget in voice_widgets:
-                voice_widget["values"] = [profile["voice_id"] for profile in profiles]
-            available_ids = {profile["voice_id"] for profile in profiles}
-            if profiles and values["tts_voice"].get().strip() not in available_ids:
-                values["tts_voice"].set(profiles[0]["voice_id"])
+                voice_widget["values"] = [voice_label(profile) for profile in profiles]
+            available_labels = {voice_label(profile) for profile in profiles}
+            if profiles and values["tts_voice"].get().strip() not in available_labels:
+                values["tts_voice"].set(voice_label(profiles[0]))
             elif not profiles:
                 values["tts_voice"].set("")
 
@@ -1002,7 +1013,9 @@ class MediaWorkerApp(tk.Tk):
         )
         quick_provider.pack(side="left", padx=(6, 16))
         ttk.Label(voice_bar, text="音色").pack(side="left")
-        quick_voice = ttk.Combobox(voice_bar, textvariable=values["tts_voice"], width=36)
+        quick_voice = ttk.Combobox(
+            voice_bar, textvariable=values["tts_voice"], width=36, state="readonly",
+        )
         quick_voice.pack(side="left", padx=6)
         voice_widgets.append(quick_voice)
         quick_provider.bind("<<ComboboxSelected>>", load_provider_voices)
@@ -1010,14 +1023,14 @@ class MediaWorkerApp(tk.Tk):
         ttk.Label(voice_bar, textvariable=voice_hint, foreground="#666").pack(side="left", padx=6)
 
         def update_voice_hint(*_args):
-            selected_id = values["tts_voice"].get().strip()
+            selected_label = values["tts_voice"].get().strip()
             provider_key = next(
                 (key for key, label in tts_choices.items() if label == values["tts_provider"].get()),
                 "none",
             )
             profile = next(
                 (item for item in self._voice_profiles()
-                 if item["provider"] == provider_key and item["voice_id"] == selected_id),
+                 if item["provider"] == provider_key and voice_label(item) == selected_label),
                 None,
             )
             voice_hint.set(
@@ -1051,6 +1064,15 @@ class MediaWorkerApp(tk.Tk):
                         shutil.copy2(source, target)
                     image_path = str(target)
                 project = dict(existing)
+                provider_key = next(
+                    key for key, label in tts_choices.items()
+                    if label == values["tts_provider"].get()
+                )
+                selected_voice = next((
+                    profile for profile in self._voice_profiles()
+                    if profile["provider"] == provider_key
+                    and voice_label(profile) == values["tts_voice"].get().strip()
+                ), None)
                 project.update({
                     "id": task_id, "type": existing.get("type") or "local_project",
                     "local_only": bool(existing.get("local_only", task is None)),
@@ -1065,15 +1087,9 @@ class MediaWorkerApp(tk.Tk):
                     "audio_mode": "mute",
                     "export_preset": preset_key,
                     "transition": "fade" if values["transition"].get() == "淡入淡出" else "none",
-                    "tts_provider": next(key for key, label in tts_choices.items() if label == values["tts_provider"].get()),
-                    "tts_voice": values["tts_voice"].get().strip(),
-                    "tts_model_id": next((
-                        profile.get("model_id", "") for profile in self._voice_profiles()
-                        if profile["provider"] == next(
-                            key for key, label in tts_choices.items()
-                            if label == values["tts_provider"].get()
-                        ) and profile["voice_id"] == values["tts_voice"].get().strip()
-                    ), existing.get("tts_model_id") or ""),
+                    "tts_provider": provider_key,
+                    "tts_voice": selected_voice["voice_id"] if selected_voice else "",
+                    "tts_model_id": selected_voice.get("model_id", "") if selected_voice else "",
                     "tts_speed": max(0.5, min(2.0, float(values["tts_speed"].get()))),
                     "tts_volume": max(0.0, min(2.0, float(values["tts_volume"].get()))),
                     "background_music": values["background_music"].get().strip(),

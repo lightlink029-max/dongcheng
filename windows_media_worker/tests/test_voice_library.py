@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from voice_library import (
+    SHERPA_KOKORO_EN_VOICES,
     VOLCENGINE_TTS_2_ENGLISH_VOICES,
     default_voice_profiles,
     load_voice_profiles,
@@ -14,6 +15,22 @@ from voice_library import (
 
 
 class VoiceLibraryTests(unittest.TestCase):
+    def test_installed_kokoro_english_voices_are_available(self):
+        with TemporaryDirectory() as folder:
+            root = Path(folder)
+            current = root / "vits-piper-en_US-lessac-medium" / "model.onnx"
+            kokoro = root / "kokoro-en-v0_19" / "model.onnx"
+            current.parent.mkdir()
+            kokoro.parent.mkdir()
+            current.touch()
+            kokoro.touch()
+            profiles = default_voice_profiles(str(current))
+        kokoro_profiles = [
+            item for item in profiles if item["source"] == "Sherpa Kokoro 英文模型"
+        ]
+        self.assertEqual(len(kokoro_profiles), len(SHERPA_KOKORO_EN_VOICES))
+        self.assertEqual({item["voice_id"] for item in kokoro_profiles}, {str(i) for i in range(11)})
+
     def test_each_provider_default_voice_is_available(self):
         profiles = default_voice_profiles(r"D:\models\vits-zh.onnx")
         by_provider = {}

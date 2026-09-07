@@ -20,6 +20,21 @@ VOLCENGINE_TTS_2_VOICES = (
 )
 
 
+SHERPA_KOKORO_EN_VOICES = (
+    ("AF Default", "0", "美式英语", "女声"),
+    ("Bella", "1", "美式英语", "女声"),
+    ("Nicole", "2", "美式英语", "女声"),
+    ("Sarah", "3", "美式英语", "女声"),
+    ("Sky", "4", "美式英语", "女声"),
+    ("Adam", "5", "美式英语", "男声"),
+    ("Michael", "6", "美式英语", "男声"),
+    ("Emma", "7", "英式英语", "女声"),
+    ("Isabella", "8", "英式英语", "女声"),
+    ("George", "9", "英式英语", "男声"),
+    ("Lewis", "10", "英式英语", "男声"),
+)
+
+
 VOLCENGINE_TTS_2_ENGLISH_VOICES = (
     ("Tina老师 2.0", "zh_female_yingyujiaoxue_uranus_bigtts", "中文、英式英语", "教育场景"),
     ("Tim", "en_male_tim_uranus_bigtts", "美式英语", "外语音色"),
@@ -121,6 +136,26 @@ def default_voice_profiles(sherpa_model="", volc_resource_id="seed-tts-2.0"):
         "description": "当前配置的 sherpa-onnx VITS 模型",
         "editable": False,
     }]
+    configured_model = Path(sherpa_model).expanduser() if sherpa_model else None
+    if configured_model:
+        candidates = (
+            configured_model.parent / "kokoro-en-v0_19" / "model.onnx",
+            configured_model.parent.parent / "kokoro-en-v0_19" / "model.onnx",
+        )
+        kokoro_model = next((path for path in candidates if path.is_file()), None)
+        if kokoro_model:
+            profiles.extend({
+                "id": "system:sherpa:kokoro-en-v0_19:" + voice_id,
+                "name": "Kokoro " + name,
+                "provider": "sherpa",
+                "voice_id": voice_id,
+                "source": "Sherpa Kokoro 英文模型",
+                "source_url": "https://k2-fsa.github.io/sherpa/onnx/tts/pretrained_models/kokoro.html#kokoro-en-v0-19-english-11-speakers",
+                "model_id": str(kokoro_model),
+                "language": language,
+                "description": description,
+                "editable": False,
+            } for name, voice_id, language, description in SHERPA_KOKORO_EN_VOICES)
     profiles.extend({
         "id": "system:volcengine:" + voice_id,
         "name": name,

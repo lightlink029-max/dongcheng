@@ -93,13 +93,15 @@ Write-Host "Downloading Whisper model $WhisperModel"
 & $whisperPython -c "from faster_whisper import WhisperModel; WhisperModel('$WhisperModel', device='cpu', compute_type='int8', download_root=r'$whisperRoot\models')"
 if ($LASTEXITCODE -ne 0) { throw "Whisper model download failed" }
 
-# sherpa-onnx official Windows x64 binaries and an English Piper voice.
+# sherpa-onnx official Windows x64 binaries, Piper, and 11-speaker English Kokoro.
 $sherpaRoot = Join-Path $installPath "sherpa-onnx"
 New-Item -ItemType Directory -Force -Path $sherpaRoot | Out-Null
 $sherpaArchive = Join-Path $cache "sherpa-onnx-v1.13.7-win-x64-shared-MT-Release.tar.bz2"
 $voiceArchive = Join-Path $cache "vits-piper-en_US-lessac-medium.tar.bz2"
+$kokoroArchive = Join-Path $cache "kokoro-en-v0_19.tar.bz2"
 Download-File "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.7/sherpa-onnx-v1.13.7-win-x64-shared-MT-Release.tar.bz2" $sherpaArchive
 Download-File "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-medium.tar.bz2" $voiceArchive
+Download-File "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-en-v0_19.tar.bz2" $kokoroArchive
 if (-not (Get-ChildItem $sherpaRoot -Filter sherpa-onnx-offline-tts.exe -Recurse -ErrorAction SilentlyContinue)) {
     & tar.exe -xjf $sherpaArchive -C $sherpaRoot
     if ($LASTEXITCODE -ne 0) { throw "sherpa-onnx extraction failed" }
@@ -109,12 +111,21 @@ if (-not (Test-Path $voiceRoot)) {
     & tar.exe -xjf $voiceArchive -C $sherpaRoot
     if ($LASTEXITCODE -ne 0) { throw "sherpa voice extraction failed" }
 }
+$kokoroRoot = Join-Path $sherpaRoot "kokoro-en-v0_19"
+if (-not (Test-Path $kokoroRoot)) {
+    & tar.exe -xjf $kokoroArchive -C $sherpaRoot
+    if ($LASTEXITCODE -ne 0) { throw "sherpa Kokoro voice extraction failed" }
+}
 $sherpaExe = Get-ChildItem $sherpaRoot -Filter sherpa-onnx-offline-tts.exe -Recurse | Select-Object -First 1
 $sherpaModel = Join-Path $voiceRoot "en_US-lessac-medium.onnx"
 $sherpaTokens = Join-Path $voiceRoot "tokens.txt"
 $sherpaData = Join-Path $voiceRoot "espeak-ng-data"
 foreach ($required in @($sherpaExe.FullName,$sherpaModel,$sherpaTokens,$sherpaData)) {
     if (-not (Test-Path $required)) { throw "Missing sherpa component: $required" }
+}
+foreach ($required in @("model.onnx","tokens.txt","voices.bin","espeak-ng-data")) {
+    $requiredPath = Join-Path $kokoroRoot $required
+    if (-not (Test-Path $requiredPath)) { throw "Missing Kokoro component: $requiredPath" }
 }
 
 # Update the worker configuration without exposing or replacing stored secrets.
@@ -141,6 +152,9 @@ if (-not $translation.response) { throw "Ollama translation smoke test failed" }
 $ttsTest = Join-Path $sherpaRoot "test-voice.wav"
 & $sherpaExe.FullName "--vits-model=$sherpaModel" "--vits-data-dir=$sherpaData" "--vits-tokens=$sherpaTokens" "--output-filename=$ttsTest" "Warm and comfortable winter shoes for children."
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $ttsTest)) { throw "sherpa TTS smoke test failed" }
+$kokoroTest = Join-Path $sherpaRoot "test-kokoro-voice.wav"
+& $sherpaExe.FullName "--kokoro-model=$kokoroRoot\model.onnx" "--kokoro-voices=$kokoroRoot\voices.bin" "--kokoro-tokens=$kokoroRoot\tokens.txt" "--kokoro-data-dir=$kokoroRoot\espeak-ng-data" "--sid=6" "--output-filename=$kokoroTest" "This is a local English voice test."
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path $kokoroTest)) { throw "sherpa Kokoro TTS smoke test failed" }
 
 Write-Host ""
 Write-Host "Local AI installation completed." -ForegroundColor Green
@@ -150,3 +164,4 @@ Write-Host "Whisper:    $whisperCommand"
 Write-Host "Sherpa TTS: $($sherpaExe.FullName)"
 Write-Host "Translation test: $($translation.response.Trim())"
 Write-Host "TTS test:   $ttsTest"
+Write-Host "Kokoro:    $kokoroTest"

@@ -70,26 +70,45 @@ def transcribe(config, source_video, output_srt, language="Chinese"):
 
 
 def _sherpa_tts(config, text, output, voice="", speed=1.0, _volume=1.0):
-    values = [
-        config.get("sherpa_command"), config.get("sherpa_model"),
-        config.get("sherpa_tokens"), config.get("sherpa_data_dir"),
-    ]
-    if not all(str(value or "").strip() for value in values):
-        raise RuntimeError("sherpa-onnx 尚未完整配置：程序、模型、tokens 和 data-dir 均为必填")
-    executable, model, tokens, data_dir = [Path(value).expanduser() for value in values]
-    missing = [
-        str(path) for path, valid in (
-            (executable, executable.is_file()), (model, model.is_file()),
-            (tokens, tokens.is_file()), (data_dir, data_dir.is_dir()),
-        ) if not valid
-    ]
+    executable_value = str(config.get("sherpa_command") or "").strip()
+    model_value = str(config.get("sherpa_model") or "").strip()
+    if not executable_value or not model_value:
+        raise RuntimeError("sherpa-onnx 尚未完整配置：程序和模型均为必填")
+    executable = Path(executable_value).expanduser()
+    model = Path(model_value).expanduser()
+    model_dir = model.parent
+    tokens = model_dir / "tokens.txt"
+    if not tokens.is_file():
+        tokens = Path(config.get("sherpa_tokens") or "").expanduser()
+    data_dir = model_dir / "espeak-ng-data"
+    if not data_dir.is_dir():
+        data_dir = Path(config.get("sherpa_data_dir") or "").expanduser()
+    voices = model_dir / "voices.bin"
+    lexicon = model_dir / "lexicon.txt"
+    missing = [str(path) for path in (executable, model, tokens) if not path.is_file()]
     if missing:
         raise RuntimeError("sherpa-onnx 尚未完整配置：" + "、".join(missing))
-    command = [
-        str(executable), f"--vits-model={model}", f"--vits-tokens={tokens}",
-        f"--vits-data-dir={data_dir}", f"--output-filename={output}",
-        f"--vits-length-scale={1 / max(0.25, float(speed))}",
-    ]
+    if voices.is_file():
+        if not data_dir.is_dir():
+            raise RuntimeError("Kokoro 模型缺少 espeak-ng-data：" + str(data_dir))
+        command = [
+            str(executable), f"--kokoro-model={model}",
+            f"--kokoro-voices={voices}", f"--kokoro-tokens={tokens}",
+            f"--kokoro-data-dir={data_dir}",
+            f"--kokoro-length-scale={1 / max(0.25, float(speed))}",
+        ]
+    else:
+        command = [
+            str(executable), f"--vits-model={model}", f"--vits-tokens={tokens}",
+            f"--vits-length-scale={1 / max(0.25, float(speed))}",
+        ]
+        if data_dir.is_dir():
+            command.append(f"--vits-data-dir={data_dir}")
+        elif lexicon.is_file():
+            command.append(f"--vits-lexicon={lexicon}")
+        else:
+            raise RuntimeError("VITS 模型缺少 espeak-ng-data 或 lexicon.txt")
+    command.append(f"--output-filename={output}")
     if str(voice).isdigit():
         command.append(f"--sid={voice}")
     command.append(text)
