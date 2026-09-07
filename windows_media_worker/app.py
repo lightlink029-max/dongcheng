@@ -800,6 +800,9 @@ class MediaWorkerApp(tk.Tk):
         if not self.save(quiet=True): return
         if not self.vars["worker_token"].get().strip():
             messagebox.showerror(APP_TITLE, "请填写Odoo工作节点令牌"); return
+        for task in self.selection_store.list_tasks():
+            if int(task.get("id") or 0) > 0 and task.get("local_status") == "processing":
+                self.pending_selections[int(task["id"])] = task
         self.stop_event.clear(); self.status.set("运行中")
         self.start_button.config(state="disabled"); self.stop_button.config(state="normal")
         self.worker_thread = threading.Thread(target=self._work_loop, daemon=True); self.worker_thread.start()
@@ -820,17 +823,17 @@ class MediaWorkerApp(tk.Tk):
                     except Exception as exc:
                         self.pending_selections.pop(task_id, None)
                         self.events.put(("log", {"message": f"选片任务 {task_id} 已失效：{exc}"}))
-                if self.pending_selections:
-                    self.stop_event.wait(delay)
-                    continue
                 task = worker.claim()
                 if task and task["type"] == "douyin_select":
+                    self.events.put(("log", {"message": "已领取 Odoo 选片任务 %s" % task["id"]}))
                     try:
                         worker.prepare_douyin_selection(task)
                         self.pending_selections[task["id"]] = task
                     except Exception as exc:
                         worker.fail_task(task, exc)
-                elif task: worker.process(task)
+                elif task:
+                    self.events.put(("log", {"message": "已领取 Odoo 生成任务 %s" % task["id"]}))
+                    worker.process(task)
                 else: self.stop_event.wait(delay)
             except Exception as exc:
                 self.events.put(("log", {"message": "任务错误：" + str(exc)})); self.stop_event.wait(delay)

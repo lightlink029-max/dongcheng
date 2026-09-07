@@ -99,6 +99,17 @@ class ContentVariant(models.Model):
         task_model = self.env["psc.local.production.task"]
         task_model.get_or_create_worker_token()
         for variant in self:
+            active_task = variant.local_task_ids.filtered(
+                lambda task: task.task_type == task_type
+                and task.state in ("queued", "claimed", "processing")
+            )
+            if active_task:
+                raise UserError(_("该内容已有同类型任务正在排队或处理中：%s") % active_task[0].display_name)
+            if task_type in ("video", "translate_mix") and not (variant.source_video_urls or "").strip():
+                raise UserError(_(
+                    "没有可供混剪的视频链接。请先使用“抖音图片选片”任务在 Windows 工具中选择并处理素材，"
+                    "或先在“原视频网址”中填写视频链接。"
+                ))
             language = variant.language_id.name or variant.language_id.code or "English"
             source_image = variant.image_attachment_id
             if not source_image and variant.product_id.image_1920:
