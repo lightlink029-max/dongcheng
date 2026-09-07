@@ -217,7 +217,7 @@ class MediaWorkerApp(tk.Tk):
         )
         self.selection_tree = ttk.Treeview(
             source_page, columns=selection_columns, show="tree headings",
-            selectmode="extended", style="Media.Treeview",
+            selectmode="extended", style="Media.Treeview", height=5,
         )
         self.selection_tree.heading("#0", text="封面")
         self.selection_tree.column("#0", width=100, minwidth=100, stretch=False, anchor="center")
@@ -233,34 +233,36 @@ class MediaWorkerApp(tk.Tk):
             source_page, orient="horizontal", command=self.selection_tree.xview,
         )
         self.selection_tree.configure(xscrollcommand=selection_scroll.set)
-        self.selection_tree.pack(fill="both", expand=True, pady=(0, 10))
-        selection_scroll.pack(fill="x", pady=(0, 8))
         self.selection_tree.bind("<<TreeviewSelect>>", lambda _event: self._refresh_selection_summary())
         self.selection_tree.bind("<Double-1>", lambda _event: self.preview_selected_video())
 
         selection_controls = ttk.LabelFrame(source_page, text="视频素材管理", padding=10)
-        selection_controls.pack(fill="x", before=self.selection_tree, pady=(0, 8))
-        ttk.Button(selection_controls, text="全选", command=self.select_all_videos).pack(side="left", padx=3)
-        ttk.Button(selection_controls, text="从剪贴板添加", command=self.add_selection_from_clipboard).pack(side="left", padx=3)
-        ttk.Button(selection_controls, text="手工添加链接", command=self.add_selection_manually).pack(side="left", padx=3)
-        ttk.Button(selection_controls, text="添加本地视频", command=self.add_local_videos).pack(side="left", padx=3)
+        selection_controls.pack(fill="x", pady=(0, 8))
+        add_controls = ttk.Frame(selection_controls)
+        add_controls.pack(fill="x", pady=(0, 6))
+        edit_controls = ttk.Frame(selection_controls)
+        edit_controls.pack(fill="x")
+        ttk.Button(add_controls, text="全选", command=self.select_all_videos).pack(side="left", padx=3)
+        ttk.Button(add_controls, text="从剪贴板添加", command=self.add_selection_from_clipboard).pack(side="left", padx=3)
+        ttk.Button(add_controls, text="手工添加链接", command=self.add_selection_manually).pack(side="left", padx=3)
+        ttk.Button(add_controls, text="添加本地视频", command=self.add_local_videos).pack(side="left", padx=3)
         ttk.Button(
-            selection_controls, text="上移", command=lambda: self.move_selected_videos(-1),
+            edit_controls, text="上移", command=lambda: self.move_selected_videos(-1),
         ).pack(side="left", padx=3)
         ttk.Button(
-            selection_controls, text="下移", command=lambda: self.move_selected_videos(1),
+            edit_controls, text="下移", command=lambda: self.move_selected_videos(1),
         ).pack(side="left", padx=3)
-        ttk.Button(selection_controls, text="时间轴/版权", command=self.edit_selected_clip).pack(side="left", padx=3)
-        ttk.Button(selection_controls, text="删除所选", command=self.delete_selected_videos).pack(side="left", padx=3)
-        ttk.Button(selection_controls, text="下载/重新下载", command=self.redownload_selected_videos).pack(side="left", padx=3)
-        ttk.Button(selection_controls, text="预览所选素材", command=self.preview_selected_video).pack(side="left", padx=3)
+        ttk.Button(edit_controls, text="时间轴/版权", command=self.edit_selected_clip).pack(side="left", padx=3)
+        ttk.Button(edit_controls, text="删除所选", command=self.delete_selected_videos).pack(side="left", padx=3)
+        ttk.Button(edit_controls, text="下载/重新下载", command=self.redownload_selected_videos).pack(side="left", padx=3)
+        ttk.Button(edit_controls, text="预览所选素材", command=self.preview_selected_video).pack(side="left", padx=3)
         self.selection_summary = tk.StringVar(value="0 条")
-        ttk.Label(selection_controls, textvariable=self.selection_summary).pack(side="right")
+        ttk.Label(add_controls, textvariable=self.selection_summary).pack(side="right")
 
         content_actions = ttk.LabelFrame(source_page, text="文案与生成", padding=10)
-        content_actions.pack(fill="x")
+        content_actions.pack(side="bottom", fill="x")
         ttk.Button(
-            content_actions, text="打开文案翻译与校验", command=self.edit_active_project,
+            content_actions, text="文案校验并生成混剪", command=self.edit_active_project,
         ).pack(side="left", padx=5)
         ttk.Button(content_actions, text="管理和试听音色", command=self.open_voice_manager).pack(side="left", padx=5)
         ttk.Label(
@@ -268,6 +270,8 @@ class MediaWorkerApp(tk.Tk):
             text="单条可识别原声；多条固定按列表顺序拼接，文案确认后生成审核稿。",
             foreground="#666",
         ).pack(side="left", padx=18)
+        selection_scroll.pack(side="bottom", fill="x", pady=(0, 8))
+        self.selection_tree.pack(fill="both", expand=True, pady=(0, 10))
 
         project_actions = ttk.LabelFrame(review_page, text="项目文件管理", padding=8)
         project_actions.pack(fill="x", pady=(0, 10))
