@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import os
 import queue
@@ -8,7 +9,6 @@ import subprocess
 import sys
 import threading
 import time
-import uuid
 import winreg
 from pathlib import Path
 
@@ -623,9 +623,15 @@ class MediaWorkerApp(tk.Tk):
                     messagebox.showerror(APP_TITLE, data.get("error") or "选片链接同步失败")
                 elif event == "voice_preview":
                     button = data.get("button")
+                    status = data.get("status")
                     try:
                         if button and button.winfo_exists():
                             button.config(state="normal")
+                        if status:
+                            status.set(
+                                "试听失败" if data.get("error") else
+                                ("已播放本地缓存" if data.get("cached") else "已生成并缓存到本地")
+                            )
                     except tk.TclError:
                         pass
                     if data.get("error"):
@@ -2049,6 +2055,7 @@ class MediaWorkerApp(tk.Tk):
         preview = ttk.LabelFrame(body, text="音色试听", padding=10)
         preview.pack(fill="x", pady=(10, 0))
         preview_text = tk.StringVar(value="你好，欢迎使用 LightLink 音色试听。这是一段中文音色测试。")
+        preview_status = tk.StringVar(value="相同音色和文本将直接使用本地缓存")
         ttk.Entry(preview, textvariable=preview_text).pack(side="left", fill="x", expand=True)
 
         def preview_voice():
@@ -2065,7 +2072,19 @@ class MediaWorkerApp(tk.Tk):
                 speech_config["sherpa_model"] = selected["model_id"]
             output_dir = app_dir() / "voice-previews"
             output_dir.mkdir(parents=True, exist_ok=True)
-            output = output_dir / ("preview-" + uuid.uuid4().hex + ".wav")
+            cache_key = hashlib.sha256(json.dumps([
+                "v1", selected["provider"], selected.get("model_id", ""),
+                selected["voice_id"], text,
+            ], ensure_ascii=False).encode("utf-8")).hexdigest()
+            suffix = ".mp3" if selected["provider"] == "volcengine" else ".wav"
+            output = output_dir / ("preview-" + cache_key + suffix)
+            if output.is_file() and output.stat().st_size:
+                self.events.put(("voice_preview", {
+                    "path": str(output), "button": preview_button,
+                    "status": preview_status, "cached": True,
+                }))
+                return
+            preview_status.set("正在调用服务生成试听音频…")
 
             def run_preview():
                 try:
@@ -2075,16 +2094,19 @@ class MediaWorkerApp(tk.Tk):
                     )
                     self.events.put(("voice_preview", {
                         "path": str(result), "button": preview_button,
+                        "status": preview_status, "cached": False,
                     }))
                 except Exception as exc:
                     self.events.put(("voice_preview", {
                         "error": str(exc), "button": preview_button,
+                        "status": preview_status,
                     }))
 
             threading.Thread(target=run_preview, daemon=True).start()
 
         preview_button = ttk.Button(preview, text="生成并试听", command=preview_voice)
         preview_button.pack(side="left", padx=(10, 0))
+        ttk.Label(body, textvariable=preview_status, foreground="#666").pack(fill="x", pady=(4, 0))
 
         actions = ttk.Frame(body)
         actions.pack(fill="x", pady=(10, 0))
