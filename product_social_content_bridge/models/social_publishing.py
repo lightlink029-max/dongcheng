@@ -213,6 +213,7 @@ class SocialPublishingAccount(models.Model):
             task = self.env["psc.social.registration.task"].create({
                 "name": _("替换 %s") % self.display_name,
                 "task_mode": "replace", "slot_id": slot.id,
+                "cluster_id": self.cluster_id.id,
                 "replacement_account_id": self.id,
                 "channel_id": self.channel_id.id,
                 "worker_node_id": self.worker_node_id.id,

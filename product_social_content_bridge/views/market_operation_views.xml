@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_psc_industry_track_list" model="ir.ui.view">
+        <field name="name">psc.industry.track.list</field><field name="model">psc.industry.track</field>
+        <field name="arch" type="xml"><list><field name="sequence" widget="handle"/><field name="name"/><field name="code"/><field name="role_ids" widget="many2many_tags"/><field name="active"/></list></field>
+    </record>
+    <record id="view_psc_industry_track_form" model="ir.ui.view">
+        <field name="name">psc.industry.track.form</field><field name="model">psc.industry.track</field>
+        <field name="arch" type="xml">
+            <form><sheet>
+                <div class="oe_title"><h1><field name="name"/></h1></div>
+                <group><group><field name="code"/><field name="sequence"/><field name="active"/><field name="role_ids" widget="many2many_tags"/></group><group><field name="description"/><field name="default_customer_profile"/></group></group>
+                <notebook>
+                    <page string="产品属性模板"><field name="product_attribute_ids"><list editable="bottom"><field name="sequence" widget="handle"/><field name="name"/><field name="code"/><field name="value_type"/><field name="unit"/><field name="required_for_publish"/><field name="hard_gate"/><field name="active"/></list></field></page>
+                    <page string="评分与硬性门槛"><field name="scoring_rule_ids"><list editable="bottom"><field name="sequence" widget="handle"/><field name="name"/><field name="code"/><field name="weight"/><field name="hard_gate"/><field name="criteria"/><field name="active"/></list></field></page>
+                    <page string="内容栏目"><field name="content_pillar_ids"><list editable="bottom"><field name="sequence" widget="handle"/><field name="name"/><field name="code"/><field name="role_ids" widget="many2many_tags"/><field name="objective"/><field name="default_ratio"/><field name="active"/></list></field></page>
+                    <page string="客户、合规与指标"><group><field name="compliance_notes"/><field name="customer_requirement_template"/><field name="default_kpis"/></group></page>
+                </notebook>
+            </sheet></form>
+        </field>
+    </record>
+
+    <record id="view_psc_business_role_list" model="ir.ui.view">
+        <field name="name">psc.business.role.list</field><field name="model">psc.business.role</field>
+        <field name="arch" type="xml"><list><field name="sequence" widget="handle"/><field name="name"/><field name="code"/><field name="capability_ids" widget="many2many_tags"/><field name="active"/></list></field>
+    </record>
+    <record id="view_psc_business_role_form" model="ir.ui.view">
+        <field name="name">psc.business.role.form</field><field name="model">psc.business.role</field>
+        <field name="arch" type="xml"><form><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group><field name="code"/><field name="sequence"/><field name="active"/><field name="capability_ids" widget="many2many_tags"/></group><group><field name="description"/><field name="content_focus"/></group></group></sheet></form></field>
+    </record>
+
+    <record id="view_psc_business_capability_list" model="ir.ui.view">
+        <field name="name">psc.business.capability.list</field><field name="model">psc.business.capability</field>
+        <field name="arch" type="xml"><list editable="bottom"><field name="sequence" widget="handle"/><field name="name"/><field name="code"/><field name="description"/><field name="active"/></list></field>
+    </record>
+
+    <record id="view_psc_project_product_list" model="ir.ui.view">
+        <field name="name">psc.project.product.list</field><field name="model">psc.project.product</field>
+        <field name="arch" type="xml"><list decoration-success="status == 'active'" decoration-danger="status == 'rejected' or compliance_state == 'blocked'" decoration-warning="status in ('candidate', 'quotation', 'market_review', 'compliance_review')"><field name="priority" widget="badge"/><field name="name"/><field name="source"/><field name="market_ids" widget="many2many_tags"/><field name="fit_score"/><field name="hard_gate_passed"/><field name="compliance_state" widget="badge"/><field name="material_state" widget="badge"/><field name="target_purchase_price"/><field name="target_sale_price"/><field name="minimum_order_qty"/><field name="lead_time_days"/><field name="status" widget="badge"/><button name="action_open_source" type="object" string="打开产品" icon="fa-external-link"/><button name="action_link_candidate_product" type="object" string="转正式产品" icon="fa-link" invisible="not candidate_id or product_id"/><button name="action_mark_active" type="object" string="批准运营" icon="fa-check" invisible="status == 'active'"/></list></field>
+    </record>
+    <record id="view_psc_project_product_form" model="ir.ui.view">
+        <field name="name">psc.project.product.form</field><field name="model">psc.project.product</field>
+        <field name="arch" type="xml"><form><header><button name="action_link_candidate_product" type="object" string="转为正式产品" class="btn-secondary" invisible="not candidate_id or product_id"/><button name="action_mark_active" type="object" string="批准进入运营" class="btn-primary" invisible="status == 'active'"/><field name="status" widget="statusbar" statusbar_visible="candidate,quotation,market_review,compliance_review,active"/></header><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group><field name="project_id"/><field name="source"/><field name="product_id"/><field name="candidate_id"/><field name="market_ids" widget="many2many_tags"/><field name="priority"/></group><group><field name="fit_score"/><field name="hard_gate_passed"/><field name="compliance_state"/><field name="material_state"/><field name="last_reviewed_at"/><field name="next_review_date"/></group></group><group string="价格与供应"><field name="target_purchase_price"/><field name="target_sale_price"/><field name="minimum_order_qty"/><field name="lead_time_days"/></group><group string="项目判断"><field name="positioning"/><field name="selling_points"/><field name="recommendation"/></group><notebook><page string="赛道产品属性"><field name="attribute_value_ids"><list editable="bottom"><field name="sequence" widget="handle"/><field name="attribute_id"/><field name="name"/><field name="value"/><field name="required_for_publish"/><field name="hard_gate"/><field name="verified"/><field name="evidence"/></list></field></page><page string="市场适配评分"><field name="score_line_ids"><list editable="bottom"><field name="sequence" widget="handle"/><field name="rule_id"/><field name="name"/><field name="weight"/><field name="score"/><field name="hard_gate"/><field name="gate_passed"/><field name="notes"/></list></field></page></notebook></sheet></form></field>
+    </record>
+
+    <record id="view_psc_content_plan_list" model="ir.ui.view">
+        <field name="name">psc.content.plan.list</field><field name="model">psc.content.plan</field>
+        <field name="arch" type="xml"><list decoration-success="state == 'published'" decoration-muted="state == 'cancelled'"><field name="scheduled_at"/><field name="name"/><field name="pillar_id"/><field name="product_id"/><field name="market_id"/><field name="channel_id"/><field name="state" widget="badge"/><field name="content_id"/><button name="action_prepare_content" type="object" string="生成草稿" icon="fa-file-text-o" invisible="content_id"/><button name="action_open_content" type="object" string="打开内容" icon="fa-external-link" invisible="not content_id"/></list></field>
+    </record>
+    <record id="view_psc_content_plan_form" model="ir.ui.view">
+        <field name="name">psc.content.plan.form</field><field name="model">psc.content.plan</field>
+        <field name="arch" type="xml"><form><header><button name="action_prepare_content" type="object" string="生成渠道内容草稿" class="btn-primary" invisible="content_id"/><button name="action_open_content" type="object" string="打开渠道内容" invisible="not content_id"/><field name="state" widget="statusbar" statusbar_visible="draft,prepared,ready,published"/></header><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group><field name="project_id"/><field name="pillar_id"/><field name="product_id"/></group><group><field name="market_id"/><field name="channel_id"/><field name="scheduled_at"/><field name="content_id"/></group></group><field name="brief"/></sheet></form></field>
+    </record>
+
+    <record id="view_psc_social_account_cluster_list" model="ir.ui.view">
+        <field name="name">psc.social.account.cluster.list</field><field name="model">psc.social.account.cluster</field>
+        <field name="arch" type="xml"><list decoration-success="state == 'ready'" decoration-danger="state == 'failed'" decoration-muted="state == 'paused'"><field name="name"/><field name="track_id"/><field name="persona"/><field name="target_market_id"/><field name="worker_node_id"/><field name="bitbrowser_environment_id"/><field name="expected_ip"/><field name="expected_country_id"/><field name="expected_timezone"/><field name="state" widget="badge"/><field name="active"/></list></field>
+    </record>
+    <record id="view_psc_social_account_cluster_form" model="ir.ui.view">
+        <field name="name">psc.social.account.cluster.form</field><field name="model">psc.social.account.cluster</field>
+        <field name="arch" type="xml"><form><header><button name="action_mark_ready" type="object" string="确认集群可用" class="btn-primary" invisible="state == 'ready'"/><button name="action_pause" type="object" string="暂停" invisible="state == 'paused'"/><field name="state" widget="statusbar" statusbar_visible="draft,ready,busy,failed,paused"/></header><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group string="经营定位"><field name="track_id"/><field name="product_line_id"/><field name="project_ids" widget="many2many_tags"/><field name="target_market_id"/><field name="persona"/><field name="positioning"/><field name="active"/></group><group string="比特环境与固定 IP"><field name="worker_node_id"/><field name="bitbrowser_environment_id" options="{'no_create': True}"/><field name="expected_ip"/><field name="expected_country_id"/><field name="expected_timezone"/><field name="last_validation_at"/><field name="last_validation_message"/></group></group><group string="平台账号"><field name="account_ids" context="{'default_cluster_id': id}"><list editable="bottom" decoration-success="account_state == 'available'" decoration-danger="account_state in ('unavailable', 'replacement_pending')"><field name="channel_id"/><field name="name"/><field name="username"/><field name="profile_url"/><field name="daily_publish_limit"/><field name="last_validation_state" widget="badge"/><field name="account_state" widget="badge"/></list></field></group></sheet></form></field>
+    </record>
+
+    <record id="view_psc_customer_touchpoint_list" model="ir.ui.view">
+        <field name="name">psc.customer.touchpoint.list</field><field name="model">psc.customer.touchpoint</field>
+        <field name="arch" type="xml"><list><field name="occurred_at"/><field name="lead_id"/><field name="event_type" widget="badge"/><field name="source_type" widget="badge"/><field name="project_id"/><field name="cluster_id"/><field name="account_id"/><field name="content_id"/><field name="product_id"/><field name="verified"/></list></field>
+    </record>
+    <record id="view_psc_customer_requirement_list" model="ir.ui.view">
+        <field name="name">psc.customer.requirement.list</field><field name="model">psc.customer.requirement</field>
+        <field name="arch" type="xml"><list><field name="name"/><field name="lead_id"/><field name="project_id"/><field name="track_id"/><field name="organization_type"/><field name="quantity"/><field name="budget"/><field name="target_purchase_date"/><field name="stage" widget="badge"/></list></field>
+    </record>
+
+    <record id="view_psc_performance_snapshot_list" model="ir.ui.view">
+        <field name="name">psc.performance.snapshot.list</field><field name="model">psc.performance.snapshot</field>
+        <field name="arch" type="xml"><list editable="bottom"><field name="snapshot_date"/><field name="project_id"/><field name="destination_id"/><field name="cluster_id"/><field name="account_id"/><field name="content_id"/><field name="product_id"/><field name="impressions"/><field name="views"/><field name="clicks"/><field name="inquiries"/><field name="qualified_leads"/><field name="quotations"/><field name="orders"/><field name="revenue"/><field name="purchase_cost"/><field name="traffic_cost"/></list></field>
+    </record>
+    <record id="view_psc_optimization_action_list" model="ir.ui.view">
+        <field name="name">psc.optimization.action.list</field><field name="model">psc.optimization.action</field>
+        <field name="arch" type="xml"><list decoration-success="state == 'done'" decoration-warning="state in ('approved', 'doing')"><field name="priority" widget="badge"/><field name="name"/><field name="project_id"/><field name="category"/><field name="owner_id"/><field name="due_date"/><field name="state" widget="badge"/><button name="action_approve" type="object" string="批准" invisible="state != 'draft'"/><button name="action_start" type="object" string="开始" invisible="state != 'approved'"/><button name="action_done" type="object" string="完成" invisible="state != 'doing'"/></list></field>
+    </record>
+
+    <record id="view_psc_project_form_market_operations" model="ir.ui.view">
+        <field name="name">psc.publishing.project.form.market.operations</field>
+        <field name="model">psc.publishing.project</field>
+        <field name="inherit_id" ref="view_psc_project_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_activate_operation" type="object" string="启动长期运营" class="btn-secondary" invisible="operation_state == 'active'"/>
+                <button name="action_sync_product_pool" type="object" string="同步所选产品到产品池" invisible="not product_ids"/>
+                <field name="operation_state" widget="badge"/>
+            </xpath>
+            <xpath expr="//field[@name='product_line_id']" position="before">
+                <field name="track_id" required="1" options="{'no_create': True}"/>
+                <field name="business_role_id" required="1" options="{'no_create': True}"/>
+                <field name="capability_ids" widget="many2many_tags"/>
+            </xpath>
+            <xpath expr="//field[@name='product_ids']" position="attributes">
+                <attribute name="string">从 Odoo 产品库快速选择</attribute>
+                <attribute name="required">0</attribute>
+            </xpath>
+            <xpath expr="//field[@name='product_ids']" position="after"><field name="business_goal" placeholder="填写长期经营目标、客户类型、产品方向和阶段性目标。"/></xpath>
+            <xpath expr="//sheet/notebook/page[1]" position="before">
+                <page string="项目产品池">
+                    <div class="alert alert-info" role="alert">正式产品可从 Odoo 产品库选择后同步；产品智能候选必须先审核批准，才能转为正式产品并进入运营。</div>
+                    <field name="project_product_ids" context="{'default_project_id': id}">
+                        <list decoration-success="status == 'active'" decoration-danger="status == 'rejected' or compliance_state == 'blocked'" decoration-warning="status in ('candidate', 'quotation', 'market_review', 'compliance_review')">
+                            <field name="priority" widget="badge"/><field name="name"/><field name="source"/><field name="product_id"/><field name="candidate_id"/><field name="market_ids" widget="many2many_tags"/><field name="fit_score"/><field name="hard_gate_passed"/><field name="compliance_state" widget="badge"/><field name="material_state" widget="badge"/><field name="status" widget="badge"/><button name="action_open_source" type="object" string="打开" icon="fa-external-link"/><button name="action_link_candidate_product" type="object" string="转正式产品" invisible="not candidate_id or product_id"/><button name="action_mark_active" type="object" string="批准运营" invisible="status == 'active'"/>
+                        </list>
+                    </field>
+                </page>
+                <page string="内容计划与栏目">
+                    <field name="content_plan_ids" context="{'default_project_id': id}"><list editable="bottom"><field name="scheduled_at"/><field name="name"/><field name="pillar_id" domain="[('track_id', '=', parent.track_id)]"/><field name="product_id"/><field name="market_id" domain="[('id', 'in', parent.market_ids)]"/><field name="channel_id" domain="[('id', 'in', parent.channel_ids)]"/><field name="state" widget="badge"/><field name="content_id"/><button name="action_prepare_content" type="object" string="生成草稿" invisible="content_id"/><button name="action_open_content" type="object" string="打开内容" invisible="not content_id"/></list></field>
+                </page>
+                <page string="账号集群">
+                    <div class="alert alert-info" role="alert">一个比特环境对应一个账号集群；同一品牌身份可在该环境内维护 Facebook、Instagram、TikTok 等平台账号。</div>
+                    <field name="account_cluster_ids" widget="many2many" options="{'no_create': True}"><list><field name="name"/><field name="persona"/><field name="target_market_id"/><field name="bitbrowser_environment_id"/><field name="expected_ip"/><field name="expected_country_id"/><field name="state" widget="badge"/></list></field>
+                </page>
+                <page string="客户与需求">
+                    <field name="lead_ids" context="{'default_psc_project_id': id}"><list><field name="name"/><field name="partner_name"/><field name="country_id"/><field name="user_id"/><field name="psc_first_touchpoint_id"/><field name="psc_last_touchpoint_id"/><field name="stage_id"/><field name="expected_revenue"/></list></field>
+                </page>
+                <page string="数据与优化">
+                    <group string="渠道、产品和成交数据"><field name="performance_snapshot_ids"><list editable="bottom"><field name="snapshot_date"/><field name="destination_id"/><field name="cluster_id"/><field name="account_id"/><field name="content_id"/><field name="product_id"/><field name="impressions"/><field name="clicks"/><field name="inquiries"/><field name="qualified_leads"/><field name="quotations"/><field name="orders"/><field name="revenue"/><field name="purchase_cost"/></list></field></group>
+                    <group string="基于数据的优化任务"><field name="optimization_action_ids"><list editable="bottom" decoration-success="state == 'done'"><field name="priority" widget="badge"/><field name="name"/><field name="category"/><field name="evidence"/><field name="proposed_action"/><field name="owner_id"/><field name="due_date"/><field name="state" widget="badge"/><button name="action_approve" type="object" string="批准" invisible="state != 'draft'"/><button name="action_start" type="object" string="开始" invisible="state != 'approved'"/><button name="action_done" type="object" string="完成" invisible="state != 'doing'"/></list></field></group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_psc_content_form_market_operations" model="ir.ui.view">
+        <field name="name">psc.content.variant.form.market.operations</field><field name="model">psc.content.variant</field><field name="inherit_id" ref="view_psc_content_form"/>
+        <field name="arch" type="xml"><xpath expr="//field[@name='project_id']" position="after"><field name="plan_id"/><field name="pillar_id"/></xpath></field>
+    </record>
+
+    <record id="view_product_intelligence_candidate_market_fit" model="ir.ui.view">
+        <field name="name">product.intelligence.candidate.form.market.fit</field>
+        <field name="model">product.intelligence.candidate</field>
+        <field name="inherit_id" ref="product_intelligence_hub.view_product_intelligence_candidate_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="适合赛道与市场">
+                    <div class="alert alert-info" role="alert">产品采集后按赛道和目标市场记录需求依据、适合客户、合规判断和推荐结论；人工确认后再加入项目产品池。</div>
+                    <field name="psc_market_fit_ids">
+                        <list editable="bottom" decoration-success="state == 'approved'" decoration-danger="state == 'rejected' or compliance_state == 'blocked'">
+                            <field name="track_id"/><field name="market_id"/><field name="business_role_id"/><field name="fit_score"/><field name="demand_evidence"/><field name="target_customer"/><field name="compliance_state" widget="badge"/><field name="state" widget="badge"/><field name="recommendation"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_psc_social_account_form_cluster" model="ir.ui.view">
+        <field name="name">psc.social.publishing.account.form.cluster</field><field name="model">psc.social.publishing.account</field><field name="inherit_id" ref="view_psc_social_publishing_account_form"/>
+        <field name="arch" type="xml"><xpath expr="//field[@name='product_line_id']" position="before"><field name="cluster_id" options="{'no_create': True}"/></xpath></field>
+    </record>
+    <record id="view_psc_social_account_list_cluster" model="ir.ui.view">
+        <field name="name">psc.social.publishing.account.list.cluster</field><field name="model">psc.social.publishing.account</field><field name="inherit_id" ref="view_psc_social_publishing_account_list"/>
+        <field name="arch" type="xml"><xpath expr="//field[@name='name']" position="after"><field name="cluster_id" optional="show"/></xpath></field>
+    </record>
+
+    <record id="view_psc_registration_task_form_cluster" model="ir.ui.view">
+        <field name="name">psc.social.registration.task.form.cluster</field><field name="model">psc.social.registration.task</field><field name="inherit_id" ref="view_psc_social_registration_task_form"/>
+        <field name="arch" type="xml"><xpath expr="//field[@name='slot_id']" position="before"><field name="cluster_id" options="{'no_create': True}"/></xpath></field>
+    </record>
+    <record id="view_psc_registration_task_list_cluster" model="ir.ui.view">
+        <field name="name">psc.social.registration.task.list.cluster</field><field name="model">psc.social.registration.task</field><field name="inherit_id" ref="view_psc_social_registration_task_list"/>
+        <field name="arch" type="xml"><xpath expr="//field[@name='task_mode']" position="after"><field name="cluster_id" optional="show"/></xpath></field>
+    </record>
+
+    <record id="view_crm_lead_form_market_operations" model="ir.ui.view">
+        <field name="name">crm.lead.form.market.operations</field><field name="model">crm.lead</field><field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml"><xpath expr="//notebook" position="inside"><page string="客户来源与行业需求" name="psc_customer_journey"><group><field name="psc_first_touchpoint_id"/><field name="psc_last_touchpoint_id"/></group><group string="完整客户触点"><field name="psc_touchpoint_ids"><list editable="bottom"><field name="occurred_at"/><field name="event_type"/><field name="source_type"/><field name="project_id"/><field name="cluster_id"/><field name="account_id"/><field name="content_id"/><field name="product_id"/><field name="verified"/></list></field></group><group string="行业采购需求"><field name="psc_requirement_ids"><list editable="bottom"><field name="name"/><field name="project_id"/><field name="track_id"/><field name="organization_type"/><field name="quantity"/><field name="budget"/><field name="target_purchase_date"/><field name="stage"/></list></field></group></page></xpath></field>
+    </record>
+
+    <record id="action_psc_industry_tracks" model="ir.actions.act_window"><field name="name">经营赛道模板</field><field name="res_model">psc.industry.track</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_business_roles" model="ir.actions.act_window"><field name="name">经营角色</field><field name="res_model">psc.business.role</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_business_capabilities" model="ir.actions.act_window"><field name="name">经营能力</field><field name="res_model">psc.business.capability</field><field name="view_mode">list</field></record>
+    <record id="action_psc_project_products" model="ir.actions.act_window"><field name="name">项目产品池</field><field name="res_model">psc.project.product</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_content_plans" model="ir.actions.act_window"><field name="name">内容计划</field><field name="res_model">psc.content.plan</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_social_account_clusters" model="ir.actions.act_window"><field name="name">账号集群</field><field name="res_model">psc.social.account.cluster</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_customer_touchpoints" model="ir.actions.act_window"><field name="name">客户来源触点</field><field name="res_model">psc.customer.touchpoint</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_customer_requirements" model="ir.actions.act_window"><field name="name">客户行业需求</field><field name="res_model">psc.customer.requirement</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_performance_snapshots" model="ir.actions.act_window"><field name="name">经营数据</field><field name="res_model">psc.performance.snapshot</field><field name="view_mode">list</field></record>
+    <record id="action_psc_optimization_actions" model="ir.actions.act_window"><field name="name">优化任务</field><field name="res_model">psc.optimization.action</field><field name="view_mode">list,form</field></record>
+</odoo>

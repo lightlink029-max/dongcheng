@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem id="menu_psc_root" name="内容发布" sequence="35"/>
-    <menuitem id="menu_psc_workflow" name="内容工作台" parent="menu_psc_root" sequence="10"/>
-    <menuitem id="menu_psc_projects" name="① 发布项目" parent="menu_psc_workflow" action="action_psc_project" sequence="10"/>
-    <menuitem id="menu_psc_contents" name="② 渠道内容审核" parent="menu_psc_workflow" action="action_psc_content" sequence="20"/>
-    <menuitem id="menu_psc_publication_tasks" name="④ 发布任务与结果" parent="menu_psc_workflow" action="action_psc_publication_tasks" sequence="40"/>
-    <menuitem id="menu_psc_resources" name="资源与账号" parent="menu_psc_root" sequence="40"/>
+    <menuitem id="menu_psc_root" name="市场运营" sequence="35"/>
+    <menuitem id="menu_psc_workflow" name="项目运营" parent="menu_psc_root" sequence="10"/>
+    <menuitem id="menu_psc_projects" name="市场运营项目" parent="menu_psc_workflow" action="action_psc_project" sequence="10"/>
+    <menuitem id="menu_psc_contents" name="内容审核" parent="menu_psc_workflow" action="action_psc_content" sequence="20"/>
+    <menuitem id="menu_psc_publication_tasks" name="发布任务与结果" parent="menu_psc_workflow" action="action_psc_publication_tasks" sequence="30"/>
+    <menuitem id="menu_psc_resources" name="账号与发布资源" parent="menu_psc_root" sequence="40"/>
     <menuitem id="menu_psc_assets" name="素材库" parent="menu_psc_resources" action="action_psc_media_asset" sequence="10"/>
     <menuitem id="menu_psc_config" name="系统配置" parent="menu_psc_root" sequence="80"/>
+    <menuitem id="menu_psc_industry_tracks" name="经营赛道模板" parent="menu_psc_config" action="action_psc_industry_tracks" sequence="5"/>
+    <menuitem id="menu_psc_business_roles" name="经营角色与能力" parent="menu_psc_config" action="action_psc_business_roles" sequence="7"/>
     <menuitem id="menu_psc_product_lines" name="品牌/产品线" parent="menu_psc_config" action="action_psc_product_line" sequence="10"/>
     <menuitem id="menu_psc_markets" name="目标市场" parent="menu_psc_config" action="action_psc_market" sequence="20"/>
     <menuitem id="menu_psc_channels" name="发布渠道" parent="menu_psc_config" action="action_psc_channel" sequence="30"/>
     <menuitem id="menu_psc_social_accounts" name="社媒账号" parent="menu_psc_resources" action="action_psc_social_publishing_accounts" sequence="40"/>
-    <menuitem id="menu_psc_social_account_slots" name="账号槽位" parent="menu_psc_resources" action="action_psc_social_account_slots" sequence="30"/>
+    <menuitem id="menu_psc_social_account_slots" name="账号集群" parent="menu_psc_resources" action="action_psc_social_account_clusters" sequence="30"/>
     <menuitem id="menu_psc_email_assets" name="邮箱资产" parent="menu_psc_resources" action="action_psc_email_assets" sequence="20"/>
     <menuitem id="menu_psc_registration_tasks" name="账号注册与替换任务" parent="menu_psc_resources" action="action_psc_social_registration_tasks" sequence="50"/>
     <menuitem id="menu_psc_destinations" name="发布目标" parent="menu_psc_resources" action="action_psc_publishing_destinations" sequence="60"/>

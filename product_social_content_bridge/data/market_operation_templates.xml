@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- 通用经营能力 -->
+        <record id="cap_own_factory" model="psc.business.capability"><field name="name">自有工厂</field><field name="code">own_factory</field><field name="description">拥有并可展示真实生产设施与产线。</field></record>
+        <record id="cap_oem_odm" model="psc.business.capability"><field name="name">OEM/ODM 定制</field><field name="code">oem_odm</field><field name="description">支持产品、Logo、包装和规格定制。</field></record>
+        <record id="cap_sourcing" model="psc.business.capability"><field name="name">一站式寻源</field><field name="code">sourcing</field><field name="description">可组织多供应商询价、验厂、验货和跟单。</field></record>
+        <record id="cap_integration" model="psc.business.capability"><field name="name">方案集成</field><field name="code">integration</field><field name="description">可完成多产品组合、选型和整体方案设计。</field></record>
+        <record id="cap_installation" model="psc.business.capability"><field name="name">安装培训</field><field name="code">installation</field><field name="description">具备安装、调试和客户培训能力。</field></record>
+        <record id="cap_after_sales" model="psc.business.capability"><field name="name">售后服务</field><field name="code">after_sales</field><field name="description">可提供备件、维护和售后响应。</field></record>
+        <record id="cap_quality" model="psc.business.capability"><field name="name">质量与验货</field><field name="code">quality</field><field name="description">具备质量控制、测试和第三方验货能力。</field></record>
+        <record id="cap_logistics" model="psc.business.capability"><field name="name">国际物流</field><field name="code">logistics</field><field name="description">可提供包装、报关、运输和交付协调。</field></record>
+        <record id="cap_local_service" model="psc.business.capability"><field name="name">本地服务</field><field name="code">local_service</field><field name="description">目标市场拥有本地库存、渠道或服务伙伴。</field></record>
+
+        <!-- 主要经营角色 -->
+        <record id="role_direct_factory" model="psc.business.role">
+            <field name="name">直营工厂</field><field name="code">direct_factory</field><field name="sequence">10</field>
+            <field name="description">以自有制造、质量控制、产能和交期为主要竞争力。</field>
+            <field name="content_focus">真实工厂、生产过程、质量测试、认证、产能、定制和交付。</field>
+            <field name="capability_ids" eval="[(6, 0, [ref('cap_own_factory'), ref('cap_oem_odm'), ref('cap_quality')])]"/>
+        </record>
+        <record id="role_oem_factory" model="psc.business.role">
+            <field name="name">OEM/ODM 制造商</field><field name="code">oem_factory</field><field name="sequence">20</field>
+            <field name="description">以打样、研发和定制生产服务品牌客户。</field>
+            <field name="content_focus">定制流程、研发打样、材料选择、包装和客户案例。</field>
+            <field name="capability_ids" eval="[(6, 0, [ref('cap_own_factory'), ref('cap_oem_odm'), ref('cap_quality')])]"/>
+        </record>
+        <record id="role_integrator" model="psc.business.role">
+            <field name="name">系统集成商/解决方案商</field><field name="code">integrator</field><field name="sequence">30</field>
+            <field name="description">围绕客户场景组织多产品、设计整体方案并交付。</field>
+            <field name="content_focus">场景分析、选型、组合方案、项目案例、安装培训与售后。</field>
+            <field name="capability_ids" eval="[(6, 0, [ref('cap_integration'), ref('cap_sourcing'), ref('cap_installation'), ref('cap_after_sales')])]"/>
+        </record>
+        <record id="role_trading" model="psc.business.role">
+            <field name="name">外贸公司</field><field name="code">trading_company</field><field name="sequence">40</field>
+            <field name="description">以多供应商、多品类、价格与交付组织能力服务海外客户。</field>
+            <field name="content_focus">选品、价格、供应商管理、验货、组合采购和国际交付。</field>
+            <field name="capability_ids" eval="[(6, 0, [ref('cap_sourcing'), ref('cap_quality'), ref('cap_logistics')])]"/>
+        </record>
+        <record id="role_sourcing_agent" model="psc.business.role">
+            <field name="name">采购/寻源代理</field><field name="code">sourcing_agent</field><field name="sequence">50</field>
+            <field name="description">代表客户寻找、筛选和管理供应商。</field>
+            <field name="content_focus">产品搜索、比价、验厂、验货、跟单和风险控制。</field>
+            <field name="capability_ids" eval="[(6, 0, [ref('cap_sourcing'), ref('cap_quality'), ref('cap_logistics')])]"/>
+        </record>
+        <record id="role_brand" model="psc.business.role">
+            <field name="name">品牌商</field><field name="code">brand_owner</field><field name="sequence">60</field>
+            <field name="description">以品牌、设计、产品差异和用户体验经营市场。</field>
+            <field name="content_focus">品牌故事、产品差异、使用体验、案例和渠道合作。</field>
+            <field name="capability_ids" eval="[(6, 0, [ref('cap_oem_odm'), ref('cap_after_sales')])]"/>
+        </record>
+        <record id="role_distributor" model="psc.business.role">
+            <field name="name">批发商/区域分销商</field><field name="code">distributor</field><field name="sequence">70</field>
+            <field name="description">以库存、区域渠道、批量供货和本地服务经营市场。</field>
+            <field name="content_focus">现货、价格梯度、经销政策、本地交付和售后服务。</field>
+            <field name="capability_ids" eval="[(6, 0, [ref('cap_local_service'), ref('cap_after_sales'), ref('cap_logistics')])]"/>
+        </record>
+        <record id="role_epc" model="psc.business.role">
+            <field name="name">工程/EPC 服务商</field><field name="code">epc</field><field name="sequence">80</field>
+            <field name="description">负责项目设计、施工、调试与整体交付。</field>
+            <field name="content_focus">项目设计、现场实施、进度、质量、安全和交付结果。</field>
+            <field name="capability_ids" eval="[(6, 0, [ref('cap_integration'), ref('cap_installation'), ref('cap_after_sales')])]"/>
+        </record>
+        <record id="role_dtc" model="psc.business.role">
+            <field name="name">跨境零售/DTC</field><field name="code">dtc</field><field name="sequence">90</field>
+            <field name="description">直接面向终端消费者销售和服务。</field>
+            <field name="content_focus">使用场景、体验、短视频、评价、促销和售后。</field>
+            <field name="capability_ids" eval="[(6, 0, [ref('cap_after_sales'), ref('cap_logistics')])]"/>
+        </record>
+
+        <!-- 四套可复制扩展的经营赛道 -->
+        <record id="track_medical" model="psc.industry.track">
+            <field name="name">医疗器械与医疗用品</field><field name="code">medical</field><field name="sequence">10</field>
+            <field name="description">面向医院、诊所、经销商和政府采购的医疗设备、耗材及整体方案。</field>
+            <field name="role_ids" eval="[(6, 0, [ref('role_direct_factory'), ref('role_oem_factory'), ref('role_integrator'), ref('role_trading'), ref('role_distributor')])]"/>
+            <field name="default_customer_profile">医院、诊所、医疗经销商、实验室、非政府组织和政府采购机构；关注认证、用途、售后、交期和总拥有成本。</field>
+            <field name="compliance_notes">认证必须与具体产品及目标国家匹配；禁止虚构治疗效果、注册状态、客户案例和临床数据；客户内容不得包含患者隐私。</field>
+            <field name="customer_requirement_template">机构类型；应用科室；采购数量；目标认证；注册要求；电气标准；培训、安装和售后要求；采购时间及交付地点。</field>
+            <field name="default_kpis">合规通过产品数；有效询盘；医院/经销商线索；报价率；样品率；成交率；订单毛利；交付周期。</field>
+        </record>
+        <record id="track_energy_storage" model="psc.industry.track">
+            <field name="name">储能与新能源</field><field name="code">energy_storage</field><field name="sequence">20</field>
+            <field name="description">户用、便携式和工商业储能系统、电池、逆变器及配套解决方案。</field>
+            <field name="role_ids" eval="[(6, 0, [ref('role_direct_factory'), ref('role_oem_factory'), ref('role_integrator'), ref('role_trading'), ref('role_distributor'), ref('role_epc')])]"/>
+            <field name="default_customer_profile">安装商、EPC、能源经销商、工商业业主和项目开发商；关注安全、容量、兼容性、认证、质保和投资回报。</field>
+            <field name="compliance_notes">电芯、BMS、系统认证、运输文件和质保必须有真实依据；禁止虚构循环寿命、安全测试、功率和项目收益。</field>
+            <field name="customer_requirement_template">负载；容量；功率；电压；并网/离网；安装地；环境温度；电池与逆变器偏好；认证；质保；交付和安装时间。</field>
+            <field name="default_kpis">合格项目线索；方案提交率；技术确认周期；报价率；成交容量；系统毛利；安装交付周期；售后问题率。</field>
+        </record>
+        <record id="track_footwear_apparel" model="psc.industry.track">
+            <field name="name">鞋服帽</field><field name="code">footwear_apparel</field><field name="sequence">30</field>
+            <field name="description">鞋类、服装、帽子与配饰的生产、定制、批发和跨境销售。</field>
+            <field name="role_ids" eval="[(6, 0, [ref('role_direct_factory'), ref('role_oem_factory'), ref('role_trading'), ref('role_brand'), ref('role_distributor'), ref('role_dtc')])]"/>
+            <field name="default_customer_profile">品牌商、进口商、批发商、零售商和电商卖家；关注款式、材料、尺码、MOQ、打样、价格和上市时间。</field>
+            <field name="compliance_notes">材质、功能、品牌授权和测试信息必须真实；禁止使用无授权商标、图片和虚假环保或性能宣称。</field>
+            <field name="customer_requirement_template">品类与款式；目标客群；材料；尺码；颜色；数量；目标价格；Logo；包装；打样时间；上市时间；测试与验厂要求。</field>
+            <field name="default_kpis">新品测试数；样品申请；有效买家；报价率；打样通过率；订单量；交期；退货/质量问题率；毛利。</field>
+        </record>
+        <record id="track_daily_goods" model="psc.industry.track">
+            <field name="name">日用百货</field><field name="code">daily_goods</field><field name="sequence">40</field>
+            <field name="description">家居、清洁、收纳、厨房及通用消费品的批发、定制和零售。</field>
+            <field name="role_ids" eval="[(6, 0, [ref('role_direct_factory'), ref('role_oem_factory'), ref('role_trading'), ref('role_sourcing_agent'), ref('role_brand'), ref('role_distributor'), ref('role_dtc')])]"/>
+            <field name="default_customer_profile">超市、连锁店、进口商、批发商、电商卖家和终端消费者；关注价格、包装、组合、物流体积和质量稳定性。</field>
+            <field name="compliance_notes">材料、安全、食品接触、儿童用品和环保宣称必须符合目标市场要求；禁止虚构测试与授权。</field>
+            <field name="customer_requirement_template">使用场景；材料；尺寸；颜色；套装组合；数量；目标价格；包装；单箱数量；交付时间；检测和标签要求。</field>
+            <field name="default_kpis">候选产品数；低成本供应数；点击率；询盘率；报价率；订单件数；装箱利用率；毛利；复购率。</field>
+        </record>
+
+        <!-- 可配置评分规则 -->
+        <record id="score_medical_demand" model="psc.track.scoring.rule"><field name="track_id" ref="track_medical"/><field name="name">市场需求</field><field name="code">demand</field><field name="weight">20</field><field name="criteria">目标机构需求、搜索、询盘和采购计划。</field></record>
+        <record id="score_medical_margin" model="psc.track.scoring.rule"><field name="track_id" ref="track_medical"/><field name="name">价格与毛利</field><field name="code">margin</field><field name="weight">15</field><field name="criteria">到岸成本、目标售价和售后成本。</field></record>
+        <record id="score_medical_compliance" model="psc.track.scoring.rule"><field name="track_id" ref="track_medical"/><field name="name">认证与合规</field><field name="code">compliance</field><field name="weight">30</field><field name="hard_gate">1</field><field name="criteria">目标国家准入、产品用途、证书和宣传内容均须通过。</field></record>
+        <record id="score_medical_supply" model="psc.track.scoring.rule"><field name="track_id" ref="track_medical"/><field name="name">供应与售后</field><field name="code">supply</field><field name="weight">20</field><field name="criteria">供应稳定、备件、培训、维修和交期。</field></record>
+        <record id="score_medical_content" model="psc.track.scoring.rule"><field name="track_id" ref="track_medical"/><field name="name">资料完整度</field><field name="code">content</field><field name="weight">15</field><field name="criteria">参数、图片、视频、证书和说明书完整。</field></record>
+
+        <record id="score_energy_demand" model="psc.track.scoring.rule"><field name="track_id" ref="track_energy_storage"/><field name="name">市场与场景需求</field><field name="code">demand</field><field name="weight">20</field></record>
+        <record id="score_energy_safety" model="psc.track.scoring.rule"><field name="track_id" ref="track_energy_storage"/><field name="name">安全与认证</field><field name="code">safety</field><field name="weight">30</field><field name="hard_gate">1</field><field name="criteria">电芯、系统、运输和目标市场认证必须通过。</field></record>
+        <record id="score_energy_technical" model="psc.track.scoring.rule"><field name="track_id" ref="track_energy_storage"/><field name="name">技术适配</field><field name="code">technical</field><field name="weight">20</field><field name="criteria">容量、功率、电压、逆变器和应用场景匹配。</field></record>
+        <record id="score_energy_margin" model="psc.track.scoring.rule"><field name="track_id" ref="track_energy_storage"/><field name="name">价格与项目毛利</field><field name="code">margin</field><field name="weight">15</field></record>
+        <record id="score_energy_service" model="psc.track.scoring.rule"><field name="track_id" ref="track_energy_storage"/><field name="name">质保与服务</field><field name="code">service</field><field name="weight">15</field></record>
+
+        <record id="score_apparel_demand" model="psc.track.scoring.rule"><field name="track_id" ref="track_footwear_apparel"/><field name="name">款式与市场需求</field><field name="code">demand</field><field name="weight">25</field></record>
+        <record id="score_apparel_price" model="psc.track.scoring.rule"><field name="track_id" ref="track_footwear_apparel"/><field name="name">价格与毛利</field><field name="code">price</field><field name="weight">25</field></record>
+        <record id="score_apparel_moq" model="psc.track.scoring.rule"><field name="track_id" ref="track_footwear_apparel"/><field name="name">MOQ与交期</field><field name="code">moq_lead</field><field name="weight">20</field></record>
+        <record id="score_apparel_quality" model="psc.track.scoring.rule"><field name="track_id" ref="track_footwear_apparel"/><field name="name">材料、质量与授权</field><field name="code">quality</field><field name="weight">20</field><field name="hard_gate">1</field></record>
+        <record id="score_apparel_content" model="psc.track.scoring.rule"><field name="track_id" ref="track_footwear_apparel"/><field name="name">视觉素材</field><field name="code">content</field><field name="weight">10</field></record>
+
+        <record id="score_daily_demand" model="psc.track.scoring.rule"><field name="track_id" ref="track_daily_goods"/><field name="name">需求与复购</field><field name="code">demand</field><field name="weight">25</field></record>
+        <record id="score_daily_price" model="psc.track.scoring.rule"><field name="track_id" ref="track_daily_goods"/><field name="name">价格与毛利</field><field name="code">price</field><field name="weight">25</field></record>
+        <record id="score_daily_logistics" model="psc.track.scoring.rule"><field name="track_id" ref="track_daily_goods"/><field name="name">包装与物流</field><field name="code">logistics</field><field name="weight">20</field></record>
+        <record id="score_daily_supply" model="psc.track.scoring.rule"><field name="track_id" ref="track_daily_goods"/><field name="name">供应稳定性</field><field name="code">supply</field><field name="weight">15</field></record>
+        <record id="score_daily_compliance" model="psc.track.scoring.rule"><field name="track_id" ref="track_daily_goods"/><field name="name">材料与安全合规</field><field name="code">compliance</field><field name="weight">15</field><field name="hard_gate">1</field></record>
+
+        <!-- 核心产品属性模板 -->
+        <record id="attr_medical_cert" model="psc.track.product.attribute"><field name="track_id" ref="track_medical"/><field name="name">认证/注册</field><field name="code">certification</field><field name="required_for_publish">1</field><field name="hard_gate">1</field></record>
+        <record id="attr_medical_use" model="psc.track.product.attribute"><field name="track_id" ref="track_medical"/><field name="name">预期用途</field><field name="code">intended_use</field><field name="required_for_publish">1</field></record>
+        <record id="attr_medical_spec" model="psc.track.product.attribute"><field name="track_id" ref="track_medical"/><field name="name">核心技术参数</field><field name="code">specification</field><field name="required_for_publish">1</field></record>
+        <record id="attr_medical_warranty" model="psc.track.product.attribute"><field name="track_id" ref="track_medical"/><field name="name">质保与售后</field><field name="code">warranty</field></record>
+
+        <record id="attr_energy_capacity" model="psc.track.product.attribute"><field name="track_id" ref="track_energy_storage"/><field name="name">容量</field><field name="code">capacity</field><field name="required_for_publish">1</field></record>
+        <record id="attr_energy_power" model="psc.track.product.attribute"><field name="track_id" ref="track_energy_storage"/><field name="name">额定功率</field><field name="code">power</field><field name="required_for_publish">1</field></record>
+        <record id="attr_energy_voltage" model="psc.track.product.attribute"><field name="track_id" ref="track_energy_storage"/><field name="name">系统电压</field><field name="code">voltage</field><field name="required_for_publish">1</field></record>
+        <record id="attr_energy_cycle" model="psc.track.product.attribute"><field name="track_id" ref="track_energy_storage"/><field name="name">循环寿命</field><field name="code">cycle_life</field></record>
+        <record id="attr_energy_cert" model="psc.track.product.attribute"><field name="track_id" ref="track_energy_storage"/><field name="name">安全与运输认证</field><field name="code">certification</field><field name="required_for_publish">1</field><field name="hard_gate">1</field></record>
+
+        <record id="attr_apparel_material" model="psc.track.product.attribute"><field name="track_id" ref="track_footwear_apparel"/><field name="name">材质</field><field name="code">material</field><field name="required_for_publish">1</field></record>
+        <record id="attr_apparel_size" model="psc.track.product.attribute"><field name="track_id" ref="track_footwear_apparel"/><field name="name">尺码范围</field><field name="code">size_range</field><field name="required_for_publish">1</field></record>
+        <record id="attr_apparel_color" model="psc.track.product.attribute"><field name="track_id" ref="track_footwear_apparel"/><field name="name">颜色</field><field name="code">colors</field></record>
+        <record id="attr_apparel_moq" model="psc.track.product.attribute"><field name="track_id" ref="track_footwear_apparel"/><field name="name">起订量</field><field name="code">moq</field><field name="value_type">number</field></record>
+        <record id="attr_apparel_custom" model="psc.track.product.attribute"><field name="track_id" ref="track_footwear_apparel"/><field name="name">定制范围</field><field name="code">customization</field></record>
+
+        <record id="attr_daily_material" model="psc.track.product.attribute"><field name="track_id" ref="track_daily_goods"/><field name="name">材料</field><field name="code">material</field><field name="required_for_publish">1</field></record>
+        <record id="attr_daily_size" model="psc.track.product.attribute"><field name="track_id" ref="track_daily_goods"/><field name="name">尺寸与重量</field><field name="code">size_weight</field><field name="required_for_publish">1</field></record>
+        <record id="attr_daily_package" model="psc.track.product.attribute"><field name="track_id" ref="track_daily_goods"/><field name="name">包装与装箱</field><field name="code">packaging</field><field name="required_for_publish">1</field></record>
+        <record id="attr_daily_safety" model="psc.track.product.attribute"><field name="track_id" ref="track_daily_goods"/><field name="name">材料与安全测试</field><field name="code">safety</field><field name="hard_gate">1</field></record>
+
+        <!-- 内容栏目：通用信任内容 + 各赛道差异化栏目 -->
+        <record id="pillar_medical_solution" model="psc.content.pillar"><field name="track_id" ref="track_medical"/><field name="name">医疗场景与整体方案</field><field name="code">solution</field><field name="default_ratio">25</field><field name="role_ids" eval="[(6, 0, [ref('role_integrator'), ref('role_epc')])]"/><field name="objective">展示场景理解和多产品集成能力。</field><field name="instructions">围绕真实机构场景说明问题、选型逻辑、产品组合、交付和售后，不虚构案例和医疗效果。</field></record>
+        <record id="pillar_medical_product" model="psc.content.pillar"><field name="track_id" ref="track_medical"/><field name="name">产品与应用</field><field name="code">product</field><field name="default_ratio">25</field><field name="objective">准确介绍用途、参数和采购价值。</field></record>
+        <record id="pillar_medical_quality" model="psc.content.pillar"><field name="track_id" ref="track_medical"/><field name="name">质量、认证与验货</field><field name="code">quality</field><field name="default_ratio">20</field><field name="objective">用可验证证据建立专业信任。</field></record>
+        <record id="pillar_medical_delivery" model="psc.content.pillar"><field name="track_id" ref="track_medical"/><field name="name">客户看货与项目交付</field><field name="code">delivery</field><field name="default_ratio">15</field><field name="objective">展示真实选型、验货、包装、发货和培训。</field></record>
+        <record id="pillar_medical_knowledge" model="psc.content.pillar"><field name="track_id" ref="track_medical"/><field name="name">采购与行业知识</field><field name="code">knowledge</field><field name="default_ratio">15</field><field name="objective">帮助采购者正确比较和决策。</field></record>
+
+        <record id="pillar_energy_solution" model="psc.content.pillar"><field name="track_id" ref="track_energy_storage"/><field name="name">负载分析与系统方案</field><field name="code">solution</field><field name="default_ratio">25</field><field name="objective">展示容量、功率、场景和系统兼容性。</field></record>
+        <record id="pillar_energy_safety" model="psc.content.pillar"><field name="track_id" ref="track_energy_storage"/><field name="name">安全测试与认证</field><field name="code">safety</field><field name="default_ratio">20</field><field name="objective">用真实测试和证书降低采购风险。</field></record>
+        <record id="pillar_energy_factory" model="psc.content.pillar"><field name="track_id" ref="track_energy_storage"/><field name="name">工厂、研发与生产</field><field name="code">factory</field><field name="default_ratio">20</field><field name="role_ids" eval="[(6, 0, [ref('role_direct_factory'), ref('role_oem_factory')])]"/><field name="objective">展示电芯、BMS、组装、老化测试和质量体系。</field></record>
+        <record id="pillar_energy_project" model="psc.content.pillar"><field name="track_id" ref="track_energy_storage"/><field name="name">安装现场与项目案例</field><field name="code">project</field><field name="default_ratio">20</field><field name="objective">展示设计、施工、调试和交付能力。</field></record>
+        <record id="pillar_energy_knowledge" model="psc.content.pillar"><field name="track_id" ref="track_energy_storage"/><field name="name">选型、收益与维护知识</field><field name="code">knowledge</field><field name="default_ratio">15</field></record>
+
+        <record id="pillar_apparel_product" model="psc.content.pillar"><field name="track_id" ref="track_footwear_apparel"/><field name="name">新品、款式与穿着场景</field><field name="code">product</field><field name="default_ratio">30</field></record>
+        <record id="pillar_apparel_factory" model="psc.content.pillar"><field name="track_id" ref="track_footwear_apparel"/><field name="name">工厂与生产过程</field><field name="code">factory</field><field name="default_ratio">20</field><field name="role_ids" eval="[(6, 0, [ref('role_direct_factory'), ref('role_oem_factory')])]"/></record>
+        <record id="pillar_apparel_material" model="psc.content.pillar"><field name="track_id" ref="track_footwear_apparel"/><field name="name">材料、工艺与质检</field><field name="code">quality</field><field name="default_ratio">15</field></record>
+        <record id="pillar_apparel_custom" model="psc.content.pillar"><field name="track_id" ref="track_footwear_apparel"/><field name="name">打样与OEM定制</field><field name="code">custom</field><field name="default_ratio">15</field></record>
+        <record id="pillar_apparel_delivery" model="psc.content.pillar"><field name="track_id" ref="track_footwear_apparel"/><field name="name">客户验货、包装与发货</field><field name="code">delivery</field><field name="default_ratio">10</field></record>
+        <record id="pillar_apparel_daily" model="psc.content.pillar"><field name="track_id" ref="track_footwear_apparel"/><field name="name">团队、展会与工厂日常</field><field name="code">daily</field><field name="default_ratio">10</field></record>
+
+        <record id="pillar_daily_scene" model="psc.content.pillar"><field name="track_id" ref="track_daily_goods"/><field name="name">使用场景与问题解决</field><field name="code">scene</field><field name="default_ratio">30</field></record>
+        <record id="pillar_daily_product" model="psc.content.pillar"><field name="track_id" ref="track_daily_goods"/><field name="name">产品功能与组合</field><field name="code">product</field><field name="default_ratio">25</field></record>
+        <record id="pillar_daily_factory" model="psc.content.pillar"><field name="track_id" ref="track_daily_goods"/><field name="name">生产、材料与质量</field><field name="code">factory</field><field name="default_ratio">15</field></record>
+        <record id="pillar_daily_package" model="psc.content.pillar"><field name="track_id" ref="track_daily_goods"/><field name="name">包装、陈列与物流</field><field name="code">packaging</field><field name="default_ratio">15</field></record>
+        <record id="pillar_daily_custom" model="psc.content.pillar"><field name="track_id" ref="track_daily_goods"/><field name="name">定制、套装与促销方案</field><field name="code">custom</field><field name="default_ratio">15</field></record>
+    </data>
+</odoo>

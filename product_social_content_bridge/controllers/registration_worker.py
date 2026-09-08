@@ -161,6 +161,7 @@ class RegistrationWorkerController(LocalWorkerController):
         })
         account_values = {
             "name": task.display_name or username,
+            "cluster_id": task.cluster_id.id,
             "product_line_id": product_line.id,
             "channel_id": task.channel_id.id,
             "target_market_id": target_market.id,

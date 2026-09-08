@@ -1,7 +1,7 @@
 {
     "name": "产品线社媒发布中心",
-    "version": "19.0.3.0.0",
-    "summary": "按产品线、市场和渠道批量生成并管理社媒内容",
+    "version": "19.0.4.0.0",
+    "summary": "从赛道、产品池到多渠道发布和客户归因的市场运营中心",
     "category": "Marketing/Social Marketing",
     "author": "LightLink",
     "license": "LGPL-3",
@@ -9,11 +9,13 @@
     "data": [
         "security/ir.model.access.csv",
         "data/media_models.xml",
+        "data/market_operation_templates.xml",
         "views/social_content_views.xml",
         "views/crm_lead_views.xml",
         "views/social_publishing_views.xml",
         "views/account_registration_views.xml",
         "views/publishing_delivery_views.xml",
+        "views/market_operation_views.xml",
         "views/social_content_menus.xml",
         "views/res_config_settings_views.xml",
         "views/local_production_views.xml",

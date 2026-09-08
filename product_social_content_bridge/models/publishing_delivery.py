@@ -94,7 +94,8 @@ class PublicationTask(models.Model):
         "psc.content.variant", string="渠道内容", required=True, ondelete="cascade", index=True,
     )
     project_id = fields.Many2one(
-        related="content_id.project_id", string="发布项目", store=True, readonly=True, index=True,
+        "psc.publishing.project", string="发布项目", required=True,
+        ondelete="cascade", readonly=True, index=True,
     )
     product_id = fields.Many2one(related="content_id.product_id", string="产品", store=True, readonly=True)
     market_id = fields.Many2one(related="content_id.market_id", string="目标市场", store=True, readonly=True)

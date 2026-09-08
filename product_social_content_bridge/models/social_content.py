@@ -250,6 +250,7 @@ class PublishingProject(models.Model):
 
     def action_generate_drafts(self):
         for project in self:
+            project.action_sync_product_pool()
             if not project.product_ids or not project.market_ids or not project.channel_ids:
                 raise UserError(_("请先选择产品、目标市场和发布渠道。"))
             existing = {(x.product_id.id, x.market_id.id, x.channel_id.id) for x in project.content_ids}
@@ -310,6 +311,7 @@ class PublishingProject(models.Model):
                     if not task:
                         task = task_model.create({
                             "name": "%s · %s" % (content.title or content.product_id.name, destination.name),
+                            "project_id": project.id,
                             "content_id": content.id,
                             "destination_id": destination.id,
                             "scheduled_at": project.scheduled_date,
@@ -402,8 +404,8 @@ class ContentVariant(models.Model):
     video_generated_at = fields.Datetime(string="视频生成时间", readonly=True)
 
     _variant_unique = models.Constraint(
-        "UNIQUE(project_id, product_id, market_id, channel_id)",
-        "同一项目中产品、市场和渠道组合不能重复。",
+        "UNIQUE(project_id, product_id, market_id, channel_id, plan_id)",
+        "同一内容计划中产品、市场和渠道组合不能重复。",
     )
 
     @api.onchange("channel_id")
@@ -721,6 +723,10 @@ class ContentVariant(models.Model):
             or product.description_sale
             or ""
         )
+        project = self.project_id
+        track = project.track_id
+        role = project.business_role_id
+        pillar = self.pillar_id
         return {
             "product_name": product.name or "",
             "sales_description": html2plaintext(source_description)[:8000],
@@ -744,6 +750,16 @@ class ContentVariant(models.Model):
             "caption_limit": self.channel_id.max_caption_length,
             "channel_rules": self.channel_id.default_instructions or "",
             "content_brief": self.project_id.content_brief or "",
+            "industry_track": track.name if track else "",
+            "track_description": track.description if track else "",
+            "track_compliance": track.compliance_notes if track else "",
+            "business_role": role.name if role else "",
+            "business_role_description": role.description if role else "",
+            "verified_capabilities": project.capability_ids.mapped("name"),
+            "business_goal": project.business_goal or "",
+            "content_pillar": pillar.name if pillar else "",
+            "content_pillar_objective": pillar.objective if pillar else "",
+            "content_pillar_rules": pillar.instructions if pillar else "",
         }
 
     def _openai_payload(self):

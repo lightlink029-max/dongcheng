@@ -143,13 +143,13 @@
     <record id="action_psc_market" model="ir.actions.act_window"><field name="name">目标市场</field><field name="res_model">psc.target.market</field><field name="view_mode">list,form</field></record>
     <record id="action_psc_channel" model="ir.actions.act_window"><field name="name">发布渠道</field><field name="res_model">psc.publishing.channel</field><field name="view_mode">list,form</field></record>
     <record id="action_psc_project" model="ir.actions.act_window">
-        <field name="name">发布项目</field>
+        <field name="name">市场运营项目</field>
         <field name="res_model">psc.publishing.project</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_psc_project_search"/>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">创建第一个内容发布项目</p>
-            <p>选择产品、市场和渠道，生成渠道内容，审核后再进入发布。</p>
+            <p class="o_view_nocontent_smiling_face">创建第一个长期市场运营项目</p>
+            <p>选择赛道、经营角色和目标市场，维护产品池、内容计划、账号集群、客户和经营数据。</p>
         </field>
     </record>
     <record id="action_psc_content" model="ir.actions.act_window"><field name="name">渠道内容</field><field name="res_model">psc.content.variant</field><field name="view_mode">list,form</field></record>
