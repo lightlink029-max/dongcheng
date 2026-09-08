@@ -133,6 +133,43 @@ class Worker:
         return self.api("POST", f"/psc/local-worker/registration/tasks/{task_id}/fail",
                         json={"error": str(error)}).json()
 
+    def publication_tasks(self):
+        return self.api("GET", "/psc/local-worker/publication/tasks").json().get("tasks", [])
+
+    def start_publication(self, task_id):
+        return self.api("POST", f"/psc/local-worker/publication/tasks/{task_id}/start").json()
+
+    def report_publication_environment(self, task_id, actual, username):
+        return self.api("POST", f"/psc/local-worker/publication/tasks/{task_id}/environment", json={
+            "actual_ip": actual.get("ip", ""),
+            "actual_country_code": actual.get("country", ""),
+            "actual_timezone": actual.get("timezone", ""),
+            "actual_username": username,
+        }).json()
+
+    def download_publication_media(self, task_id, media_type, target):
+        target = Path(target)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        response = self.api(
+            "GET", f"/psc/local-worker/publication/tasks/{task_id}/media/{media_type}",
+        )
+        target.write_bytes(response.content)
+        return target
+
+    def complete_publication(self, task_id, published_url, screenshot):
+        with Path(screenshot).open("rb") as stream:
+            return self.api(
+                "POST", f"/psc/local-worker/publication/tasks/{task_id}/complete",
+                data={"published_url": published_url},
+                files={"screenshot": (Path(screenshot).name, stream, "image/png")},
+            ).json()
+
+    def fail_publication(self, task_id, error):
+        return self.api(
+            "POST", f"/psc/local-worker/publication/tasks/{task_id}/fail",
+            json={"error": str(error)},
+        ).json()
+
     def progress(self, task_id, progress, message):
         self.api("POST", f"/psc/local-worker/tasks/{task_id}/progress",
                  json={"progress": progress, "message": message})

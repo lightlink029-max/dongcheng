@@ -2,14 +2,139 @@
 <odoo>
     <record id="view_psc_product_line_list" model="ir.ui.view"><field name="name">psc.product.line.list</field><field name="model">psc.product.line</field><field name="arch" type="xml"><list><field name="name"/><field name="code"/><field name="brand_name"/><field name="website_id"/><field name="tone"/><field name="active"/></list></field></record>
     <record id="view_psc_product_line_form" model="ir.ui.view"><field name="name">psc.product.line.form</field><field name="model">psc.product.line</field><field name="arch" type="xml"><form><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group><field name="code"/><field name="brand_name"/><field name="website_id"/><field name="tone"/><field name="active"/></group><group><field name="target_customer"/><field name="key_selling_points"/><field name="compliance_notes"/></group></group><field name="product_ids" widget="many2many_tags"/></sheet></form></field></record>
-    <record id="view_psc_market_list" model="ir.ui.view"><field name="name">psc.target.market.list</field><field name="model">psc.target.market</field><field name="arch" type="xml"><list><field name="name"/><field name="country_id"/><field name="lang_id"/><field name="currency_id"/><field name="customer_type"/><field name="active"/></list></field></record>
-    <record id="view_psc_market_form" model="ir.ui.view"><field name="name">psc.target.market.form</field><field name="model">psc.target.market</field><field name="arch" type="xml"><form><sheet><group><group><field name="name"/><field name="country_id"/><field name="lang_id"/><field name="currency_id"/><field name="customer_type"/></group><group><field name="keywords"/><field name="compliance_notes"/><field name="active"/></group></group></sheet></form></field></record>
+    <record id="view_psc_market_list" model="ir.ui.view"><field name="name">psc.target.market.list</field><field name="model">psc.target.market</field><field name="arch" type="xml"><list><field name="name"/><field name="country_id"/><field name="lang_id"/><field name="currency_id"/><field name="customer_type"/><field name="customer_profile" optional="hide"/><field name="active"/></list></field></record>
+    <record id="view_psc_market_form" model="ir.ui.view"><field name="name">psc.target.market.form</field><field name="model">psc.target.market</field><field name="arch" type="xml"><form><sheet><group><group><field name="name"/><field name="country_id"/><field name="lang_id"/><field name="currency_id"/><field name="customer_type"/></group><group><field name="keywords"/><field name="customer_profile" placeholder="典型买家、使用场景、核心需求、采购关注点和禁忌"/><field name="compliance_notes"/><field name="active"/></group></group></sheet></form></field></record>
     <record id="view_psc_channel_list" model="ir.ui.view"><field name="name">psc.publishing.channel.list</field><field name="model">psc.publishing.channel</field><field name="arch" type="xml"><list><field name="name"/><field name="platform"/><field name="social_account_ids" widget="many2many_tags"/><field name="image_model_id"/><field name="video_model_id"/><field name="image_ratio"/><field name="active"/></list></field></record>
     <record id="view_psc_channel_form" model="ir.ui.view"><field name="name">psc.publishing.channel.form</field><field name="model">psc.publishing.channel</field><field name="arch" type="xml"><form><sheet><group><group><field name="name"/><field name="platform"/><field name="social_account_ids" widget="many2many_tags"/><field name="active"/></group><group><field name="image_model_id" options="{'no_create': True}"/><field name="video_model_id" options="{'no_create': True}"/><field name="image_ratio"/><field name="image_quality"/><field name="max_caption_length"/><field name="default_instructions"/></group></group><notebook><page string="默认模板与素材"><field name="template_asset_ids" widget="many2many_tags"/></page></notebook></sheet></form></field></record>
-    <record id="view_psc_project_list" model="ir.ui.view"><field name="name">psc.publishing.project.list</field><field name="model">psc.publishing.project</field><field name="arch" type="xml"><list default_order="create_date desc"><field name="name"/><field name="product_line_id"/><field name="market_ids" widget="many2many_tags"/><field name="channel_ids" widget="many2many_tags"/><field name="user_id"/><field name="scheduled_date"/><field name="state"/></list></field></record>
-    <record id="view_psc_project_form" model="ir.ui.view"><field name="name">psc.publishing.project.form</field><field name="model">psc.publishing.project</field><field name="arch" type="xml"><form><header><button name="action_generate_drafts" type="object" string="AI生成渠道内容" class="btn-primary" invisible="state != 'draft'"/><button name="action_mark_ready" type="object" string="确认待发布" invisible="state != 'generated'"/><field name="state" widget="statusbar"/></header><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group><field name="product_line_id"/><field name="product_ids" widget="many2many_tags"/><field name="market_ids" widget="many2many_tags"/></group><group><field name="channel_ids" widget="many2many_tags"/><field name="ai_model"/><field name="user_id"/><field name="scheduled_date"/><field name="company_id" groups="base.group_multi_company"/></group></group><field name="content_brief"/><notebook><page string="项目模板与素材"><field name="material_asset_ids" widget="many2many_tags"/></page><page string="渠道内容"><field name="content_ids"><list editable="bottom"><field name="product_id"/><field name="market_id"/><field name="channel_id"/><field name="language_id"/><field name="title"/><field name="ai_state"/><field name="state"/><field name="social_post_id"/><button name="action_generate_ai_content" type="object" string="重新生成"/><button name="action_create_social_post" type="object" string="创建社媒帖子" invisible="social_post_id or ai_state != 'done'"/><button name="action_open_social_post" type="object" string="打开帖子" invisible="not social_post_id"/></list></field></page></notebook></sheet><chatter/></form></field></record>
+    <record id="view_psc_project_list" model="ir.ui.view">
+        <field name="name">psc.publishing.project.list</field>
+        <field name="model">psc.publishing.project</field>
+        <field name="arch" type="xml">
+            <list default_order="create_date desc" decoration-info="state in ('generated', 'publishing')" decoration-warning="state == 'ready'" decoration-success="state == 'published'" decoration-danger="state == 'failed'">
+                <field name="name"/>
+                <field name="product_line_id"/>
+                <field name="market_ids" widget="many2many_tags"/>
+                <field name="channel_ids" widget="many2many_tags"/>
+                <field name="content_count" string="内容数"/>
+                <field name="user_id"/>
+                <field name="scheduled_date"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_psc_project_search" model="ir.ui.view">
+        <field name="name">psc.publishing.project.search</field>
+        <field name="model">psc.publishing.project</field>
+        <field name="arch" type="xml">
+            <search string="搜索发布项目">
+                <field name="name"/>
+                <field name="product_line_id"/>
+                <field name="market_ids"/>
+                <field name="channel_ids"/>
+                <field name="user_id"/>
+                <separator/>
+                <filter name="draft" string="草稿" domain="[('state', '=', 'draft')]"/>
+                <filter name="generated" string="待确认" domain="[('state', '=', 'generated')]"/>
+                <filter name="ready" string="待发布" domain="[('state', '=', 'ready')]"/>
+                <filter name="publishing" string="发布中" domain="[('state', '=', 'publishing')]"/>
+                <filter name="published" string="已发布" domain="[('state', '=', 'published')]"/>
+                <filter name="failed" string="发布失败" domain="[('state', '=', 'failed')]"/>
+                <separator/>
+                <filter name="my_projects" string="我的项目" domain="[('user_id', '=', uid)]"/>
+                <group expand="0" string="分组">
+                    <filter name="group_state" string="状态" context="{'group_by': 'state'}"/>
+                    <filter name="group_product_line" string="品牌/产品线" context="{'group_by': 'product_line_id'}"/>
+                    <filter name="group_user" string="负责人" context="{'group_by': 'user_id'}"/>
+                    <filter name="group_schedule" string="计划月份" context="{'group_by': 'scheduled_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="view_psc_project_form" model="ir.ui.view">
+        <field name="name">psc.publishing.project.form</field>
+        <field name="model">psc.publishing.project</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_generate_drafts" type="object" string="① 生成渠道内容" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_mark_ready" type="object" string="② 确认内容并进入待发布" class="btn-primary" invisible="state != 'generated'"/>
+                    <button name="action_create_publication_tasks" type="object" string="③ 创建发布任务" class="btn-primary" invisible="state != 'ready'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,generated,ready,publishing,published"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_contents" type="object" class="oe_stat_button" icon="fa-file-text-o">
+                            <field name="content_count" widget="statinfo" string="渠道内容"/>
+                        </button>
+                        <button name="action_open_publication_tasks" type="object" class="oe_stat_button" icon="fa-paper-plane">
+                            <field name="publication_task_count" widget="statinfo" string="发布任务"/>
+                        </button>
+                    </div>
+                    <div class="oe_title"><h1><field name="name" placeholder="例如：美国 Instagram 秋季新品发布"/></h1></div>
+                    <group string="① 项目与负责人">
+                        <group>
+                            <field name="product_line_id"/>
+                            <field name="user_id"/>
+                        </group>
+                        <group>
+                            <field name="scheduled_date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <group string="② 发布范围">
+                        <field name="product_ids" widget="many2many_tags"/>
+                        <field name="destination_ids" widget="many2many_tags" options="{'no_create': True}" placeholder="选择已经配置好的网站、社媒账号或阿里国际站店铺"/>
+                        <field name="market_ids" widget="many2many_tags" readonly="destination_ids"/>
+                        <field name="channel_ids" widget="many2many_tags" readonly="destination_ids"/>
+                    </group>
+                    <notebook>
+                        <page string="③ 内容要求">
+                            <group>
+                                <field name="content_brief" placeholder="填写主题、卖点、语气、禁用词和合规要求。"/>
+                                <field name="ai_model"/>
+                            </group>
+                        </page>
+                        <page string="④ 模板与素材">
+                            <field name="material_asset_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                        </page>
+                        <page string="⑤ 内容制作、审核与发布">
+                            <div class="alert alert-info" role="alert">
+                                先检查每个市场和渠道的文案与素材；确认无误后，再创建或打开对应的社媒帖子。
+                            </div>
+                            <field name="content_ids" context="{'default_project_id': id}">
+                                <list editable="bottom" decoration-success="state == 'published'" decoration-danger="state == 'failed'">
+                                    <field name="product_id"/>
+                                    <field name="market_id"/>
+                                    <field name="channel_id"/>
+                                    <field name="language_id" optional="hide"/>
+                                    <field name="title"/>
+                                    <field name="ai_state" widget="badge"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="social_post_id" optional="show"/>
+                                    <field name="published_url" widget="url" optional="show"/>
+                                    <button name="action_generate_ai_content" type="object" string="重新生成文案" icon="fa-refresh"/>
+                                    <button name="action_create_social_post" type="object" string="创建发布帖" icon="fa-send" invisible="social_post_id or ai_state != 'done'"/>
+                                    <button name="action_open_social_post" type="object" string="查看发布帖" icon="fa-external-link" invisible="not social_post_id"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="⑥ 发布任务与结果">
+                            <field name="publication_task_ids" readonly="1">
+                                <list decoration-info="state in ('validating', 'publishing')" decoration-success="state == 'published'" decoration-danger="state == 'failed'">
+                                    <field name="scheduled_at"/><field name="product_id"/><field name="market_id"/>
+                                    <field name="destination_id"/><field name="state" widget="badge"/>
+                                    <field name="status_message"/><field name="published_url" widget="url"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
     <record id="view_psc_content_list" model="ir.ui.view"><field name="name">psc.content.variant.list</field><field name="model">psc.content.variant</field><field name="arch" type="xml"><list><field name="project_id"/><field name="product_id"/><field name="market_id"/><field name="channel_id"/><field name="language_id"/><field name="title"/><field name="state"/><field name="social_post_id"/><field name="published_url"/></list></field></record>
-    <record id="view_psc_content_form" model="ir.ui.view"><field name="name">psc.content.variant.form</field><field name="model">psc.content.variant</field><field name="arch" type="xml"><form><header><button name="action_generate_ai_content" type="object" string="AI生成/重新生成"/><button name="action_generate_social_image" type="object" string="生成图片素材" class="btn-secondary" invisible="ai_state != 'done' or image_attachment_id"/><button name="action_generate_social_image" type="object" string="重新生成图片" class="btn-secondary" invisible="ai_state != 'done' or not image_attachment_id"/><button name="action_open_generated_image" type="object" string="查看已有图片" invisible="not image_attachment_id"/><button name="action_generate_social_video" type="object" string="生成视频素材" class="btn-secondary" invisible="ai_state != 'done' or video_attachment_id"/><button name="action_generate_social_video" type="object" string="重新生成视频" class="btn-secondary" invisible="ai_state != 'done' or not video_attachment_id"/><button name="action_open_generated_video" type="object" string="播放已有视频" invisible="not video_attachment_id"/><button name="action_create_social_post" type="object" string="创建Odoo社媒帖子" class="btn-primary" invisible="social_post_id or ai_state != 'done'"/><button name="action_open_social_post" type="object" string="打开Odoo帖子" invisible="not social_post_id"/><field name="state" widget="statusbar"/></header><sheet><group><group><field name="project_id"/><field name="product_id"/><field name="market_id"/><field name="channel_id"/><field name="language_id"/><field name="title"/><field name="caption"/><field name="hashtags"/><field name="video_script"/><field name="image_prompt"/></group><group><field name="ai_state"/><field name="ai_model"/><field name="ai_generated_at"/><field name="ai_input_tokens"/><field name="ai_output_tokens"/><separator string="本次生成模型（留空则使用渠道默认）"/><field name="image_model_id" options="{'no_create': True}"/><field name="video_model_id" options="{'no_create': True}"/><field name="image_ai_state"/><field name="image_ai_model"/><field name="image_generated_at"/><field name="generated_image" widget="image" class="oe_avatar" options="{'size': [420, 525]}" invisible="not generated_image"/><field name="image_attachment_id" options="{'no_create': True}"/><field name="video_ai_state"/><field name="video_ai_model"/><field name="video_generated_at"/><field name="video_attachment_id" options="{'no_create': True}"/><field name="social_post_id"/><field name="published_url" widget="url"/></group></group><notebook><page string="本次模板与素材"><field name="material_asset_ids" widget="many2many_tags"/></page></notebook><field name="error_message" invisible="not error_message"/></sheet></form></field></record>
+    <record id="view_psc_content_form" model="ir.ui.view"><field name="name">psc.content.variant.form</field><field name="model">psc.content.variant</field><field name="arch" type="xml"><form><header><button name="action_generate_ai_content" type="object" string="AI生成/重新生成"/><button name="action_generate_social_image" type="object" string="生成图片素材" class="btn-secondary" invisible="ai_state != 'done' or image_attachment_id"/><button name="action_generate_social_image" type="object" string="重新生成图片" class="btn-secondary" invisible="ai_state != 'done' or not image_attachment_id"/><button name="action_open_generated_image" type="object" string="查看已有图片" invisible="not image_attachment_id"/><button name="action_generate_social_video" type="object" string="生成视频素材" class="btn-secondary" invisible="ai_state != 'done' or video_attachment_id"/><button name="action_generate_social_video" type="object" string="重新生成视频" class="btn-secondary" invisible="ai_state != 'done' or not video_attachment_id"/><button name="action_open_generated_video" type="object" string="播放已有视频" invisible="not video_attachment_id"/><button name="action_create_social_post" type="object" string="创建Odoo社媒帖子" class="btn-primary" invisible="social_post_id or ai_state != 'done'"/><button name="action_open_social_post" type="object" string="打开Odoo帖子" invisible="not social_post_id"/><field name="state" widget="statusbar"/></header><sheet><group><group><field name="project_id"/><field name="product_id"/><field name="market_id"/><field name="channel_id"/><field name="language_id"/><field name="title"/><field name="caption"/><field name="hashtags"/><field name="seo_keywords"/><field name="video_script"/><field name="image_prompt"/></group><group><field name="ai_state"/><field name="ai_model"/><field name="ai_generated_at"/><field name="ai_input_tokens"/><field name="ai_output_tokens"/><separator string="本次生成模型（留空则使用渠道默认）"/><field name="image_model_id" options="{'no_create': True}"/><field name="video_model_id" options="{'no_create': True}"/><field name="image_ai_state"/><field name="image_ai_model"/><field name="image_generated_at"/><field name="generated_image" widget="image" class="oe_avatar" options="{'size': [420, 525]}" invisible="not generated_image"/><field name="image_attachment_id" options="{'no_create': True}"/><field name="video_ai_state"/><field name="video_ai_model"/><field name="video_generated_at"/><field name="video_attachment_id" options="{'no_create': True}"/><field name="social_post_id"/><field name="published_url" widget="url"/></group></group><notebook><page string="本次模板与素材"><field name="material_asset_ids" widget="many2many_tags"/></page></notebook><field name="error_message" invisible="not error_message"/></sheet></form></field></record>
     <record id="view_psc_media_asset_list" model="ir.ui.view"><field name="name">psc.media.asset.list</field><field name="model">psc.media.asset</field><field name="arch" type="xml"><list><field name="sequence" widget="handle"/><field name="name"/><field name="asset_type"/><field name="file_name"/><field name="mimetype"/><field name="file_size"/><field name="product_line_id"/><field name="channel_id"/><field name="active"/></list></field></record>
     <record id="view_psc_media_asset_form" model="ir.ui.view"><field name="name">psc.media.asset.form</field><field name="model">psc.media.asset</field><field name="arch" type="xml"><form><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group><field name="asset_type"/><field name="file_data" filename="file_name"/><field name="file_name" invisible="1"/><field name="mimetype" readonly="1"/><field name="file_size" readonly="1"/><field name="is_image" invisible="1"/></group><group><field name="product_line_id"/><field name="channel_id"/><field name="sequence"/><field name="active"/></group></group><field name="usage_instructions" placeholder="例如：保持模板背景与构图；Logo 放在右上角，不改变颜色。"/><field name="file_data" widget="image" filename="file_name" class="oe_avatar" options="{'size': [480, 480]}" invisible="not is_image"/></sheet></form></field></record>
     <record id="view_psc_media_model_list" model="ir.ui.view"><field name="name">psc.media.model.list</field><field name="model">psc.media.model</field><field name="arch" type="xml"><list><field name="sequence" widget="handle"/><field name="name"/><field name="media_type"/><field name="provider"/><field name="model_code"/><field name="deprecated"/><field name="active"/></list></field></record>
@@ -17,7 +142,16 @@
     <record id="action_psc_product_line" model="ir.actions.act_window"><field name="name">品牌/产品线</field><field name="res_model">psc.product.line</field><field name="view_mode">list,form</field></record>
     <record id="action_psc_market" model="ir.actions.act_window"><field name="name">目标市场</field><field name="res_model">psc.target.market</field><field name="view_mode">list,form</field></record>
     <record id="action_psc_channel" model="ir.actions.act_window"><field name="name">发布渠道</field><field name="res_model">psc.publishing.channel</field><field name="view_mode">list,form</field></record>
-    <record id="action_psc_project" model="ir.actions.act_window"><field name="name">发布项目</field><field name="res_model">psc.publishing.project</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_project" model="ir.actions.act_window">
+        <field name="name">发布项目</field>
+        <field name="res_model">psc.publishing.project</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_psc_project_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">创建第一个内容发布项目</p>
+            <p>选择产品、市场和渠道，生成渠道内容，审核后再进入发布。</p>
+        </field>
+    </record>
     <record id="action_psc_content" model="ir.actions.act_window"><field name="name">渠道内容</field><field name="res_model">psc.content.variant</field><field name="view_mode">list,form</field></record>
     <record id="action_psc_media_asset" model="ir.actions.act_window"><field name="name">模板与素材库</field><field name="res_model">psc.media.asset</field><field name="view_mode">list,form</field></record>
     <record id="action_psc_media_model" model="ir.actions.act_window"><field name="name">图片/视频模型</field><field name="res_model">psc.media.model</field><field name="view_mode">list,form</field></record>

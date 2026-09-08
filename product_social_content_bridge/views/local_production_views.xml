@@ -48,7 +48,7 @@
     <record id="action_psc_local_tasks" model="ir.actions.act_window">
         <field name="name">本地生产任务</field><field name="res_model">psc.local.production.task</field><field name="view_mode">list,form</field>
     </record>
-    <menuitem id="menu_psc_local_tasks" name="本地生产任务" parent="menu_psc_root" action="action_psc_local_tasks" sequence="25"/>
+    <menuitem id="menu_psc_local_tasks" name="③ 本地素材生产任务" parent="menu_psc_workflow" action="action_psc_local_tasks" sequence="30"/>
 
     <record id="view_psc_content_form_local_production" model="ir.ui.view">
         <field name="name">psc.content.variant.form.local.production</field>

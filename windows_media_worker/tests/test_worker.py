@@ -115,6 +115,21 @@ class WorkerLeaseTests(unittest.TestCase):
             "actual_timezone": "America/New_York",
         })
 
+    def test_publication_environment_uploads_only_required_validation_data(self):
+        worker = Worker(self.config())
+        response = mock.Mock()
+        response.json.return_value = {"ok": True}
+        with mock.patch.object(worker, "api", return_value=response) as api:
+            worker.report_publication_environment(8, {
+                "ip": "203.0.113.7", "country": "US", "timezone": "America/New_York",
+                "password": "must-not-upload", "cookie": "must-not-upload",
+            }, "brand_account")
+        payload = api.call_args.kwargs["json"]
+        self.assertEqual(payload, {
+            "actual_ip": "203.0.113.7", "actual_country_code": "US",
+            "actual_timezone": "America/New_York", "actual_username": "brand_account",
+        })
+
     def test_heartbeat_loop_renews_the_claim(self):
         worker = RecordingWorker(self.config())
         worker.heartbeat_loop(42, StopAfterFirstHeartbeat())

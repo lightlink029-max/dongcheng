@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_psc_publishing_destination_list" model="ir.ui.view">
+        <field name="name">psc.publishing.destination.list</field>
+        <field name="model">psc.publishing.destination</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state == 'ready'" decoration-muted="state == 'paused'">
+                <field name="name"/>
+                <field name="destination_type" widget="badge"/>
+                <field name="product_line_id"/>
+                <field name="market_id"/>
+                <field name="channel_id"/>
+                <field name="website_id" optional="show"/>
+                <field name="publishing_account_id" optional="show"/>
+                <field name="store_name" optional="show"/>
+                <field name="state" widget="badge"/>
+                <field name="active" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_psc_publishing_destination_form" model="ir.ui.view">
+        <field name="name">psc.publishing.destination.form</field>
+        <field name="model">psc.publishing.destination</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_mark_ready" type="object" string="确认配置并启用" class="btn-primary" invisible="state == 'ready'"/>
+                    <button name="action_pause" type="object" string="暂停" invisible="state != 'ready'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,ready,paused"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name" placeholder="例如：美国 Instagram 主账号"/></h1></div>
+                    <group string="① 目标范围">
+                        <group>
+                            <field name="destination_type"/>
+                            <field name="product_line_id"/>
+                            <field name="market_id"/>
+                        </group>
+                        <group>
+                            <field name="channel_id"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <group string="② 实际发布位置">
+                        <field name="website_id" invisible="destination_type != 'website'" required="destination_type == 'website'"/>
+                        <field name="publishing_account_id" invisible="destination_type == 'website'" required="destination_type != 'website'" options="{'no_create': True}"/>
+                        <field name="store_name" invisible="destination_type != 'alibaba'" required="destination_type == 'alibaba'"/>
+                        <field name="store_id" invisible="destination_type != 'alibaba'"/>
+                        <field name="store_url" widget="url" invisible="destination_type != 'alibaba'"/>
+                    </group>
+                    <group string="③ 发布规则"><field name="notes" placeholder="填写该账号、网站或店铺的内容偏好、频率及注意事项。"/></group>
+                    <notebook>
+                        <page string="发布记录">
+                            <field name="publication_task_ids" readonly="1">
+                                <list>
+                                    <field name="scheduled_at"/><field name="product_id"/><field name="state" widget="badge"/>
+                                    <field name="published_url" widget="url"/><field name="error_message" optional="hide"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_psc_publishing_destination_search" model="ir.ui.view">
+        <field name="name">psc.publishing.destination.search</field>
+        <field name="model">psc.publishing.destination</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/><field name="product_line_id"/><field name="market_id"/><field name="channel_id"/>
+                <filter name="ready" string="可发布" domain="[('state', '=', 'ready')]"/>
+                <filter name="website" string="网站" domain="[('destination_type', '=', 'website')]"/>
+                <filter name="social" string="社媒" domain="[('destination_type', '=', 'social')]"/>
+                <filter name="alibaba" string="阿里国际站" domain="[('destination_type', '=', 'alibaba')]"/>
+                <group expand="0" string="分组">
+                    <filter name="group_type" string="目标类型" context="{'group_by': 'destination_type'}"/>
+                    <filter name="group_market" string="目标市场" context="{'group_by': 'market_id'}"/>
+                    <filter name="group_product_line" string="品牌/产品线" context="{'group_by': 'product_line_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_psc_publication_task_list" model="ir.ui.view">
+        <field name="name">psc.publication.task.list</field>
+        <field name="model">psc.publication.task</field>
+        <field name="arch" type="xml">
+            <list decoration-info="state in ('validating', 'publishing')" decoration-success="state == 'published'" decoration-danger="state == 'failed'" decoration-muted="state == 'cancelled'">
+                <field name="scheduled_at"/>
+                <field name="name"/>
+                <field name="project_id"/>
+                <field name="product_id"/>
+                <field name="market_id"/>
+                <field name="destination_id"/>
+                <field name="destination_type" widget="badge"/>
+                <field name="publishing_account_id" optional="show"/>
+                <field name="state" widget="badge"/>
+                <field name="status_message" optional="show"/>
+                <field name="published_url" widget="url" optional="show"/>
+                <field name="error_message" optional="hide"/>
+                <button name="action_queue" type="object" string="发布/进入队列" icon="fa-play" invisible="state != 'draft'"/>
+                <button name="action_retry" type="object" string="重试" icon="fa-refresh" invisible="state not in ('failed', 'cancelled')"/>
+                <button name="action_cancel" type="object" string="取消" icon="fa-times" invisible="state not in ('draft', 'queued')"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_psc_publication_task_form" model="ir.ui.view">
+        <field name="name">psc.publication.task.form</field>
+        <field name="model">psc.publication.task</field>
+        <field name="arch" type="xml">
+            <form create="false">
+                <header>
+                    <button name="action_queue" type="object" string="发布/进入队列" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_retry" type="object" string="重新排队" class="btn-primary" invisible="state not in ('failed', 'cancelled')"/>
+                    <button name="action_cancel" type="object" string="取消任务" invisible="state not in ('draft', 'queued')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,queued,validating,publishing,published"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group string="内容与目标">
+                        <group><field name="project_id"/><field name="content_id"/><field name="product_id"/><field name="market_id"/></group>
+                        <group><field name="destination_id"/><field name="destination_type"/><field name="publishing_account_id"/><field name="scheduled_at"/></group>
+                    </group>
+                    <group string="执行环境" invisible="destination_type == 'website'">
+                        <field name="worker_node_id"/><field name="bitbrowser_environment_id"/><field name="worker_id"/><field name="actual_ip"/>
+                    </group>
+                    <group string="执行结果">
+                        <field name="status_message"/><field name="attempt_count"/><field name="started_at"/><field name="finished_at"/>
+                        <field name="published_url" widget="url"/><field name="screenshot_attachment_id"/><field name="error_message"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_psc_publication_task_search" model="ir.ui.view">
+        <field name="name">psc.publication.task.search</field>
+        <field name="model">psc.publication.task</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/><field name="project_id"/><field name="product_id"/><field name="market_id"/><field name="destination_id"/>
+                <filter name="queued" string="待发布" domain="[('state', '=', 'queued')]"/>
+                <filter name="in_progress" string="执行中" domain="[('state', 'in', ('validating', 'publishing'))]"/>
+                <filter name="published" string="已发布" domain="[('state', '=', 'published')]"/>
+                <filter name="failed" string="失败" domain="[('state', '=', 'failed')]"/>
+                <group expand="0" string="分组">
+                    <filter name="group_state" string="状态" context="{'group_by': 'state'}"/>
+                    <filter name="group_destination" string="发布目标" context="{'group_by': 'destination_id'}"/>
+                    <filter name="group_market" string="目标市场" context="{'group_by': 'market_id'}"/>
+                    <filter name="group_project" string="发布项目" context="{'group_by': 'project_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_psc_publishing_destinations" model="ir.actions.act_window">
+        <field name="name">发布目标</field><field name="res_model">psc.publishing.destination</field>
+        <field name="view_mode">list,form</field><field name="search_view_id" ref="view_psc_publishing_destination_search"/>
+    </record>
+    <record id="action_psc_publication_tasks" model="ir.actions.act_window">
+        <field name="name">发布任务与结果</field><field name="res_model">psc.publication.task</field>
+        <field name="view_mode">list,form</field><field name="search_view_id" ref="view_psc_publication_task_search"/>
+    </record>
+
+    <record id="action_queue_publication_tasks_server" model="ir.actions.server">
+        <field name="name">批量进入发布队列</field>
+        <field name="model_id" ref="model_psc_publication_task"/>
+        <field name="binding_model_id" ref="model_psc_publication_task"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">records.action_queue()</field>
+    </record>
+</odoo>

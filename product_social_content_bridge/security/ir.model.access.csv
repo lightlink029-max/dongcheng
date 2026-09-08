@@ -13,3 +13,5 @@ access_psc_social_publishing_account_user,psc.social.publishing.account user,mod
 access_psc_email_asset_user,psc.email.asset user,model_psc_email_asset,base.group_user,1,1,1,1
 access_psc_social_registration_task_user,psc.social.registration.task user,model_psc_social_registration_task,base.group_user,1,1,1,1
 access_psc_social_account_slot_user,psc.social.account.slot user,model_psc_social_account_slot,base.group_user,1,1,1,0
+access_psc_publishing_destination_user,psc.publishing.destination user,model_psc_publishing_destination,base.group_user,1,1,1,1
+access_psc_publication_task_user,psc.publication.task user,model_psc_publication_task,base.group_user,1,1,1,1

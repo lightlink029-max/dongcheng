@@ -118,6 +118,11 @@ class TargetMarket(models.Model):
     lang_id = fields.Many2one("res.lang", string="语言", required=True)
     currency_id = fields.Many2one("res.currency", string="币种", required=True)
     customer_type = fields.Selection([("b2b", "B2B"), ("b2c", "B2C")], default="b2b", required=True)
+    customer_profile = fields.Text(
+        string="目标客户群体",
+        translate=True,
+        help="描述该市场的典型买家、使用场景、核心需求、采购关注点和禁忌。",
+    )
     keywords = fields.Text(string="市场关键词", translate=True)
     compliance_notes = fields.Text(string="认证与合规要求", translate=True)
 
@@ -199,16 +204,22 @@ class PublishingProject(models.Model):
     product_ids = fields.Many2many("product.template", string="发布产品", required=True)
     market_ids = fields.Many2many("psc.target.market", string="目标市场", required=True)
     channel_ids = fields.Many2many("psc.publishing.channel", string="发布渠道", required=True)
+    destination_ids = fields.Many2many("psc.publishing.destination", string="发布目标")
     user_id = fields.Many2one("res.users", string="负责人", default=lambda self: self.env.user)
     company_id = fields.Many2one("res.company", required=True, default=lambda self: self.env.company)
     scheduled_date = fields.Datetime(string="计划发布时间")
     content_brief = fields.Text(string="本期内容要求", translate=True)
     state = fields.Selection([
         ("draft", "草稿"), ("generated", "待确认"),
-        ("ready", "待发布"), ("published", "已发布"), ("failed", "发布失败"),
+        ("ready", "待发布"), ("publishing", "发布中"),
+        ("published", "已发布"), ("failed", "发布失败"),
     ], default="draft", required=True, tracking=True)
     content_ids = fields.One2many("psc.content.variant", "project_id", string="渠道内容")
     content_count = fields.Integer(compute="_compute_content_count")
+    publication_task_ids = fields.One2many(
+        "psc.publication.task", "project_id", string="发布任务", readonly=True,
+    )
+    publication_task_count = fields.Integer(compute="_compute_publication_task_count")
     ai_model = fields.Char(string="AI模型", default=DEFAULT_OPENAI_MODEL)
     material_asset_ids = fields.Many2many(
         "psc.media.asset", "psc_project_material_asset_rel", "project_id", "asset_id",
@@ -219,6 +230,18 @@ class PublishingProject(models.Model):
     def _compute_content_count(self):
         for record in self:
             record.content_count = len(record.content_ids)
+
+    @api.depends("publication_task_ids")
+    def _compute_publication_task_count(self):
+        for record in self:
+            record.publication_task_count = len(record.publication_task_ids)
+
+    @api.onchange("destination_ids")
+    def _onchange_destination_ids(self):
+        for project in self:
+            if project.destination_ids:
+                project.market_ids = project.destination_ids.mapped("market_id")
+                project.channel_ids = project.destination_ids.mapped("channel_id")
 
     @api.onchange("product_line_id")
     def _onchange_product_line_id(self):
@@ -231,20 +254,30 @@ class PublishingProject(models.Model):
                 raise UserError(_("请先选择产品、目标市场和发布渠道。"))
             existing = {(x.product_id.id, x.market_id.id, x.channel_id.id) for x in project.content_ids}
             commands = []
+            if project.destination_ids:
+                market_channels = {
+                    (destination.market_id, destination.channel_id)
+                    for destination in project.destination_ids
+                }
+            else:
+                market_channels = {
+                    (market, channel)
+                    for market in project.market_ids
+                    for channel in project.channel_ids
+                }
             for product in project.product_ids:
-                for market in project.market_ids:
-                    for channel in project.channel_ids:
-                        key = (product.id, market.id, channel.id)
-                        if key in existing:
-                            continue
-                        selling = project.product_line_id.key_selling_points or product.description_sale or ""
-                        commands.append((0, 0, {
-                            "product_id": product.id, "market_id": market.id, "channel_id": channel.id,
-                            "language_id": market.lang_id.id,
-                            "title": product.name,
-                            "caption": "\n\n".join(filter(None, [product.name, selling, project.content_brief or ""])),
-                            "state": "draft",
-                        }))
+                for market, channel in market_channels:
+                    key = (product.id, market.id, channel.id)
+                    if key in existing:
+                        continue
+                    selling = project.product_line_id.key_selling_points or product.description_sale or ""
+                    commands.append((0, 0, {
+                        "product_id": product.id, "market_id": market.id, "channel_id": channel.id,
+                        "language_id": market.lang_id.id,
+                        "title": product.name,
+                        "caption": "\n\n".join(filter(None, [product.name, selling, project.content_brief or ""])),
+                        "state": "draft",
+                    }))
             if commands:
                 project.write({"content_ids": commands, "state": "generated"})
             project.content_ids.filtered(lambda item: item.state != "published").action_generate_ai_content()
@@ -254,6 +287,56 @@ class PublishingProject(models.Model):
         self.write({"state": "ready"})
         self.mapped("content_ids").filtered(lambda x: x.state == "draft").write({"state": "ready"})
         return True
+
+    def action_create_publication_tasks(self):
+        task_model = self.env["psc.publication.task"]
+        for project in self:
+            if not project.destination_ids:
+                raise UserError(_("请先选择至少一个发布目标。"))
+            invalid = project.destination_ids.filtered(lambda destination: destination.state != "ready")
+            if invalid:
+                raise UserError(_("以下发布目标尚未就绪：%s") % ", ".join(invalid.mapped("name")))
+            created = task_model
+            for content in project.content_ids.filtered(lambda item: item.ai_state == "done"):
+                destinations = project.destination_ids.filtered(
+                    lambda destination: destination.market_id == content.market_id
+                    and destination.channel_id == content.channel_id
+                )
+                for destination in destinations:
+                    task = task_model.search([
+                        ("content_id", "=", content.id),
+                        ("destination_id", "=", destination.id),
+                    ], limit=1)
+                    if not task:
+                        task = task_model.create({
+                            "name": "%s · %s" % (content.title or content.product_id.name, destination.name),
+                            "content_id": content.id,
+                            "destination_id": destination.id,
+                            "scheduled_at": project.scheduled_date,
+                        })
+                    created |= task
+            if not created:
+                raise UserError(_("没有可创建的发布任务；请先生成并确认渠道内容。"))
+        return self.action_open_publication_tasks()
+
+    def action_open_publication_tasks(self):
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id(
+            "product_social_content_bridge.action_psc_publication_tasks"
+        )
+        action["domain"] = [("project_id", "=", self.id)]
+        return action
+
+    def action_open_contents(self):
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id(
+            "product_social_content_bridge.action_psc_content"
+        )
+        action["domain"] = [("project_id", "=", self.id)]
+        action["context"] = {
+            "default_project_id": self.id,
+        }
+        return action
 
 
 class ContentVariant(models.Model):
@@ -269,10 +352,14 @@ class ContentVariant(models.Model):
     title = fields.Char(string="标题", translate=True)
     caption = fields.Text(string="发布文案", translate=True)
     hashtags = fields.Char(string="标签")
+    seo_keywords = fields.Text(string="关键词", translate=True)
     video_script = fields.Text(string="短视频脚本", translate=True)
     image_attachment_id = fields.Many2one("ir.attachment", string="发布图片")
     generated_image = fields.Binary(related="image_attachment_id.datas", string="图片预览", readonly=True)
     video_attachment_id = fields.Many2one("ir.attachment", string="发布视频")
+    publication_task_ids = fields.One2many(
+        "psc.publication.task", "content_id", string="发布任务", readonly=True,
+    )
     image_model_id = fields.Many2one(
         "psc.media.model", string="本次图片生成模型",
         domain="[('media_type', '=', 'image'), ('active', '=', True), ('deprecated', '=', False)]",
@@ -628,6 +715,7 @@ class ContentVariant(models.Model):
     def _product_context(self):
         self.ensure_one()
         product = self.product_id.with_context(lang=self.language_id.code)
+        source_candidate = product.pi_candidate_id
         source_description = (
             getattr(product, "description_ecommerce", False)
             or product.description_sale
@@ -636,6 +724,7 @@ class ContentVariant(models.Model):
         return {
             "product_name": product.name or "",
             "sales_description": html2plaintext(source_description)[:8000],
+            "source_keywords": source_candidate.keyword_text if source_candidate else "",
             "list_price": product.list_price,
             "currency": self.project_id.company_id.currency_id.name,
             "brand": self.project_id.product_line_id.brand_name or "",
@@ -647,6 +736,7 @@ class ContentVariant(models.Model):
             "country": self.market_id.country_id.name,
             "language": self.language_id.name,
             "customer_type": self.market_id.customer_type.upper(),
+            "customer_profile": self.market_id.customer_profile or "",
             "market_keywords": self.market_id.keywords or "",
             "market_compliance": self.market_id.compliance_notes or "",
             "channel": self.channel_id.name,
@@ -724,6 +814,7 @@ class ContentVariant(models.Model):
                     "title": generated.get("title") or variant.product_id.name,
                     "caption": "\n\n".join(filter(None, caption_parts)),
                     "hashtags": " ".join(hashtags),
+                    "seo_keywords": "\n".join(str(keyword).strip() for keyword in seo_keywords if str(keyword).strip()),
                     "video_script": generated.get("video_script", ""),
                     "image_prompt": generated.get("image_prompt", ""),
                     "ai_state": "done",
