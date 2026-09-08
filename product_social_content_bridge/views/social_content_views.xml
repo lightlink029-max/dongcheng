@@ -41,7 +41,7 @@
                 <filter name="failed" string="发布失败" domain="[('state', '=', 'failed')]"/>
                 <separator/>
                 <filter name="my_projects" string="我的项目" domain="[('user_id', '=', uid)]"/>
-                <group expand="0" string="分组">
+                <group>
                     <filter name="group_state" string="状态" context="{'group_by': 'state'}"/>
                     <filter name="group_product_line" string="品牌/产品线" context="{'group_by': 'product_line_id'}"/>
                     <filter name="group_user" string="负责人" context="{'group_by': 'user_id'}"/>

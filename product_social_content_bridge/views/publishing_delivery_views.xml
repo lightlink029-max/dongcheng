@@ -75,7 +75,7 @@
                 <filter name="website" string="网站" domain="[('destination_type', '=', 'website')]"/>
                 <filter name="social" string="社媒" domain="[('destination_type', '=', 'social')]"/>
                 <filter name="alibaba" string="阿里国际站" domain="[('destination_type', '=', 'alibaba')]"/>
-                <group expand="0" string="分组">
+                <group>
                     <filter name="group_type" string="目标类型" context="{'group_by': 'destination_type'}"/>
                     <filter name="group_market" string="目标市场" context="{'group_by': 'market_id'}"/>
                     <filter name="group_product_line" string="品牌/产品线" context="{'group_by': 'product_line_id'}"/>
@@ -147,7 +147,7 @@
                 <filter name="in_progress" string="执行中" domain="[('state', 'in', ('validating', 'publishing'))]"/>
                 <filter name="published" string="已发布" domain="[('state', '=', 'published')]"/>
                 <filter name="failed" string="失败" domain="[('state', '=', 'failed')]"/>
-                <group expand="0" string="分组">
+                <group>
                     <filter name="group_state" string="状态" context="{'group_by': 'state'}"/>
                     <filter name="group_destination" string="发布目标" context="{'group_by': 'destination_id'}"/>
                     <filter name="group_market" string="目标市场" context="{'group_by': 'market_id'}"/>
