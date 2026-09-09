@@ -146,3 +146,26 @@ class AiOperationsCase(TransactionCase):
             ("content_id", "=", False),
             ("product_id", "=", False),
         ]), 1)
+
+    def test_medical_test_data_cleanup_is_approved_and_scoped(self):
+        unrelated = self.env["product.template"].create({"name": "Production product"})
+        old_preview = self.service.prepare_action(
+            action_type="create_optimization",
+            title="[AUTO TEST] Pending preview",
+            reason="Verify cleanup retains the audit record.",
+            payload={"project_id": self.project.id, "name": "Pending preview"},
+        )
+        prepared = self.service.prepare_action(
+            action_type="cleanup_medical_test_data",
+            title="[AUTO TEST] Cleanup medical smoke data",
+            reason="Reset only the fixed medical smoke dataset.",
+            payload={"project_id": self.project.id},
+            risk_level="high",
+        )
+        result = self.service.commit_action(prepared["action_token"], str(uuid.uuid4()))
+        self.assertFalse(self.project.exists())
+        self.assertFalse(self.lead.exists())
+        self.assertTrue(unrelated.exists())
+        retained_action = self.env["psc.ai.action"].browse(old_preview["action_id"])
+        self.assertEqual(retained_action.state, "rejected")
+        self.assertIn("psc.publishing.project", result["deleted"])

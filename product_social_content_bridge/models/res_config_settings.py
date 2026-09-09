@@ -232,6 +232,84 @@ class ResConfigSettings(models.TransientModel):
             requirement_model.create(requirement_values)
         return project
 
+    def _cleanup_medical_test_data(self, exclude_action_id=None):
+        """Delete only the fixed smoke-test dataset, inside one transaction."""
+        self.ensure_one()
+        if not self.env.user.has_group("base.group_system"):
+            raise AccessError(_("只有系统管理员可以清理测试数据。"))
+
+        project = self.env["psc.publishing.project"].search([
+            ("name", "=", MEDICAL_TEST_PROJECT_NAME),
+        ], limit=1)
+        if not project:
+            return {"model": "psc.publishing.project", "id": 0, "display_name": MEDICAL_TEST_PROJECT_NAME, "deleted": {}}
+
+        products = self.env["product.template"].search([
+            ("name", "in", list(MEDICAL_TEST_PRODUCT_NAMES)),
+        ])
+        product_line = self.env["psc.product.line"].search([
+            ("code", "=", MEDICAL_TEST_PRODUCT_LINE_CODE),
+        ], limit=1)
+        market = self.env["psc.target.market"].search([
+            ("name", "=", MEDICAL_TEST_MARKET_NAME),
+        ], limit=1)
+        channel = self.env["psc.publishing.channel"].search([
+            ("name", "=", MEDICAL_TEST_CHANNEL_NAME),
+        ], limit=1)
+        shared_domains = []
+        if product_line:
+            shared_domains.append([("product_line_id", "=", product_line.id)])
+        if products:
+            shared_domains.append([("product_ids", "in", products.ids)])
+        if market:
+            shared_domains.append([("market_ids", "in", market.ids)])
+        if channel:
+            shared_domains.append([("channel_ids", "in", channel.ids)])
+        for shared_domain in shared_domains:
+            if self.env["psc.publishing.project"].search_count([
+                ("id", "!=", project.id), *shared_domain,
+            ]):
+                raise UserError(_("测试产品、产品线、市场或渠道已被非测试项目引用，已拒绝清理。"))
+
+        deleted = {}
+
+        def remove(model_name, domain):
+            records = self.env[model_name].search(domain)
+            if records:
+                deleted[model_name] = records.ids
+                records.unlink()
+
+        action_domain = [
+            ("project_id", "=", project.id),
+            ("state", "=", "waiting_approval"),
+        ]
+        if exclude_action_id:
+            action_domain.append(("id", "!=", exclude_action_id))
+        pending_actions = self.env["psc.ai.action"].search(action_domain)
+        if pending_actions:
+            deleted["rejected_psc.ai.action"] = pending_actions.ids
+            pending_actions.action_reject()
+        remove("psc.customer.requirement", [
+            ("name", "=", MEDICAL_TEST_REQUIREMENT_NAME),
+            ("project_id", "=", project.id),
+        ])
+        remove("crm.lead", [
+            ("name", "=", MEDICAL_TEST_LEAD_NAME),
+            ("psc_project_id", "=", project.id),
+        ])
+        remove("psc.publishing.project", [("id", "=", project.id)])
+        remove("res.partner", [("name", "=", MEDICAL_TEST_PARTNER_NAME)])
+        remove("psc.target.market", [("name", "=", MEDICAL_TEST_MARKET_NAME)])
+        remove("psc.publishing.channel", [("name", "=", MEDICAL_TEST_CHANNEL_NAME)])
+        remove("psc.product.line", [("code", "=", MEDICAL_TEST_PRODUCT_LINE_CODE)])
+        remove("product.template", [("name", "in", list(MEDICAL_TEST_PRODUCT_NAMES))])
+        return {
+            "model": "psc.publishing.project",
+            "id": project.id,
+            "display_name": MEDICAL_TEST_PROJECT_NAME,
+            "deleted": deleted,
+        }
+
     def action_prepare_medical_test_data(self):
         project = self._upsert_medical_test_data()
         return {

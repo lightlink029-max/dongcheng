@@ -13,7 +13,12 @@
     .sub { color:var(--muted); font-size:12px; }
     button { border:1px solid color-mix(in srgb, CanvasText 18%, transparent); background:Canvas; color:CanvasText; border-radius:9px; padding:8px 11px; cursor:pointer; }
     button:hover { border-color:var(--accent); }
-    .metrics { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; margin-bottom:14px; }
+    .quick-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin-bottom:14px; }
+    .quick-action { min-height:88px; padding:12px; text-align:left; display:flex; flex-direction:column; justify-content:space-between; gap:8px; }
+    .quick-action strong { font-size:15px; }
+    .quick-action span { color:var(--muted); font-size:12px; line-height:1.4; }
+    .quick-action::after { content:"开始处理 →"; color:var(--accent); font-size:12px; font-weight:650; }
+    .metrics { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin-bottom:14px; }
     .metric, .card, .empty { border:1px solid color-mix(in srgb, CanvasText 13%, transparent); border-radius:12px; background:color-mix(in srgb, Canvas 96%, var(--accent) 4%); }
     .metric { padding:11px; }
     .metric strong { font-size:22px; display:block; }
@@ -31,12 +36,27 @@
     .empty { padding:18px; color:var(--muted); text-align:center; font-size:13px; }
     .actions { display:flex; gap:7px; margin-top:9px; }
     .actions button { padding:5px 8px; font-size:12px; }
-    @media (max-width:760px) { .metrics{grid-template-columns:repeat(2,1fr)} .columns{grid-template-columns:1fr} }
+    .notice { display:none; margin:-5px 0 14px; padding:10px 12px; border:1px solid color-mix(in srgb, var(--accent) 28%, transparent); border-radius:10px; background:color-mix(in srgb, Canvas 91%, var(--accent) 9%); color:CanvasText; font-size:13px; line-height:1.45; }
+    .notice.show { display:block; }
+    @media (max-width:760px) { .quick-actions,.metrics{grid-template-columns:repeat(2,1fr)} .columns{grid-template-columns:1fr} }
+    @media (max-width:460px) { .quick-actions{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
   <div class="shell">
     <header><div><h1>LightLink AI 外贸运营驾驶舱</h1><div class="sub" id="stamp">等待Odoo数据</div></div><button id="refresh">刷新</button></header>
+    <section aria-labelledby="quick-title">
+      <h2 id="quick-title">业务常用</h2>
+      <div class="quick-actions">
+        <button class="quick-action" data-prompt="请读取今日运营驾驶舱，并按必须处理、增长机会、待批准三类给出行动顺序。"><strong>每日驾驶舱</strong><span>查看今日阻塞、机会与待批准事项</span></button>
+        <button class="quick-action" data-prompt="请协助处理产品上市：先列出可访问的运营项目，再根据我选择的项目读取产品市场依据并评估上市门槛。只使用Odoo事实；如需写入，先准备行动预览并等待我确认。"><strong>产品上市</strong><span>核对价格、MOQ、交期与合规门槛</span></button>
+        <button class="quick-action" data-prompt="请协助处理内容计划：先列出可访问的运营项目，再根据我选择的项目读取内容待办和产品市场依据。如需创建计划或草稿，先准备行动预览并等待我确认。"><strong>内容计划</strong><span>查看待办并准备渠道内容</span></button>
+        <button class="quick-action" data-prompt="请读取发布异常和账号环境健康状态，区分临时故障、认证权限问题、数据校验问题和业务规则问题。不要自动重试；如建议重试，先准备行动预览并等待我确认。"><strong>发布异常</strong><span>定位失败原因与安全处理方式</span></button>
+        <button class="quick-action" data-prompt="请读取优先客户，按价值、时效和下一活动给出跟进顺序。如需创建客户跟进，先展示Odoo依据并准备行动预览，等待我确认。"><strong>客户跟进</strong><span>排序高价值客户与逾期活动</span></button>
+        <button class="quick-action" data-prompt="请协助经营复盘：先列出可访问的运营项目，再根据我选择的项目读取经营效果，明确基线、目标指标、观察期、成功条件和回滚条件。如需记录优化行动，先准备预览并等待我确认。"><strong>经营复盘</strong><span>复盘漏斗、收入、毛利和实验</span></button>
+      </div>
+    </section>
+    <div class="notice" id="notice" role="status" aria-live="polite"></div>
     <div class="metrics" id="metrics"></div>
     <div class="columns">
       <section><h2>必须处理</h2><div class="stack" id="blockers"></div></section>
@@ -50,13 +70,15 @@
     const text = value => String(value ?? "");
     const safe = value => text(value).replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[char]);
     function safeUrl(value){ try { const url=new URL(text(value)); return ["http:","https:"].includes(url.protocol)?url.href:""; } catch { return ""; } }
+    function showNotice(message){ const notice=document.querySelector("#notice"); notice.textContent=message; notice.classList.add("show"); }
+    async function copyPrompt(prompt){ try { await navigator.clipboard.writeText(prompt); } catch { const area=document.createElement("textarea"); area.value=prompt; area.style.position="fixed"; area.style.opacity="0"; document.body.append(area); area.select(); document.execCommand("copy"); area.remove(); } showNotice("业务指令已复制。请回到 ChatGPT 对话中粘贴并发送；正式内嵌驾驶舱会直接发送。"); }
     function request(method, params) { const id=nextId++; parent.postMessage({jsonrpc:"2.0",id,method,params},"*"); return new Promise((resolve,reject)=>pending.set(id,{resolve,reject})); }
     function empty(text){ return `<div class="empty">${safe(text)}</div>`; }
     function card(item, kind){ const priority=text(item.priority||""); const priorityClass=/^p[0-3]$/i.test(priority)?priority.toLowerCase():""; const evidence=safeUrl(item.evidence?.[0]?.url); return `<article class="card"><div class="row"><div class="title">${safe(item.title)}</div><span class="badge ${priorityClass}">${safe(priority||kind)}</span></div><div class="reason">${safe(item.reason||item.project||"")}</div><div class="actions">${evidence?`<button data-url="${safe(evidence)}">查看Odoo依据</button>`:""}<button data-follow="${safe(item.id||item.title)}">在对话中处理</button></div></article>`; }
     function render(data){ snapshot=data||{}; const s=snapshot.summary||{}; document.querySelector("#stamp").textContent=`${text(snapshot.generated_at||"")} · ${text(snapshot.project_count||0)}个项目`; const metrics=[["产品阻塞",s.blocked_products],["发布异常",s.failed_publications],["账号环境",s.unhealthy_accounts],["逾期客户",s.overdue_leads],["有效机会",s.active_opportunities],["待批准",s.waiting_approvals]]; document.querySelector("#metrics").innerHTML=metrics.map(([k,v])=>`<div class="metric"><strong>${safe(v||0)}</strong><span>${k}</span></div>`).join(""); document.querySelector("#blockers").innerHTML=(snapshot.blockers||[]).map(x=>card(x,x.kind)).join("")||empty("当前没有阻塞事项"); document.querySelector("#opportunities").innerHTML=(snapshot.opportunities||[]).map(x=>card(x,"机会")).join("")||empty("当前没有高优先级机会"); document.querySelector("#approvals").innerHTML=(snapshot.waiting_approvals||[]).map(x=>card(x,"待批准")).join("")||empty("当前没有待批准行动"); }
     addEventListener("message",event=>{ if(event.source!==parent||event.data?.jsonrpc!=="2.0")return; const m=event.data; if(m.id!==undefined&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(m.error):p.resolve(m.result);return;} if(m.method==="ui/notifications/tool-result")render(m.params?.structuredContent); },{passive:true});
-    addEventListener("click",async event=>{ const button=event.target.closest("button"); if(!button)return; if(button.dataset.url){ const url=safeUrl(button.dataset.url); if(url){ if(window.openai?.openExternal) await window.openai.openExternal({href:url}); else window.open(url,"_blank","noopener,noreferrer"); } } if(button.dataset.follow){ await request("ui/message",{role:"user",content:[{type:"text",text:`请处理驾驶舱中的行动或事项：${button.dataset.follow}。先读取依据；如需写入Odoo，请先准备行动预览，等待我确认。`}]}).catch(()=>{}); } });
-    document.querySelector("#refresh").onclick=async()=>{ const result=await request("tools/call",{name:"get_daily_operations_snapshot",arguments:{}}).catch(()=>null); if(result?.structuredContent)render(result.structuredContent); };
+    addEventListener("click",async event=>{ const button=event.target.closest("button"); if(!button)return; if(button.dataset.url){ const url=safeUrl(button.dataset.url); if(url){ if(window.openai?.openExternal) await window.openai.openExternal({href:url}); else window.open(url,"_blank","noopener,noreferrer"); } } const prompt=button.dataset.prompt||(button.dataset.follow?`请处理驾驶舱中的行动或事项：${button.dataset.follow}。先读取依据；如需写入Odoo，请先准备行动预览，等待我确认。`:""); if(prompt){ if(window.parent===window) await copyPrompt(prompt); else await request("ui/message",{role:"user",content:[{type:"text",text:prompt}]}).catch(()=>showNotice("发送失败，请重新打开正式驾驶舱后再试。")); } });
+    document.querySelector("#refresh").onclick=async()=>{ if(window.parent===window){ showNotice("本地预览无法连接 Odoo。请在 ChatGPT 中打开正式驾驶舱后刷新。"); return; } const result=await request("tools/call",{name:"get_daily_operations_snapshot",arguments:{}}).catch(()=>null); if(result?.structuredContent)render(result.structuredContent); else showNotice("刷新失败，请检查 LightLink MCP 连接后重试。"); };
     render(window.openai?.toolOutput||{});
   </script>
 </body>

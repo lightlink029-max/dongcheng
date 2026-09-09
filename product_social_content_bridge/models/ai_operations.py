@@ -210,6 +210,7 @@ class AiAction(models.Model):
         ("close_optimization", "完成优化复盘"),
         ("retry_publication", "重试发布任务"),
         ("record_feedback", "记录AI建议反馈"),
+        ("cleanup_medical_test_data", "清理医疗测试数据"),
     ], string="动作类型", required=True, index=True)
     priority = fields.Selection([
         ("0", "P0"), ("1", "P1"), ("2", "P2"), ("3", "P3"),
@@ -463,6 +464,10 @@ class AiAction(models.Model):
                 "reason": values.get("reason") or "",
                 "actual_effect": values.get("actual_effect") or "",
             })
+        elif self.action_type == "cleanup_medical_test_data":
+            return self.env["res.config.settings"].create({})._cleanup_medical_test_data(
+                exclude_action_id=self.id,
+            )
         else:
             raise ValidationError(_("不支持的AI动作类型。"))
         return {"model": record._name, "id": record.id, "display_name": record.display_name}
@@ -669,6 +674,9 @@ class AiOperationsService(models.AbstractModel):
             "close_optimization": [("psc.optimization.action", "optimization_id", "优化实验", True)],
             "retry_publication": [("psc.publication.task", "task_id", "发布任务", True)],
             "record_feedback": [("psc.ai.action", "action_id", "AI行动", True)],
+            "cleanup_medical_test_data": [
+                ("psc.publishing.project", "project_id", "测试运营项目", True),
+            ],
         }
         records = []
         for model_name, field_name, label, required in target_specs.get(action_type, []):
@@ -691,6 +699,10 @@ class AiOperationsService(models.AbstractModel):
                 ], limit=1)
                 if project_product:
                     records.append(project_product)
+        if action_type == "cleanup_medical_test_data":
+            project = next((record for record in records if record._name == "psc.publishing.project"), False)
+            if not project or project.name != "[TEST] 西非医疗类综合采购商运营项目":
+                raise ValidationError(_("只能清理内置的医疗测试数据集。"))
         return records
 
     @api.model
@@ -1038,7 +1050,8 @@ class AiOperationsService(models.AbstractModel):
             "priority": metadata.get("priority") or "2",
             "reason": reason,
             "evidence_json": _json_dumps(metadata.get("evidence")),
-            "risk_level": metadata.get("risk_level") or "medium",
+            "risk_level": "high" if action_type == "cleanup_medical_test_data"
+            else metadata.get("risk_level") or "medium",
             "estimated_impact": metadata.get("estimated_impact") or "",
             "payload_json": _json_dumps(payload),
             "precondition_json": _json_dumps({"records": [{
@@ -1050,7 +1063,9 @@ class AiOperationsService(models.AbstractModel):
                 "action_type": action_type,
                 "target": payload,
                 "target_records": [self._record_ref(record) for record in target_records],
-                "effect": _("仅创建或更新预览中列出的业务记录；目标发生变化时执行将被拒绝。"),
+                "effect": _("将删除内置医疗测试数据及其测试依赖；任何目标变化或非测试引用都会拒绝执行。")
+                if action_type == "cleanup_medical_test_data"
+                else _("仅创建或更新预览中列出的业务记录；目标发生变化时执行将被拒绝。"),
                 "requires_approval": True,
             }),
         })

@@ -4,7 +4,7 @@ import express, { type Request, type Response } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { z } from "zod";
+import * as z from "zod/v4";
 
 import { OdooClient, type JsonObject } from "./odoo-client.js";
 import { loadCockpitHtml } from "./widget.js";
@@ -13,7 +13,7 @@ const COCKPIT_URI = "ui://lightlink/operations-cockpit-v1.html";
 
 const projectId = z.number().int().positive();
 const optionalProjectId = projectId.optional();
-const outputObject = z.record(z.unknown());
+const outputObject = z.looseObject({});
 
 function textResult(label: string, data: JsonObject) {
   return {
@@ -75,7 +75,7 @@ export async function createServer(): Promise<McpServer> {
       run_id: projectId,
       state: z.enum(["done", "partial", "failed"]).default("done"),
       summary: z.string().max(4000).optional(),
-      related_records: z.array(z.record(z.unknown())).optional(),
+      related_records: z.array(z.record(z.string(), z.unknown())).optional(),
     },
     outputSchema: outputObject,
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
@@ -169,14 +169,15 @@ export async function createServer(): Promise<McpServer> {
         "launch_project", "create_content_plan", "create_content_draft",
         "create_lead_followup", "create_project_task", "create_optimization",
         "close_optimization", "retry_publication", "record_feedback",
+        "cleanup_medical_test_data",
       ]),
       title: z.string().min(1).max(200),
       reason: z.string().min(1).max(4000),
-      payload: z.record(z.unknown()),
+      payload: z.record(z.string(), z.unknown()),
       priority: z.enum(["0", "1", "2", "3"]).default("2"),
       risk_level: z.enum(["low", "medium", "high"]).default("medium"),
       estimated_impact: z.string().max(500).optional(),
-      evidence: z.array(z.record(z.unknown())).optional(),
+      evidence: z.array(z.record(z.string(), z.unknown())).optional(),
       run_id: projectId.optional(),
     },
     outputSchema: outputObject,
@@ -211,7 +212,7 @@ export async function createServer(): Promise<McpServer> {
   server.registerTool("render_operations_cockpit", {
     title: "显示LightLink运营驾驶舱",
     description: "把get_daily_operations_snapshot返回的最终快照显示为集中式驾驶舱。必须先读取快照，再原样传入本工具。",
-    inputSchema: { snapshot: z.record(z.unknown()) },
+    inputSchema: { snapshot: z.record(z.string(), z.unknown()) },
     outputSchema: outputObject,
     _meta: {
       ui: { resourceUri: COCKPIT_URI },
