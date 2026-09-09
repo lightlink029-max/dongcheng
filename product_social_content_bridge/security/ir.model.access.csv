@@ -31,3 +31,14 @@ access_psc_customer_touchpoint_user,psc.customer.touchpoint user,model_psc_custo
 access_psc_customer_requirement_user,psc.customer.requirement user,model_psc_customer_requirement,base.group_user,1,1,1,1
 access_psc_performance_snapshot_user,psc.performance.snapshot user,model_psc_performance_snapshot,base.group_user,1,1,1,1
 access_psc_optimization_action_user,psc.optimization.action user,model_psc_optimization_action,base.group_user,1,1,1,1
+access_psc_project_blueprint_user,psc.project.blueprint user,model_psc_project_blueprint,base.group_user,1,1,1,0
+access_psc_project_blueprint_admin,psc.project.blueprint admin,model_psc_project_blueprint,base.group_system,1,1,1,1
+access_psc_project_launch_wizard_user,psc.project.launch.wizard user,model_psc_project_launch_wizard,base.group_user,1,1,1,1
+access_psc_ai_run_user,psc.ai.run user,model_psc_ai_run,base.group_user,1,1,1,0
+access_psc_ai_run_admin,psc.ai.run admin,model_psc_ai_run,base.group_system,1,1,1,1
+access_psc_ai_action_user,psc.ai.action user,model_psc_ai_action,base.group_user,1,1,1,0
+access_psc_ai_action_admin,psc.ai.action admin,model_psc_ai_action,base.group_system,1,1,1,1
+access_psc_ai_execution_user,psc.ai.execution user,model_psc_ai_execution,base.group_user,1,0,1,0
+access_psc_ai_execution_admin,psc.ai.execution admin,model_psc_ai_execution,base.group_system,1,1,1,1
+access_psc_ai_feedback_user,psc.ai.feedback user,model_psc_ai_feedback,base.group_user,1,1,1,0
+access_psc_ai_feedback_admin,psc.ai.feedback admin,model_psc_ai_feedback,base.group_system,1,1,1,1

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_psc_project_launch_wizard" model="ir.actions.act_window"><field name="name">创建运营项目</field><field name="res_model">psc.project.launch.wizard</field><field name="view_mode">form</field><field name="target">new</field></record>
+
+    <record id="view_psc_ai_action_search" model="ir.ui.view">
+        <field name="name">psc.ai.action.search</field>
+        <field name="model">psc.ai.action</field>
+        <field name="arch" type="xml"><search><field name="name"/><field name="project_id"/><field name="action_type"/><filter name="waiting" string="待批准" domain="[('state', '=', 'waiting_approval')]"/><filter name="failed" string="失败" domain="[('state', '=', 'failed')]"/><group expand="0" string="分组"><filter string="项目" context="{'group_by': 'project_id'}"/><filter string="状态" context="{'group_by': 'state'}"/></group></search></field>
+    </record>
+
+    <record id="view_psc_ai_action_list" model="ir.ui.view">
+        <field name="name">psc.ai.action.list</field>
+        <field name="model">psc.ai.action</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="priority == '0' or state == 'failed'" decoration-warning="state == 'waiting_approval'" decoration-success="state == 'done'" decoration-muted="state in ('rejected', 'expired')">
+                <field name="priority" widget="badge"/>
+                <field name="name"/>
+                <field name="project_id" optional="show"/>
+                <field name="action_type"/>
+                <field name="risk_level" widget="badge"/>
+                <field name="state" widget="badge"/>
+                <field name="approved_by_id" optional="hide"/>
+                <field name="executed_at" optional="hide"/>
+                <button name="action_approve" type="object" string="批准" icon="fa-check" invisible="state != 'waiting_approval'"/>
+                <button name="action_reject" type="object" string="拒绝" icon="fa-times" invisible="state != 'waiting_approval'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_psc_ai_action_form" model="ir.ui.view">
+        <field name="name">psc.ai.action.form</field>
+        <field name="model">psc.ai.action</field>
+        <field name="arch" type="xml">
+            <form create="0">
+                <header>
+                    <button name="action_approve" type="object" string="批准行动" class="btn-primary" invisible="state != 'waiting_approval'"/>
+                    <button name="action_reject" type="object" string="拒绝" invisible="state != 'waiting_approval'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="waiting_approval,approved,executing,done,failed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group><field name="project_id"/><field name="run_id"/><field name="action_type"/><field name="priority"/><field name="risk_level"/></group>
+                        <group><field name="company_id" groups="base.group_multi_company"/><field name="estimated_impact"/><field name="token_expires_at"/><field name="approved_by_id"/><field name="approved_at"/><field name="executed_at"/></group>
+                    </group>
+                    <group string="为什么建议"><field name="reason"/><field name="evidence_json" widget="text"/></group>
+                    <notebook>
+                        <page string="变更预览"><field name="preview_json" widget="text"/></page>
+                        <page string="执行参数"><field name="payload_json" widget="text"/></page>
+                        <page string="目标版本"><field name="precondition_json" widget="text"/></page>
+                        <page string="执行结果"><field name="result_json" widget="text"/><field name="error_message"/></page>
+                        <page string="执行审计"><field name="execution_ids" readonly="1"><list><field name="started_at"/><field name="tool_name"/><field name="user_id"/><field name="idempotency_key"/><field name="state" widget="badge"/><field name="finished_at"/><field name="error_message"/></list></field></page>
+                        <page string="用户反馈"><field name="feedback_ids"><list editable="bottom"><field name="decision"/><field name="reason"/><field name="actual_effect"/><field name="user_id" readonly="1"/></list></field></page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_psc_ai_run_list" model="ir.ui.view">
+        <field name="name">psc.ai.run.list</field>
+        <field name="model">psc.ai.run</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state == 'done'" decoration-danger="state == 'failed'" decoration-warning="state == 'partial'">
+                <field name="started_at"/><field name="name"/><field name="source"/><field name="project_id"/><field name="user_id"/><field name="intent"/><field name="state" widget="badge"/><field name="finished_at"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_psc_ai_run_form" model="ir.ui.view">
+        <field name="name">psc.ai.run.form</field>
+        <field name="model">psc.ai.run</field>
+        <field name="arch" type="xml">
+            <form create="0" edit="0"><sheet>
+                <div class="oe_title"><h1><field name="name"/></h1></div>
+                <group><group><field name="source"/><field name="project_id"/><field name="user_id"/><field name="intent"/></group><group><field name="company_id" groups="base.group_multi_company"/><field name="state"/><field name="started_at"/><field name="finished_at"/></group></group>
+                <group string="输入与结果"><field name="input_summary"/><field name="result_summary"/><field name="related_records_json" widget="text"/></group>
+                <field name="action_ids"><list><field name="priority" widget="badge"/><field name="name"/><field name="action_type"/><field name="risk_level" widget="badge"/><field name="state" widget="badge"/></list></field>
+            </sheet></form>
+        </field>
+    </record>
+
+    <record id="view_psc_project_blueprint_list" model="ir.ui.view">
+        <field name="name">psc.project.blueprint.list</field>
+        <field name="model">psc.project.blueprint</field>
+        <field name="arch" type="xml"><list><field name="sequence" widget="handle"/><field name="name"/><field name="code"/><field name="version"/><field name="track_id"/><field name="business_role_id"/><field name="active"/></list></field>
+    </record>
+
+    <record id="view_psc_project_blueprint_form" model="ir.ui.view">
+        <field name="name">psc.project.blueprint.form</field>
+        <field name="model">psc.project.blueprint</field>
+        <field name="arch" type="xml">
+            <form>
+                <header><button name="%(action_psc_project_launch_wizard)d" type="action" string="按蓝图创建项目" class="btn-primary" context="{'default_blueprint_id': id}"/></header>
+                <sheet><div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group><group><field name="code"/><field name="version"/><field name="sequence"/><field name="active"/><field name="company_id" groups="base.group_multi_company"/></group><group><field name="track_id"/><field name="business_role_id"/></group></group>
+                    <notebook><page string="业务定义"><field name="business_goal"/><field name="customer_profile"/></page><page string="合规与指标"><field name="compliance_notes"/><field name="default_kpis"/></page><page string="内容要求"><field name="content_brief"/></page></notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_psc_project_launch_wizard_form" model="ir.ui.view">
+        <field name="name">psc.project.launch.wizard.form</field>
+        <field name="model">psc.project.launch.wizard</field>
+        <field name="arch" type="xml">
+            <form string="创建运营项目"><group><field name="blueprint_id" options="{'no_create': True}"/><field name="name"/><field name="product_line_id"/><field name="product_ids" widget="many2many_tags"/><field name="market_ids" widget="many2many_tags"/><field name="channel_ids" widget="many2many_tags"/><field name="business_goal"/><field name="content_brief"/></group><footer><button name="action_create_project" type="object" string="创建项目" class="btn-primary"/><button string="取消" special="cancel"/></footer></form>
+        </field>
+    </record>
+
+    <record id="view_psc_optimization_action_form" model="ir.ui.view">
+        <field name="name">psc.optimization.action.form</field>
+        <field name="model">psc.optimization.action</field>
+        <field name="arch" type="xml">
+            <form><header><button name="action_approve" type="object" string="批准" class="btn-primary" invisible="state != 'draft'"/><button name="action_start" type="object" string="开始" invisible="state != 'approved'"/><button name="action_done" type="object" string="完成" invisible="state != 'doing'"/><field name="state" widget="statusbar" statusbar_visible="draft,approved,doing,done"/></header><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group><field name="project_id"/><field name="category"/><field name="priority"/><field name="owner_id"/><field name="due_date"/></group><group><field name="target_metric"/><field name="baseline_value"/><field name="target_value"/><field name="observation_days"/><field name="actual_value"/><field name="final_decision"/></group></group><group string="实验定义"><field name="evidence"/><field name="proposed_action"/><field name="success_criteria"/><field name="rollback_criteria"/><field name="result"/></group></sheet></form>
+        </field>
+    </record>
+
+    <record id="view_psc_project_form_ai" model="ir.ui.view">
+        <field name="name">psc.publishing.project.form.ai</field>
+        <field name="model">psc.publishing.project</field>
+        <field name="inherit_id" ref="view_psc_project_form_market_operations"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='business_goal']" position="after"><field name="blueprint_id" readonly="1"/><field name="blueprint_version" readonly="1"/></xpath>
+            <xpath expr="//sheet/notebook" position="inside"><page string="AI行动与审计"><group string="待确认及执行结果"><field name="ai_action_ids"><list decoration-warning="state == 'waiting_approval'" decoration-success="state == 'done'" decoration-danger="state == 'failed'"><field name="priority" widget="badge"/><field name="name"/><field name="action_type"/><field name="risk_level" widget="badge"/><field name="state" widget="badge"/><field name="executed_at"/></list></field></group><group string="AI运行历史"><field name="ai_run_ids" readonly="1"><list><field name="started_at"/><field name="name"/><field name="source"/><field name="user_id"/><field name="state" widget="badge"/></list></field></group></page></xpath>
+        </field>
+    </record>
+
+    <record id="view_sale_order_form_psc_attribution" model="ir.ui.view">
+        <field name="name">sale.order.form.psc.attribution</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml"><xpath expr="//field[@name='opportunity_id']" position="after"><field name="psc_project_id"/><field name="psc_market_id"/><field name="psc_channel_id"/></xpath></field>
+    </record>
+
+    <record id="action_psc_ai_cockpit" model="ir.actions.act_window"><field name="name">AI运营驾驶舱</field><field name="res_model">psc.ai.action</field><field name="view_mode">list,form</field><field name="domain">[('state', 'not in', ('rejected', 'expired'))]</field><field name="context">{'search_default_waiting': 1}</field></record>
+    <record id="action_psc_ai_runs" model="ir.actions.act_window"><field name="name">AI运行记录</field><field name="res_model">psc.ai.run</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_project_blueprints" model="ir.actions.act_window"><field name="name">运营项目蓝图</field><field name="res_model">psc.project.blueprint</field><field name="view_mode">list,form</field></record>
+    <menuitem id="menu_psc_ai_cockpit" name="AI运营驾驶舱" parent="menu_psc_root" action="action_psc_ai_cockpit" sequence="5"/>
+    <menuitem id="menu_psc_ai_runs" name="AI运行记录" parent="menu_psc_config" action="action_psc_ai_runs" sequence="2"/>
+    <menuitem id="menu_psc_project_blueprints" name="运营项目蓝图" parent="menu_psc_config" action="action_psc_project_blueprints" sequence="3"/>
+</odoo>

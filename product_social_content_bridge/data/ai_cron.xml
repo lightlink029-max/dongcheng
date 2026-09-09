@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="ir_cron_psc_daily_performance_snapshot" model="ir.cron">
+        <field name="name">市场运营：生成每日经营快照</field>
+        <field name="model_id" ref="model_psc_performance_snapshot"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_build_project_snapshots()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active">True</field>
+    </record>
+</odoo>

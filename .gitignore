@@ -1,2 +1,4 @@
 __pycache__/
 *.py[cod]
+chatgpt_lightlink_app/node_modules/
+chatgpt_lightlink_app/dist/

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="rule_psc_project_blueprint_company" model="ir.rule">
+        <field name="name">运营项目蓝图公司隔离</field>
+        <field name="model_id" ref="model_psc_project_blueprint"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <record id="rule_psc_ai_run_company" model="ir.rule">
+        <field name="name">AI运行本人及公司隔离</field>
+        <field name="model_id" ref="model_psc_ai_run"/>
+        <field name="domain_force">[('company_id', 'in', company_ids), ('user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <record id="rule_psc_ai_run_admin" model="ir.rule"><field name="name">AI运行管理员</field><field name="model_id" ref="model_psc_ai_run"/><field name="domain_force">[('company_id', 'in', company_ids)]</field><field name="groups" eval="[(4, ref('base.group_system'))]"/></record>
+    <record id="rule_psc_ai_action_company" model="ir.rule">
+        <field name="name">AI行动创建人及公司隔离</field>
+        <field name="model_id" ref="model_psc_ai_action"/>
+        <field name="domain_force">[('company_id', 'in', company_ids), ('create_uid', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <record id="rule_psc_ai_action_admin" model="ir.rule"><field name="name">AI行动管理员</field><field name="model_id" ref="model_psc_ai_action"/><field name="domain_force">[('company_id', 'in', company_ids)]</field><field name="groups" eval="[(4, ref('base.group_system'))]"/></record>
+    <record id="rule_psc_ai_execution_company" model="ir.rule">
+        <field name="name">AI执行本人及公司隔离</field>
+        <field name="model_id" ref="model_psc_ai_execution"/>
+        <field name="domain_force">[('company_id', 'in', company_ids), ('user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <record id="rule_psc_ai_execution_admin" model="ir.rule"><field name="name">AI执行管理员</field><field name="model_id" ref="model_psc_ai_execution"/><field name="domain_force">[('company_id', 'in', company_ids)]</field><field name="groups" eval="[(4, ref('base.group_system'))]"/></record>
+    <record id="rule_psc_ai_feedback_company" model="ir.rule">
+        <field name="name">AI反馈本人及公司隔离</field>
+        <field name="model_id" ref="model_psc_ai_feedback"/>
+        <field name="domain_force">[('company_id', 'in', company_ids), ('user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <record id="rule_psc_ai_feedback_admin" model="ir.rule"><field name="name">AI反馈管理员</field><field name="model_id" ref="model_psc_ai_feedback"/><field name="domain_force">[('company_id', 'in', company_ids)]</field><field name="groups" eval="[(4, ref('base.group_system'))]"/></record>
+</odoo>

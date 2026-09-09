@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="blueprint_west_africa_medical_procurement" model="psc.project.blueprint">
+        <field name="name">西非医疗综合采购</field>
+        <field name="code">west_africa_medical_procurement</field>
+        <field name="track_id" ref="track_medical"/>
+        <field name="business_role_id" ref="role_integrator"/>
+        <field name="business_goal">建立面向西非医院、诊所、经销商和项目采购方的医疗产品组合，持续获得有效询盘、报价和订单。</field>
+        <field name="customer_profile">医院采购部门、医疗用品经销商、政府及援助项目供应商、综合医疗项目承包商。</field>
+        <field name="compliance_notes">所有注册、证书、预期用途、临床或性能声明必须由人工使用真实文件确认；未通过硬性门槛不得推广。</field>
+        <field name="default_kpis">有效询盘数
+需求确认率
+报价率
+订单转化率
+收入与毛利
+客户响应时间</field>
+        <field name="content_brief">围绕可验证的产品参数、采购选型、供应协调、验货、交付、培训和售后生成B2B内容，不虚构认证、案例或医疗效果。</field>
+    </record>
+
+    <record id="blueprint_south_america_daily_goods" model="psc.project.blueprint">
+        <field name="name">南美日用品综合采购</field>
+        <field name="code">south_america_daily_goods</field>
+        <field name="track_id" ref="track_daily_goods"/>
+        <field name="business_role_id" ref="role_sourcing_agent"/>
+        <field name="business_goal">为南美批发商、连锁零售商和进口商建立稳定的日用品组合采购能力，提高复购、组合销售和柜量转化。</field>
+        <field name="customer_profile">进口商、批发商、连锁零售采购、区域经销商、电商卖家。</field>
+        <field name="compliance_notes">核实材料安全、包装标签、知识产权、装箱数据和目标国进口要求。</field>
+        <field name="default_kpis">有效SKU数
+组合询盘数
+报价率
+样品转订单率
+复购率
+柜量与毛利</field>
+        <field name="content_brief">突出使用场景、产品组合、包装陈列、MOQ、装箱和供应稳定性；价格和交期以Odoo中已核实数据为准。</field>
+    </record>
+
+    <record id="blueprint_africa_energy_storage_factory" model="psc.project.blueprint">
+        <field name="name">非洲储能工厂项目</field>
+        <field name="code">africa_energy_storage_factory</field>
+        <field name="track_id" ref="track_energy_storage"/>
+        <field name="business_role_id" ref="role_direct_factory"/>
+        <field name="business_goal">面向非洲工商业、经销商、EPC和微电网项目展示真实工厂与方案能力，形成负载分析、选型、报价和项目交付闭环。</field>
+        <field name="customer_profile">储能经销商、太阳能安装商、EPC、工商业业主、微电网和政府能源项目。</field>
+        <field name="compliance_notes">电芯、BMS、整机、电气安全和运输认证均为硬性事实；方案承诺需人工复核负载、环境和安装条件。</field>
+        <field name="default_kpis">有效项目线索
+完成负载分析数
+方案报价率
+项目赢单率
+收入与毛利
+交付周期</field>
+        <field name="content_brief">展示真实工厂、质量控制、容量与功率选型、安全测试、安装和售后；禁止未经验证的循环寿命、节省比例和项目案例。</field>
+    </record>
+</odoo>

@@ -1,0 +1,28 @@
+{
+  "name": "lightlink-ai-operations",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server and ChatGPT cockpit for LightLink Odoo operations.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "test": "npm run build && node --test dist/**/*.test.js",
+    "check": "npm run test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "express": "5.2.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.3",
+    "@types/node": "24.3.0",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
