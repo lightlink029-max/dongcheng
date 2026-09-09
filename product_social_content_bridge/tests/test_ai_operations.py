@@ -45,6 +45,53 @@ class AiOperationsCase(TransactionCase):
         self.assertTrue(project.project_product_ids)
         self.assertTrue(project.content_plan_ids)
 
+    def test_footwear_project_initialization_builds_a_gated_daily_plan(self):
+        prepared = self.service.prepare_action(
+            action_type="initialize_footwear_sourcing_project",
+            title="[AUTO TEST] Initialize footwear sourcing project",
+            reason="Create the approved US and UK footwear sourcing launch plan.",
+            payload={
+                "dataset": "eu_us_footwear_sourcing_v1",
+                "project_name": "[AUTO TEST] EU and US Footwear Sourcing",
+            },
+        )
+        self.assertIn("28项", prepared["preview"]["effect"])
+        key = str(uuid.uuid4())
+        result = self.service.commit_action(prepared["action_token"], key)
+        project = self.env["psc.publishing.project"].browse(result["id"])
+        self.assertEqual(project.operation_state, "planning")
+        self.assertEqual(project.business_role_id.code, "sourcing_agent")
+        self.assertEqual(set(project.market_ids.mapped("country_id.code")), {"US", "GB"})
+        self.assertEqual(set(project.channel_ids.mapped("platform")), {
+            "website", "linkedin", "instagram",
+        })
+        self.assertFalse(project.product_ids)
+        self.assertFalse(project.publication_task_ids)
+        self.assertEqual(len(project.readiness_item_ids), 28)
+        self.assertEqual(sum(project.readiness_item_ids.mapped("weight")), 100.0)
+        self.assertEqual(project.readiness_progress, 0.0)
+        self.assertFalse(project.launch_ready)
+        with self.assertRaises(UserError):
+            project.action_activate_operation()
+
+        hard_gate = project.readiness_item_ids.filtered("hard_gate")[:1]
+        with self.assertRaises(UserError):
+            hard_gate.action_done()
+        hard_gate.evidence = "Verified automated-test evidence"
+        hard_gate.action_done()
+        self.assertGreater(project.readiness_progress, 0.0)
+        snapshot = self.service.get_daily_operations_snapshot(project_id=project.id)
+        self.assertEqual(snapshot["summary"]["readiness_incomplete"], 27)
+        self.assertTrue(snapshot["readiness_tasks"])
+        self.assertIn("responsibility", snapshot["readiness_tasks"][0])
+        listed = self.service.list_projects()
+        listed_project = next(item for item in listed["projects"] if item["id"] == project.id)
+        self.assertEqual(listed_project["readiness_progress"], project.readiness_progress)
+
+        replay = self.service.commit_action(prepared["action_token"], key)
+        self.assertEqual(replay["id"], project.id)
+        self.assertEqual(len(project.readiness_item_ids), 28)
+
     def test_prepare_commit_is_approved_audited_and_idempotent(self):
         prepared = self.service.prepare_action(
             action_type="create_optimization",

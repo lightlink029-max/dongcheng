@@ -79,6 +79,75 @@
         <field name="arch" type="xml"><list decoration-success="state == 'done'" decoration-warning="state in ('approved', 'doing')"><field name="priority" widget="badge"/><field name="name"/><field name="project_id"/><field name="category"/><field name="owner_id"/><field name="due_date"/><field name="state" widget="badge"/><button name="action_approve" type="object" string="批准" invisible="state != 'draft'"/><button name="action_start" type="object" string="开始" invisible="state != 'approved'"/><button name="action_done" type="object" string="完成" invisible="state != 'doing'"/></list></field>
     </record>
 
+    <record id="view_psc_project_readiness_item_search" model="ir.ui.view">
+        <field name="name">psc.project.readiness.item.search</field>
+        <field name="model">psc.project.readiness.item</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/><field name="project_id"/><field name="owner_id"/>
+                <filter name="today" string="今日" domain="[('due_date', '=', context_today())]"/>
+                <filter name="overdue" string="已逾期" domain="[('due_date', '&lt;', context_today()), ('state', '!=', 'done')]"/>
+                <filter name="blocked" string="阻塞" domain="[('state', '=', 'blocked')]"/>
+                <filter name="my_work" string="我的任务" domain="[('owner_id', '=', uid)]"/>
+                <group>
+                    <filter name="group_project" string="项目" context="{'group_by': 'project_id'}"/>
+                    <filter name="group_category" string="阶段" context="{'group_by': 'category'}"/>
+                    <filter name="group_responsibility" string="责任归属" context="{'group_by': 'responsibility'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_psc_project_readiness_item_list" model="ir.ui.view">
+        <field name="name">psc.project.readiness.item.list</field>
+        <field name="model">psc.project.readiness.item</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state == 'done'" decoration-danger="state == 'blocked'" decoration-warning="state == 'doing'">
+                <field name="sequence" widget="handle"/><field name="due_date"/><field name="category"/>
+                <field name="name"/><field name="weight" sum="100"/><field name="hard_gate"/>
+                <field name="responsibility" widget="badge"/><field name="owner_id"/><field name="state" widget="badge"/>
+                <button name="action_start" type="object" string="开始" invisible="state not in ('todo', 'blocked')"/>
+                <button name="action_block" type="object" string="阻塞" invisible="state == 'done'"/>
+                <button name="action_done" type="object" string="完成" invisible="state == 'done'"/>
+                <button name="action_reopen" type="object" string="重开" invisible="state != 'done'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_psc_project_readiness_item_form" model="ir.ui.view">
+        <field name="name">psc.project.readiness.item.form</field>
+        <field name="model">psc.project.readiness.item</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_start" type="object" string="开始" class="btn-secondary" invisible="state not in ('todo', 'blocked')"/>
+                    <button name="action_block" type="object" string="标记阻塞" class="btn-secondary" invisible="state == 'done'"/>
+                    <button name="action_done" type="object" string="完成" class="btn-primary" invisible="state == 'done'"/>
+                    <button name="action_reopen" type="object" string="重新打开" invisible="state != 'done'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="todo,doing,blocked,done" readonly="1"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group><field name="project_id"/><field name="category"/><field name="responsibility"/><field name="owner_id"/></group>
+                        <group><field name="due_date"/><field name="weight"/><field name="hard_gate"/><field name="completed_at"/></group>
+                    </group>
+                    <group string="完成标准"><field name="description"/></group>
+                    <group string="完成依据"><field name="evidence" placeholder="填写真实文件、页面、记录或测试结果；硬门槛完成前必须填写。"/></group>
+                    <group string="阻塞说明"><field name="block_reason" placeholder="标记阻塞前先填写具体原因和需要谁处理。"/></group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_psc_project_readiness_items" model="ir.actions.act_window">
+        <field name="name">今日上线准备</field>
+        <field name="res_model">psc.project.readiness.item</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_psc_project_readiness_item_search"/>
+        <field name="context">{'search_default_today': 1, 'search_default_my_work': 1}</field>
+    </record>
+
     <record id="view_psc_project_form_market_operations" model="ir.ui.view">
         <field name="name">psc.publishing.project.form.market.operations</field>
         <field name="model">psc.publishing.project</field>
@@ -100,6 +169,31 @@
             </xpath>
             <xpath expr="//field[@name='product_ids']" position="after"><field name="business_goal" placeholder="填写长期经营目标、客户类型、产品方向和阶段性目标。"/></xpath>
             <xpath expr="//sheet/notebook/page[1]" position="before">
+                <page string="上线准备" name="launch_readiness">
+                    <div class="alert alert-info" role="alert">只有进度达到 100%、全部硬门槛有真实依据且首发产品通过审核后，项目才能启动运营或创建发布任务。</div>
+                    <group>
+                        <group>
+                            <field name="readiness_progress" widget="progressbar" options="{'max_value': 100}"/>
+                            <field name="launch_ready" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="readiness_total_count" readonly="1"/>
+                            <field name="readiness_done_count" readonly="1"/>
+                            <field name="readiness_blocked_count" readonly="1"/>
+                            <field name="readiness_overdue_count" readonly="1"/>
+                        </group>
+                    </group>
+                    <field name="readiness_blocker_summary" readonly="1" invisible="not readiness_blocker_summary"/>
+                    <field name="readiness_item_ids" context="{'default_project_id': id}" mode="list,form">
+                        <list decoration-success="state == 'done'" decoration-danger="state == 'blocked'" decoration-warning="state == 'doing'">
+                            <field name="sequence" widget="handle"/><field name="due_date"/><field name="category"/>
+                            <field name="name"/><field name="weight"/><field name="hard_gate"/>
+                            <field name="responsibility" widget="badge"/><field name="owner_id"/><field name="state" widget="badge"/>
+                            <button name="action_start" type="object" string="开始" invisible="state not in ('todo', 'blocked')"/>
+                            <button name="action_done" type="object" string="完成" invisible="state == 'done'"/>
+                        </list>
+                    </field>
+                </page>
                 <page string="项目产品池">
                     <div class="alert alert-info" role="alert">正式产品可从 Odoo 产品库选择后同步；产品智能候选必须先审核批准，才能转为正式产品并进入运营。</div>
                     <field name="project_product_ids" context="{'default_project_id': id}">

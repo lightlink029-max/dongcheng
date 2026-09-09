@@ -1,5 +1,67 @@
+from dateutil.relativedelta import relativedelta
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
+
+
+FOOTWEAR_SOURCING_READINESS_TEMPLATE = (
+    ("strategy_positioning", 10, "strategy", "确认英文定位与服务边界", 4, True, "joint", 0,
+     "确认 China Footwear Sourcing & Supply Chain Partner 定位、服务范围和不宣称自有工厂的边界。"),
+    ("strategy_icp", 20, "strategy", "定义进口商、批发商与 Private Label 客户画像", 3, False, "ai", 0,
+     "形成目标客户规模、采购角色、需求信号、排除条件和优先级规则。"),
+    ("strategy_market_kpi", 30, "strategy", "确认美国与英国首发市场及指标", 3, False, "joint", 1,
+     "首期使用英文内容覆盖美国和英国，并确定流量、询盘、报价、订单和净毛利指标。"),
+    ("product_shortlist", 40, "product", "建立首批 5 个鞋款候选池", 5, False, "joint", 2,
+     "录入真实鞋款或候选产品，不使用虚构产品作为正式发布依据。"),
+    ("product_specs", 50, "product", "核实材质、尺码、颜色与包装资料", 6, True, "user", 3,
+     "为每个首发鞋款补齐并核实材质、尺码范围、颜色、包装与图片证据。"),
+    ("product_supplier_terms", 60, "product", "核实供应商报价、MOQ、产能与交期", 5, True, "user", 4,
+     "使用供应商真实资料填写采购价、MOQ、打样周期、量产交期和产能。"),
+    ("product_margin", 70, "product", "核算目标售价、样品成本与毛利", 5, True, "ai", 5,
+     "基于已核实成本和物流条件计算报价区间、样品成本及目标毛利。"),
+    ("product_approval", 80, "product", "完成市场适配评分并批准首发产品", 4, True, "joint", 6,
+     "完成需求、价格、MOQ、质量与视觉素材评分，只批准通过硬门槛的产品。"),
+    ("compliance_ip", 90, "compliance", "核实商标、图片和款式知识产权", 5, True, "user", 4,
+     "确认商标授权、图片使用权和款式风险；未授权品牌或素材不得发布。"),
+    ("compliance_us", 100, "compliance", "完成美国鞋类标签与合规清单", 5, True, "joint", 5,
+     "按首发产品实际材料和用途核对美国标签、进口与宣传要求并保存依据。"),
+    ("compliance_uk", 110, "compliance", "完成英国鞋类标签与合规清单", 5, True, "joint", 5,
+     "按首发产品实际材料和用途核对英国标签、进口与宣传要求并保存依据。"),
+    ("compliance_claims", 120, "compliance", "复核全部英文声明与证据", 5, True, "ai", 7,
+     "价格、认证、环保、性能、产能、交期和案例声明必须与 Odoo 中的证据一致。"),
+    ("commercial_rfq", 130, "commercial", "完成英文 RFQ 与报价模板", 5, True, "ai", 6,
+     "模板包含 MOQ、价格有效期、Incoterms、付款条件、打样和量产交期。"),
+    ("commercial_sample", 140, "commercial", "建立样品申请与跟进流程", 4, False, "ai", 7,
+     "明确样品费用、寄送、反馈、改样和转订单的状态及响应时限。"),
+    ("commercial_qc", 150, "commercial", "建立验货、质量与索赔规则", 3, True, "joint", 8,
+     "明确产前、生产中、出货前检查和不合格处理规则。"),
+    ("commercial_shipping", 160, "commercial", "补齐包装、装箱、HS 与运输资料", 3, True, "user", 8,
+     "使用真实包装尺寸、重量、装箱量、HS 建议和物流条件。"),
+    ("content_message", 170, "content", "完成英文价值主张与网站落地页结构", 4, False, "ai", 8,
+     "围绕供应商筛选、验厂、质量控制、成本、交期和出口协调组织英文信息。"),
+    ("content_assets", 180, "content", "准备首发产品图片、视频与事实表", 4, True, "user", 9,
+     "素材必须真实、可授权，并能支持页面和社媒中的产品事实。"),
+    ("content_linkedin", 190, "content", "完成 LinkedIn 首发内容包", 3, False, "ai", 10,
+     "准备 4 条英文 B2B 内容，覆盖采购知识、供应商管理、质量控制和产品机会。"),
+    ("content_instagram", 200, "content", "完成 Instagram 首发内容包", 3, False, "ai", 10,
+     "准备 6 条英文图片或短视频内容，使用真实产品与供应链素材。"),
+    ("content_cta", 210, "content", "完成询盘 CTA、表单与隐私说明", 1, True, "joint", 10,
+     "网站和社媒统一指向可追踪的询盘入口，并提供必要的隐私说明。"),
+    ("channel_website", 220, "channel", "配置英文网站与数据追踪", 4, True, "joint", 11,
+     "完成网站发布目标、表单测试、分析工具和来源追踪。"),
+    ("channel_linkedin", 230, "channel", "配置 LinkedIn 真实账号授权", 2, True, "user", 11,
+     "由本人完成真实账号登录授权；密码和 Cookie 不录入 Odoo。"),
+    ("channel_instagram", 240, "channel", "配置 Instagram 真实账号授权", 2, True, "user", 11,
+     "由本人完成真实账号登录授权；密码和 Cookie 不录入 Odoo。"),
+    ("channel_attribution", 250, "channel", "配置 UTM、来源归因与驾驶舱", 2, True, "ai", 12,
+     "网站、LinkedIn、Instagram 的流量、询盘、报价和订单可回溯到渠道与内容。"),
+    ("crm_stages", 260, "operations", "配置 ICP、CRM 阶段与响应时限", 2, False, "ai", 12,
+     "覆盖新询盘、需求确认、报价、样品、谈判、赢单和流失原因。"),
+    ("operations_rehearsal", 270, "operations", "完成询盘到订单的全流程演练", 2, True, "joint", 13,
+     "用明确测试标识的数据验证询盘、报价、样品、采购、库存、交付和收款链路。"),
+    ("operations_review", 280, "operations", "建立每周数据复盘与优化节奏", 1, False, "ai", 13,
+     "每周基于渠道、产品、客户和净毛利数据生成保留、迭代或停止建议。"),
+)
 
 
 class BusinessCapability(models.Model):
@@ -672,6 +734,78 @@ class OptimizationAction(models.Model):
         return True
 
 
+class ProjectReadinessItem(models.Model):
+    _name = "psc.project.readiness.item"
+    _description = "项目上线准备项"
+    _order = "due_date, sequence, id"
+
+    name = fields.Char(string="准备事项", required=True)
+    template_key = fields.Char(string="模板键", required=True, index=True)
+    project_id = fields.Many2one(
+        "psc.publishing.project", string="市场运营项目", required=True,
+        ondelete="cascade", index=True,
+    )
+    sequence = fields.Integer(default=10)
+    category = fields.Selection([
+        ("strategy", "定位与市场"), ("product", "产品与供应"),
+        ("compliance", "合规与知识产权"), ("commercial", "交易与交付"),
+        ("content", "英文内容与素材"), ("channel", "渠道与数据"),
+        ("operations", "CRM与运营演练"),
+    ], string="阶段", required=True, default="strategy", index=True)
+    weight = fields.Float(string="进度权重 %", required=True, default=1.0)
+    hard_gate = fields.Boolean(string="上线硬门槛")
+    responsibility = fields.Selection([
+        ("ai", "ChatGPT主办"), ("user", "本人配置"), ("joint", "共同完成"),
+    ], string="责任归属", required=True, default="joint", index=True)
+    owner_id = fields.Many2one(
+        "res.users", string="Odoo负责人", required=True, default=lambda self: self.env.user,
+    )
+    due_date = fields.Date(string="计划完成日期", index=True)
+    state = fields.Selection([
+        ("todo", "待开始"), ("doing", "进行中"),
+        ("blocked", "阻塞"), ("done", "已完成"),
+    ], string="状态", required=True, default="todo", index=True)
+    description = fields.Text(string="完成标准")
+    evidence = fields.Text(string="完成依据")
+    block_reason = fields.Text(string="阻塞原因")
+    completed_at = fields.Datetime(string="完成时间", readonly=True)
+
+    _project_template_unique = models.Constraint(
+        "UNIQUE(project_id, template_key)", "同一项目不能重复创建相同的准备事项。",
+    )
+
+    @api.constrains("weight")
+    def _check_weight(self):
+        for item in self:
+            if not 0.0 < item.weight <= 100.0:
+                raise ValidationError(_("准备事项权重必须大于0且不超过100。"))
+
+    def action_start(self):
+        self.write({"state": "doing", "block_reason": False, "completed_at": False})
+        return True
+
+    def action_block(self):
+        for item in self:
+            if not item.block_reason:
+                raise UserError(_("请先填写阻塞原因。"))
+        self.write({"state": "blocked", "completed_at": False})
+        return True
+
+    def action_done(self):
+        for item in self:
+            if item.hard_gate and not item.evidence:
+                raise UserError(_("上线硬门槛必须填写真实完成依据。"))
+        self.write({
+            "state": "done", "block_reason": False,
+            "completed_at": fields.Datetime.now(),
+        })
+        return True
+
+    def action_reopen(self):
+        self.write({"state": "todo", "completed_at": False})
+        return True
+
+
 class PublishingProjectOperations(models.Model):
     _inherit = "psc.publishing.project"
 
@@ -699,6 +833,114 @@ class PublishingProjectOperations(models.Model):
     optimization_action_ids = fields.One2many(
         "psc.optimization.action", "project_id", string="优化任务",
     )
+    readiness_item_ids = fields.One2many(
+        "psc.project.readiness.item", "project_id", string="上线准备清单",
+    )
+    readiness_progress = fields.Float(
+        string="上线准备进度 %", compute="_compute_readiness", store=True,
+    )
+    readiness_total_count = fields.Integer(
+        string="准备项总数", compute="_compute_readiness", store=True,
+    )
+    readiness_done_count = fields.Integer(
+        string="已完成", compute="_compute_readiness", store=True,
+    )
+    readiness_blocked_count = fields.Integer(
+        string="阻塞项", compute="_compute_readiness", store=True,
+    )
+    readiness_overdue_count = fields.Integer(string="逾期项", compute="_compute_readiness")
+    launch_ready = fields.Boolean(
+        string="允许上线", compute="_compute_readiness", store=True,
+    )
+    readiness_blocker_summary = fields.Text(
+        string="上线阻塞摘要", compute="_compute_readiness",
+    )
+
+    @api.depends(
+        "readiness_item_ids.state", "readiness_item_ids.weight",
+        "readiness_item_ids.hard_gate", "readiness_item_ids.due_date",
+    )
+    def _compute_readiness(self):
+        today = fields.Date.context_today(self)
+        for project in self:
+            items = project.readiness_item_ids
+            done = items.filtered(lambda item: item.state == "done")
+            blocked = items.filtered(lambda item: item.state == "blocked")
+            overdue = items.filtered(
+                lambda item: item.state != "done" and item.due_date and item.due_date < today
+            )
+            total_weight = sum(items.mapped("weight"))
+            progress = 100.0 * sum(done.mapped("weight")) / total_weight if total_weight else 0.0
+            incomplete_hard_gates = items.filtered(
+                lambda item: item.hard_gate and item.state != "done"
+            )
+            project.readiness_progress = progress
+            project.readiness_total_count = len(items)
+            project.readiness_done_count = len(done)
+            project.readiness_blocked_count = len(blocked)
+            project.readiness_overdue_count = len(overdue)
+            project.launch_ready = bool(items) and progress >= 100.0 and not incomplete_hard_gates
+            blockers = blocked or incomplete_hard_gates[:5]
+            project.readiness_blocker_summary = "\n".join(
+                "%s：%s" % (item.name, item.block_reason or _("尚未完成"))
+                for item in blockers[:5]
+            )
+
+    def _check_readiness_before_launch(self):
+        for project in self:
+            if project.readiness_item_ids and not project.launch_ready:
+                raise UserError(_(
+                    "项目上线准备进度为 %.1f%%，仍有%s个阻塞项和%s个未完成硬门槛。"
+                ) % (
+                    project.readiness_progress,
+                    project.readiness_blocked_count,
+                    len(project.readiness_item_ids.filtered(
+                        lambda item: item.hard_gate and item.state != "done"
+                    )),
+                ))
+        return True
+
+    def _check_products_before_launch(self):
+        for project in self.filtered("readiness_item_ids"):
+            if not project.project_product_ids:
+                raise UserError(_("至少需要一个已核实并批准运营的项目产品。"))
+            invalid_products = project.project_product_ids.filtered(
+                lambda item: item.status != "active"
+                or item.compliance_state != "passed"
+                or item.material_state != "complete"
+                or not item.hard_gate_passed
+            )
+            if invalid_products:
+                raise UserError(_("以下产品尚未通过全部上线门槛：%s") % ", ".join(
+                    invalid_products.mapped("name")
+                ))
+        return True
+
+    def ensure_footwear_sourcing_readiness(self):
+        item_model = self.env["psc.project.readiness.item"]
+        today = fields.Date.context_today(self)
+        for project in self:
+            existing_keys = set(project.readiness_item_ids.mapped("template_key"))
+            values_list = []
+            for key, sequence, category, name, weight, hard_gate, responsibility, due_days, description in FOOTWEAR_SOURCING_READINESS_TEMPLATE:
+                if key in existing_keys:
+                    continue
+                values_list.append({
+                    "project_id": project.id,
+                    "template_key": key,
+                    "sequence": sequence,
+                    "category": category,
+                    "name": name,
+                    "weight": weight,
+                    "hard_gate": hard_gate,
+                    "responsibility": responsibility,
+                    "owner_id": project.user_id.id or self.env.user.id,
+                    "due_date": today + relativedelta(days=due_days),
+                    "description": description,
+                })
+            if values_list:
+                item_model.create(values_list)
+        return True
 
     @api.onchange("track_id")
     def _onchange_track_id(self):
@@ -716,8 +958,20 @@ class PublishingProjectOperations(models.Model):
         for project in self:
             if not project.track_id or not project.business_role_id or not project.market_ids:
                 raise UserError(_("请先配置经营赛道、主要角色和目标市场。"))
+            project._check_readiness_before_launch()
+            project._check_products_before_launch()
             project.operation_state = "active"
         return True
+
+    def action_mark_ready(self):
+        self._check_readiness_before_launch()
+        self._check_products_before_launch()
+        return super().action_mark_ready()
+
+    def action_create_publication_tasks(self):
+        self._check_readiness_before_launch()
+        self._check_products_before_launch()
+        return super().action_create_publication_tasks()
 
     def action_sync_product_pool(self):
         pool_model = self.env["psc.project.product"]

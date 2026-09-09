@@ -210,6 +210,7 @@ class AiAction(models.Model):
         ("close_optimization", "完成优化复盘"),
         ("retry_publication", "重试发布任务"),
         ("record_feedback", "记录AI建议反馈"),
+        ("initialize_footwear_sourcing_project", "初始化欧美鞋类采购代理项目"),
         ("initialize_medical_test_data", "初始化医疗测试数据"),
         ("complete_medical_test_scenario", "补齐医疗全业务测试场景"),
         ("sync_project_business_state", "同步项目业务阶段"),
@@ -468,6 +469,14 @@ class AiAction(models.Model):
                 "reason": values.get("reason") or "",
                 "actual_effect": values.get("actual_effect") or "",
             })
+        elif self.action_type == "initialize_footwear_sourcing_project":
+            if values.get("dataset") != "eu_us_footwear_sourcing_v1":
+                raise ValidationError(_("不支持的鞋类运营项目模板。"))
+            result = self.env["psc.ai.service"]._initialize_footwear_sourcing_project(
+                project_name=values.get("project_name"),
+            )
+            self.project_id = result["id"]
+            return result
         elif self.action_type == "initialize_medical_test_data":
             if values.get("dataset") != "medical_procurement_smoke_v1":
                 raise ValidationError(_("不支持的测试数据集。"))
@@ -801,6 +810,9 @@ class AiOperationsService(models.AbstractModel):
         if action_type == "initialize_medical_test_data":
             if payload.get("dataset") != "medical_procurement_smoke_v1":
                 raise ValidationError(_("只能初始化内置的医疗测试数据集。"))
+        if action_type == "initialize_footwear_sourcing_project":
+            if payload.get("dataset") != "eu_us_footwear_sourcing_v1":
+                raise ValidationError(_("只能初始化内置的欧美鞋类采购代理项目。"))
         if action_type == "complete_medical_test_scenario":
             project = next((record for record in records if record._name == "psc.publishing.project"), False)
             worker = self._required_record(
@@ -836,6 +848,140 @@ class AiOperationsService(models.AbstractModel):
         return {"run_id": run.id, "state": run.state, "started_at": fields.Datetime.to_string(run.started_at)}
 
     @api.model
+    def _initialize_footwear_sourcing_project(self, project_name=None):
+        company = self.env.company
+        track = self.env.ref("product_social_content_bridge.track_footwear_apparel")
+        role = self.env.ref("product_social_content_bridge.role_sourcing_agent")
+        language = self.env["res.lang"].with_context(active_test=False).search([
+            ("code", "=", "en_US"),
+        ], limit=1)
+        if not language or not language.active:
+            raise ValidationError(_("请先启用 Odoo 英语（en_US），再初始化英文运营项目。"))
+
+        market_specs = (
+            (
+                "US Footwear Importers & Wholesalers", "US", "USD",
+                "Footwear importers, wholesalers and private-label buyers seeking verified Chinese suppliers, flexible sourcing, quality control and export coordination.",
+                "footwear sourcing, shoe wholesaler, private label footwear, China shoe supplier",
+                "Verify product labeling, material and country-of-origin requirements for each real product before publishing or quoting.",
+            ),
+            (
+                "UK Footwear Importers & Wholesalers", "GB", "GBP",
+                "UK footwear importers, wholesalers and private-label buyers seeking verified Chinese suppliers, quality control and dependable delivery.",
+                "footwear sourcing UK, shoe wholesaler, private label footwear, China supply chain",
+                "Verify UK footwear labeling, material, importer and marketing requirements for each real product before publishing or quoting.",
+            ),
+        )
+        markets = self.env["psc.target.market"]
+        for name, country_code, currency_code, profile, keywords, compliance_notes in market_specs:
+            country = self.env["res.country"].search([("code", "=", country_code)], limit=1)
+            currency = self.env["res.currency"].with_context(active_test=False).search([
+                ("name", "=", currency_code),
+            ], limit=1)
+            if not country or not currency:
+                raise ValidationError(_("缺少%s市场所需的国家或币种基础数据。") % name)
+            market = self.env["psc.target.market"].search([
+                ("name", "=", name), ("country_id", "=", country.id),
+            ], limit=1)
+            if not market:
+                market = self.env["psc.target.market"].create({
+                    "name": name,
+                    "country_id": country.id,
+                    "lang_id": language.id,
+                    "currency_id": currency.id,
+                    "customer_type": "b2b",
+                    "customer_profile": profile,
+                    "keywords": keywords,
+                    "compliance_notes": compliance_notes,
+                })
+            markets |= market
+
+        channel_specs = (
+            ("English B2B Website", "website", "Use evidence-backed English landing pages with a clear RFQ call to action and source attribution."),
+            ("English B2B LinkedIn", "linkedin", "Publish professional sourcing, supplier management, quality control and buyer education content."),
+            ("English B2B Instagram", "instagram", "Publish authentic footwear, material, inspection and supply-chain visuals without unsupported claims."),
+        )
+        channels = self.env["psc.publishing.channel"]
+        for name, platform, instructions in channel_specs:
+            channel = self.env["psc.publishing.channel"].search([
+                ("name", "=", name), ("platform", "=", platform),
+            ], limit=1)
+            if not channel:
+                channel = self.env["psc.publishing.channel"].create({
+                    "name": name,
+                    "platform": platform,
+                    "default_instructions": instructions,
+                })
+            channels |= channel
+
+        product_line = self.env["psc.product.line"].search([
+            ("code", "=", "footwear_sourcing_private_label"),
+        ], limit=1)
+        if not product_line:
+            product_line = self.env["psc.product.line"].create({
+                "name": "Footwear Sourcing & Private Label",
+                "code": "footwear_sourcing_private_label",
+                "brand_name": "LightLink Supply Chain",
+                "tone": "professional",
+                "target_customer": "US and UK footwear importers, wholesalers and private-label buyers.",
+                "key_selling_points": "Supplier sourcing and screening; factory audit coordination; quality control; commercial comparison; export and delivery coordination.",
+                "compliance_notes": "Do not claim ownership of supplier factories. Do not publish unverified prices, capacity, lead times, certifications, environmental claims, trademarks or customer cases.",
+            })
+
+        blueprint = self.env["psc.project.blueprint"].search([
+            ("code", "=", "eu_us_footwear_sourcing"),
+            ("company_id", "=", company.id),
+        ], limit=1)
+        if not blueprint:
+            blueprint = self.env["psc.project.blueprint"].create({
+                "name": "欧美鞋类采购与中国供应链",
+                "code": "eu_us_footwear_sourcing",
+                "company_id": company.id,
+                "track_id": track.id,
+                "business_role_id": role.id,
+                "business_goal": "Build a repeatable footwear sourcing and private-label wholesale pipeline for US and UK importers and wholesalers, from verified products and content to inquiries, quotations, orders and net margin optimization.",
+                "customer_profile": "Footwear importers, wholesalers and private-label buyers that value reliable supplier selection, MOQ, sampling, quality control, delivery and transparent communication.",
+                "compliance_notes": "All product, supplier, trademark, material, price, capacity, lead-time and compliance claims require real evidence. Supplier factories must be identified as partners, never represented as owned factories.",
+                "default_kpis": "Qualified website inquiries\nLinkedIn and Instagram sourced leads\nRFQ-to-quotation rate\nSample-to-order rate\nOrder value\nNet revenue and net gross profit\nResponse time",
+                "content_brief": "Write in professional English for US and UK B2B footwear buyers. Focus on sourcing, supplier screening, quality control, MOQ, sampling, delivery and risk reduction. Use only verified Odoo facts and clearly identify partner factories.",
+            })
+
+        project = self.env["psc.publishing.project"].search([
+            ("blueprint_id", "=", blueprint.id),
+            ("company_id", "=", company.id),
+            ("operation_state", "!=", "closed"),
+        ], order="id", limit=1)
+        if not project:
+            project = self.env["psc.publishing.project"].create({
+                "name": (project_name or "欧美鞋类采购与中国供应链运营项目").strip(),
+                "company_id": company.id,
+                "blueprint_id": blueprint.id,
+                "blueprint_version": blueprint.version,
+                "track_id": track.id,
+                "business_role_id": role.id,
+                "capability_ids": [(6, 0, role.capability_ids.ids)],
+                "product_line_id": product_line.id,
+                "market_ids": [(6, 0, markets.ids)],
+                "channel_ids": [(6, 0, channels.ids)],
+                "business_goal": blueprint.business_goal,
+                "content_brief": blueprint.content_brief,
+                "operation_state": "planning",
+            })
+        project.ensure_footwear_sourcing_readiness()
+        return {
+            "model": project._name,
+            "id": project.id,
+            "display_name": project.display_name,
+            "blueprint_id": blueprint.id,
+            "market_ids": markets.ids,
+            "channel_ids": channels.ids,
+            "readiness_item_ids": project.readiness_item_ids.ids,
+            "readiness_progress": project.readiness_progress,
+            "launch_ready": project.launch_ready,
+            "external_publication_created": False,
+        }
+
+    @api.model
     def finish_ai_run(self, run_id, state="done", summary=None, related_records=None):
         run = self._required_record("psc.ai.run", run_id, _("AI运行"))
         if run.company_id not in self.env.companies:
@@ -857,6 +1003,10 @@ class AiOperationsService(models.AbstractModel):
             "business_role": project.business_role_id.name,
             "markets": project.market_ids.mapped("name"),
             "owner": project.user_id.name,
+            "readiness_progress": project.readiness_progress,
+            "launch_ready": project.launch_ready,
+            "readiness_blocked": project.readiness_blocked_count,
+            "readiness_overdue": project.readiness_overdue_count,
         } for project in projects]}
 
     @api.model
@@ -865,7 +1015,7 @@ class AiOperationsService(models.AbstractModel):
         if project_id:
             project_domain.append(("id", "=", project_id))
         else:
-            project_domain.append(("operation_state", "=", "active"))
+            project_domain.append(("operation_state", "in", ("planning", "active")))
         projects = self.env["psc.publishing.project"].search(project_domain, limit=100)
         if project_id and not projects:
             raise UserError(_("运营项目不存在或当前无权访问。"))
@@ -890,6 +1040,21 @@ class AiOperationsService(models.AbstractModel):
             ("project_id", "in", project_ids), ("state", "=", "waiting_approval"),
         ], order="priority, create_date desc", limit=limit)
         account_health = self.get_account_environment_health(project_id=project_id, limit=limit)
+        today = fields.Date.context_today(self)
+        readiness_domain = [
+            ("project_id", "in", project_ids), ("state", "!=", "done"),
+        ]
+        readiness_tasks = self.env["psc.project.readiness.item"].search(
+            readiness_domain + [
+                "|", ("state", "=", "blocked"), ("due_date", "<=", today),
+            ],
+            order="due_date, sequence, id", limit=limit,
+        )
+        readiness_projects = projects.filtered("readiness_item_ids")
+        readiness_progress = (
+            sum(readiness_projects.mapped("readiness_progress")) / len(readiness_projects)
+            if readiness_projects else 0.0
+        )
         return {
             "generated_at": fields.Datetime.to_string(fields.Datetime.now()),
             "project_count": len(projects),
@@ -905,7 +1070,32 @@ class AiOperationsService(models.AbstractModel):
                 ]),
                 "unhealthy_accounts": account_health["summary"]["unhealthy_accounts"],
                 "account_setup_required": account_health.get("setup_required", False),
+                "readiness_progress": readiness_progress,
+                "readiness_incomplete": self.env["psc.project.readiness.item"].search_count(
+                    readiness_domain
+                ),
+                "readiness_blocked": self.env["psc.project.readiness.item"].search_count(
+                    readiness_domain + [("state", "=", "blocked")]
+                ),
+                "readiness_overdue": self.env["psc.project.readiness.item"].search_count(
+                    readiness_domain + [("due_date", "<", today)]
+                ),
             },
+            "readiness_tasks": [{
+                **self._record_ref(item),
+                "title": item.display_name,
+                "project": self._record_ref(item.project_id),
+                "category": item.category,
+                "responsibility": item.responsibility,
+                "hard_gate": item.hard_gate,
+                "due_date": fields.Date.to_string(item.due_date) if item.due_date else None,
+                "state": item.state,
+                "description": item.description,
+                "block_reason": item.block_reason,
+                "reason": item.block_reason or item.description,
+                "priority": "P0" if item.hard_gate and item.state == "blocked" else "P1",
+                "requires_user_action": item.responsibility in ("user", "joint"),
+            } for item in readiness_tasks],
             "blockers": [{
                 "kind": "product",
                 "title": item.display_name,
@@ -936,7 +1126,15 @@ class AiOperationsService(models.AbstractModel):
                 "reason": account_health["setup_reason"],
                 "priority": "P1",
                 "evidence": [self._record_ref(projects[:1])],
-            }] if account_health.get("setup_required") else []),
+            }] if account_health.get("setup_required") else []) + [{
+                "kind": "readiness",
+                "title": item.display_name,
+                "reason": item.block_reason or item.description or _("上线准备事项尚未完成"),
+                "priority": "P0" if item.hard_gate and item.state == "blocked" else "P1",
+                "evidence": [self._record_ref(item)],
+                "responsibility": item.responsibility,
+                "due_date": fields.Date.to_string(item.due_date) if item.due_date else None,
+            } for item in readiness_tasks.filtered(lambda row: row.state == "blocked")],
             "opportunities": [{
                 "kind": "lead",
                 "title": lead.display_name,
@@ -1365,6 +1563,8 @@ class AiOperationsService(models.AbstractModel):
                     if action_type == "cleanup_medical_test_data"
                     else _("将根据项目内已确认销售订单，把关联客户需求同步为已成交，并为空白的预计采购日期补入订单日期。")
                     if action_type == "sync_project_business_state"
+                    else _("将创建或复用欧美鞋类采购代理蓝图、美国和英国英文B2B市场、网站/LinkedIn/Instagram渠道、筹备项目及28项总权重100%的上线准备清单；不会创建产品事实、账号授权或外部发布任务。")
+                    if action_type == "initialize_footwear_sourcing_project"
                     else _("将创建或修复带[TEST]标识的内置医疗业务测试数据，不修改真实业务记录。")
                     if action_type == "initialize_medical_test_data"
                     else (

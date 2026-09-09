@@ -169,6 +169,7 @@ export async function createServer(): Promise<McpServer> {
         "launch_project", "create_content_plan", "create_content_draft",
         "create_lead_followup", "create_project_task", "create_optimization",
         "close_optimization", "retry_publication", "record_feedback",
+        "initialize_footwear_sourcing_project",
         "initialize_medical_test_data", "complete_medical_test_scenario",
         "sync_project_business_state", "cleanup_medical_test_data",
       ]),
