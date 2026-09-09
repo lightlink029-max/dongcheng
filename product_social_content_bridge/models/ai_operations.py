@@ -520,7 +520,10 @@ class AiAction(models.Model):
             "started_at": fields.Datetime.now(),
         })
         try:
-            result = action._execute_payload()
+            # Roll back all business-record changes when an action fails while
+            # retaining the action and execution audit written outside this savepoint.
+            with self.env.cr.savepoint():
+                result = action._execute_payload()
         except Exception as error:
             message = str(error)[:4000]
             action.write({"state": "failed", "error_message": message})

@@ -1,4 +1,5 @@
 import uuid
+from unittest.mock import patch
 
 from odoo import fields
 from odoo.exceptions import AccessError, UserError
@@ -68,6 +69,29 @@ class AiOperationsCase(TransactionCase):
         optimization = self.env[first["model"]].browse(first["id"])
         self.assertEqual(optimization.target_metric, "qualified inquiry rate")
         self.assertEqual(optimization.observation_days, 14)
+
+    def test_failed_action_rolls_back_business_changes_and_keeps_audit(self):
+        original_name = self.project.name
+        prepared = self.service.prepare_action(
+            action_type="create_optimization",
+            title="[AUTO TEST] Transaction rollback",
+            reason="Verify failed actions are atomic.",
+            payload={"project_id": self.project.id, "name": "Rollback test"},
+        )
+        action = self.env["psc.ai.action"].browse(prepared["action_id"])
+
+        def fail_after_write(action_record):
+            action_record.project_id.name = "[AUTO TEST] Must roll back"
+            raise UserError("Forced failure after write")
+
+        with patch.object(action.__class__, "_execute_payload", fail_after_write):
+            with self.assertRaises(UserError):
+                self.service.commit_action(prepared["action_token"], str(uuid.uuid4()))
+        self.project.invalidate_recordset(["name"])
+        action.invalidate_recordset(["state", "error_message"])
+        self.assertEqual(self.project.name, original_name)
+        self.assertEqual(action.state, "failed")
+        self.assertIn("Forced failure", action.error_message)
 
     def test_invalid_action_token_is_rejected(self):
         with self.assertRaises(AccessError):
