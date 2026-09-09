@@ -17,6 +17,9 @@ MEDICAL_TEST_PARTNER_NAME = "[TEST] Lagos Integrated Medical Procurement Ltd."
 MEDICAL_TEST_LEAD_NAME = "[TEST] Lagos 综合医疗采购项目"
 MEDICAL_TEST_REQUIREMENT_NAME = "[TEST] 基础诊疗设备与医用耗材综合采购"
 MEDICAL_TEST_QUOTATION_REFERENCE = "[TEST] Medical attribution quotation"
+MEDICAL_TEST_FULFILLMENT_REFERENCE = "[TEST] CRM procurement inventory order"
+MEDICAL_TEST_PURCHASE_REFERENCE = "[TEST] Purchase for CRM inventory flow"
+MEDICAL_TEST_VENDOR_NAME = "[TEST] Shenzhen Medical Equipment Supplier"
 MEDICAL_TEST_TOUCHPOINT_PREFIX = "test-medical-funnel-"
 MEDICAL_TEST_PRODUCT_NAMES = (
     "[TEST] Portable Patient Monitor",
@@ -124,12 +127,20 @@ class ResConfigSettings(models.TransientModel):
         else:
             channel = channel_model.create(channel_values)
 
-        product_model = self.env["product.template"]
+        product_model = self.env["product.template"].with_context(active_test=False)
         products = product_model
         for product_name in MEDICAL_TEST_PRODUCT_NAMES:
             product = product_model.search([("name", "=", product_name)], limit=1)
-            if not product:
-                product = product_model.create({"name": product_name, "sale_ok": True, "purchase_ok": True})
+            product_values = {
+                "name": product_name,
+                "sale_ok": True,
+                "purchase_ok": True,
+                "active": True,
+            }
+            if product:
+                product.write(product_values)
+            else:
+                product = product_model.create(product_values)
             products |= product
         product_line.product_ids = [(6, 0, products.ids)]
 
@@ -181,12 +192,13 @@ class ResConfigSettings(models.TransientModel):
                     "sequence": attribute.sequence,
                 }) for attribute in missing_attributes]
 
-        partner_model = self.env["res.partner"]
+        partner_model = self.env["res.partner"].with_context(active_test=False)
         partner = partner_model.search([("name", "=", MEDICAL_TEST_PARTNER_NAME)], limit=1)
         partner_values = {
             "name": MEDICAL_TEST_PARTNER_NAME,
             "company_type": "company",
             "country_id": country.id,
+            "active": True,
         }
         if partner:
             partner.write(partner_values)
@@ -240,7 +252,128 @@ class ResConfigSettings(models.TransientModel):
             requirement_model.create(requirement_values)
         return project
 
-    def _complete_medical_test_scenario(self, worker_node_id=None, environment_id=None):
+    def _complete_test_pickings(self, record, field_name, label):
+        """Validate every step of a synthetic receipt or delivery chain."""
+        for _iteration in range(10):
+            record.invalidate_recordset([field_name])
+            pickings = record[field_name]
+            if not pickings:
+                raise UserError(_("%s未生成库存单据。") % label)
+            pending = pickings.filtered(lambda item: item.state not in ("done", "cancel"))
+            if not pending:
+                return pickings.filtered(lambda item: item.state == "done")
+            progressed = False
+            for picking in pending.sorted("id"):
+                picking.action_assign()
+                if picking.state not in ("assigned", "confirmed"):
+                    continue
+                for move in picking.move_ids.filtered(lambda item: item.state not in ("done", "cancel")):
+                    move.write({"quantity": move.product_uom_qty, "picked": True})
+                picking.with_context(
+                    skip_backorder=True,
+                    picking_ids_not_to_backorder=picking.ids,
+                    skip_sms=True,
+                ).button_validate()
+                if picking.state == "done":
+                    progressed = True
+            if not progressed:
+                raise UserError(_("%s无法继续，仍有等待中的库存移动。") % label)
+        raise UserError(_("%s超过最大库存处理步数。") % label)
+
+    def _complete_medical_procurement_inventory_flow(self, project, lead, product_item):
+        """Build a repeatable CRM-to-purchase-to-stock synthetic flow."""
+        product_template = product_item.product_id
+        product_template.write({"sale_ok": True, "purchase_ok": True, "is_storable": True})
+        product = product_template.product_variant_id
+
+        vendor_model = self.env["res.partner"].with_context(active_test=False)
+        vendor = vendor_model.search([("name", "=", MEDICAL_TEST_VENDOR_NAME)], limit=1)
+        vendor_values = {
+            "name": MEDICAL_TEST_VENDOR_NAME,
+            "company_type": "company",
+            "supplier_rank": 1,
+            "active": True,
+        }
+        if vendor:
+            vendor.write(vendor_values)
+        else:
+            vendor = vendor_model.create(vendor_values)
+
+        sale_order = self.env["sale.order"].search([
+            ("opportunity_id", "=", lead.id),
+            ("client_order_ref", "=", MEDICAL_TEST_FULFILLMENT_REFERENCE),
+        ], limit=1)
+        if not sale_order:
+            sale_order = self.env["sale.order"].create({
+                "partner_id": lead.partner_id.id,
+                "opportunity_id": lead.id,
+                "client_order_ref": MEDICAL_TEST_FULFILLMENT_REFERENCE,
+            })
+        if not sale_order.order_line:
+            self.env["sale.order.line"].create({
+                "order_id": sale_order.id,
+                "product_id": product.id,
+                "name": "[TEST] CRM-to-inventory fulfillment item",
+                "product_uom_qty": 2.0,
+                "product_uom_id": product.uom_id.id,
+                "price_unit": 1000.0,
+            })
+        if sale_order.state in ("draft", "sent"):
+            sale_order.action_confirm()
+
+        purchase_order = self.env["purchase.order"].search([
+            ("partner_id", "=", vendor.id),
+            ("partner_ref", "=", MEDICAL_TEST_PURCHASE_REFERENCE),
+        ], limit=1)
+        if not purchase_order:
+            purchase_order = self.env["purchase.order"].create({
+                "partner_id": vendor.id,
+                "partner_ref": MEDICAL_TEST_PURCHASE_REFERENCE,
+                "origin": sale_order.name,
+                "picking_type_id": sale_order.warehouse_id.in_type_id.id,
+            })
+        if not purchase_order.order_line:
+            self.env["purchase.order.line"].create({
+                "order_id": purchase_order.id,
+                "product_id": product.id,
+                "name": "[TEST] Purchase for CRM inventory fulfillment",
+                "product_qty": 2.0,
+                "product_uom_id": product.uom_id.id,
+                "price_unit": 600.0,
+                "date_planned": fields.Datetime.now(),
+            })
+        if purchase_order.state in ("draft", "sent"):
+            purchase_order.button_confirm()
+        if purchase_order.state == "to approve":
+            purchase_order.button_approve()
+
+        receipt_pickings = self._complete_test_pickings(
+            purchase_order, "picking_ids", _("测试采购收货"),
+        )
+        delivery_pickings = self._complete_test_pickings(
+            sale_order, "picking_ids", _("测试销售出库"),
+        )
+        purchase_order.order_line.invalidate_recordset(["qty_received"])
+        sale_order.order_line.invalidate_recordset(["qty_delivered"])
+        internal_quants = self.env["stock.quant"].search([
+            ("product_id", "=", product.id),
+            ("location_id.usage", "=", "internal"),
+            ("company_id", "=", sale_order.company_id.id),
+        ])
+        return {
+            "vendor": vendor.id,
+            "fulfillment_order": sale_order.id,
+            "purchase_order": purchase_order.id,
+            "receipt_pickings": receipt_pickings.ids,
+            "delivery_pickings": delivery_pickings.ids,
+            "purchased_qty": sum(purchase_order.order_line.mapped("qty_received")),
+            "delivered_qty": sum(sale_order.order_line.mapped("qty_delivered")),
+            "internal_stock_qty": sum(internal_quants.mapped("quantity")),
+        }
+
+    def _complete_medical_test_scenario(
+        self, worker_node_id=None, environment_id=None, include_procurement_inventory=False,
+    ):
         """Complete the fixed dataset with safe synthetic records for end-to-end testing."""
         self.ensure_one()
         project = self._upsert_medical_test_data()
@@ -341,6 +474,12 @@ class ResConfigSettings(models.TransientModel):
             })
         if quotation.state in ("draft", "sent"):
             quotation.action_confirm()
+
+        procurement_inventory = {}
+        if include_procurement_inventory:
+            procurement_inventory = self._complete_medical_procurement_inventory_flow(
+                project, lead, product_item,
+            )
 
         worker = self.env["psc.local.worker.node"].browse(worker_node_id).exists()
         environment = self.env["psc.bitbrowser.environment"].browse(environment_id).exists()
@@ -464,22 +603,24 @@ class ResConfigSettings(models.TransientModel):
             publication_task = self.env["psc.publication.task"].create(publication_values)
 
         self.env["psc.performance.snapshot"].cron_build_project_snapshots()
+        test_records = {
+            "project_product": product_item.id,
+            "content_plans": project.content_plan_ids.ids,
+            "lead": lead.id,
+            "quotation": quotation.id,
+            "order": quotation.id,
+            "content": content.id,
+            "account_cluster": cluster.id,
+            "publishing_account": account.id,
+            "publishing_destination": destination.id,
+            "publication_task": publication_task.id,
+        }
+        test_records.update(procurement_inventory)
         return {
             "model": project._name,
             "id": project.id,
             "display_name": project.display_name,
-            "test_records": {
-                "project_product": product_item.id,
-                "content_plans": project.content_plan_ids.ids,
-                "lead": lead.id,
-                "quotation": quotation.id,
-                "order": quotation.id,
-                "content": content.id,
-                "account_cluster": cluster.id,
-                "publishing_account": account.id,
-                "publishing_destination": destination.id,
-                "publication_task": publication_task.id,
-            },
+            "test_records": test_records,
         }
 
     def _cleanup_medical_test_data(self, exclude_action_id=None):
@@ -494,7 +635,7 @@ class ResConfigSettings(models.TransientModel):
         if not project:
             return {"model": "psc.publishing.project", "id": 0, "display_name": MEDICAL_TEST_PROJECT_NAME, "deleted": {}}
 
-        products = self.env["product.template"].search([
+        products = self.env["product.template"].with_context(active_test=False).search([
             ("name", "in", list(MEDICAL_TEST_PRODUCT_NAMES)),
         ])
         product_line = self.env["psc.product.line"].search([
@@ -532,6 +673,7 @@ class ResConfigSettings(models.TransientModel):
             raise UserError(_("测试账号集群已被非测试项目引用，已拒绝清理。"))
 
         deleted = {}
+        retained_audit = {}
 
         def remove(model_name, domain):
             records = self.env[model_name].search(domain)
@@ -553,6 +695,19 @@ class ResConfigSettings(models.TransientModel):
             ("name", "=", MEDICAL_TEST_LEAD_NAME),
             ("psc_project_id", "=", project.id),
         ], limit=1)
+        fulfillment_orders = self.env["sale.order"].search([
+            ("client_order_ref", "=", MEDICAL_TEST_FULFILLMENT_REFERENCE),
+        ])
+        purchase_orders = self.env["purchase.order"].search([
+            ("partner_ref", "=", MEDICAL_TEST_PURCHASE_REFERENCE),
+        ])
+        if fulfillment_orders:
+            retained_audit["sale.order"] = fulfillment_orders.ids
+        if purchase_orders:
+            retained_audit["purchase.order"] = purchase_orders.ids
+        audit_pickings = fulfillment_orders.picking_ids | purchase_orders.picking_ids
+        if audit_pickings:
+            retained_audit["stock.picking"] = audit_pickings.ids
         if lead:
             remove("mail.activity", [
                 ("res_model_id", "=", self.env["ir.model"]._get_id("crm.lead")),
@@ -581,17 +736,41 @@ class ResConfigSettings(models.TransientModel):
             ("psc_project_id", "=", project.id),
         ])
         remove("psc.publishing.project", [("id", "=", project.id)])
-        remove("res.partner", [("name", "=", MEDICAL_TEST_PARTNER_NAME)])
+        customer = self.env["res.partner"].with_context(active_test=False).search([
+            ("name", "=", MEDICAL_TEST_PARTNER_NAME),
+        ], limit=1)
+        if customer and fulfillment_orders:
+            customer.active = False
+            deleted["archived_res.partner"] = customer.ids
+        else:
+            remove("res.partner", [("name", "=", MEDICAL_TEST_PARTNER_NAME)])
+        vendor = self.env["res.partner"].with_context(active_test=False).search([
+            ("name", "=", MEDICAL_TEST_VENDOR_NAME),
+        ], limit=1)
+        if vendor and purchase_orders:
+            vendor.active = False
+            deleted.setdefault("archived_res.partner", []).extend(vendor.ids)
+        elif vendor:
+            deleted["res.partner.vendor"] = vendor.ids
+            vendor.unlink()
         remove("psc.target.market", [("name", "=", MEDICAL_TEST_MARKET_NAME)])
         remove("psc.publishing.channel", [("name", "=", MEDICAL_TEST_CHANNEL_NAME)])
         remove("psc.publishing.channel", [("name", "=", MEDICAL_TEST_SOCIAL_CHANNEL_NAME)])
         remove("psc.product.line", [("code", "=", MEDICAL_TEST_PRODUCT_LINE_CODE)])
-        remove("product.template", [("name", "in", list(MEDICAL_TEST_PRODUCT_NAMES))])
+        stock_moves = self.env["stock.move"].search([
+            ("product_id.product_tmpl_id", "in", products.ids),
+        ], limit=1)
+        if products and stock_moves:
+            products.active = False
+            deleted["archived_product.template"] = products.ids
+        else:
+            remove("product.template", [("name", "in", list(MEDICAL_TEST_PRODUCT_NAMES))])
         return {
             "model": "psc.publishing.project",
             "id": project.id,
             "display_name": MEDICAL_TEST_PROJECT_NAME,
             "deleted": deleted,
+            "retained_audit": retained_audit,
         }
 
     def action_prepare_medical_test_data(self):

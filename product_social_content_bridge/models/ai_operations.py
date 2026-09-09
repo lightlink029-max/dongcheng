@@ -477,6 +477,7 @@ class AiAction(models.Model):
             return self.env["res.config.settings"].create({})._complete_medical_test_scenario(
                 worker_node_id=values.get("worker_node_id"),
                 environment_id=values.get("environment_id"),
+                include_procurement_inventory=bool(values.get("include_procurement_inventory")),
             )
         elif self.action_type == "cleanup_medical_test_data":
             return self.env["res.config.settings"].create({})._cleanup_medical_test_data(
@@ -1152,7 +1153,11 @@ class AiOperationsService(models.AbstractModel):
                     if action_type == "cleanup_medical_test_data"
                     else _("将创建或修复带[TEST]标识的内置医疗业务测试数据，不修改真实业务记录。")
                     if action_type == "initialize_medical_test_data"
-                    else _("将补齐[TEST]产品成功门槛、内容计划、漏斗触点、测试报价和经营快照；不发布内容，不创建真实账号。")
+                    else (
+                        _("将补齐[TEST] CRM客户、销售订单、采购订单、收货入库、销售出库和库存核验；所有外部发布仍保持关闭。")
+                        if payload.get("include_procurement_inventory")
+                        else _("将补齐[TEST]产品成功门槛、内容计划、漏斗触点、测试报价和经营快照；不发布内容，不创建真实账号。")
+                    )
                     if action_type == "complete_medical_test_scenario"
                     else _("仅创建或更新预览中列出的业务记录；目标发生变化时执行将被拒绝。")
                 ),

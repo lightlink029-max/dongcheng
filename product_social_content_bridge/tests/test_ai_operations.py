@@ -9,7 +9,9 @@ from ..models.res_config_settings import (
     MEDICAL_TEST_ACCOUNT_NAME,
     MEDICAL_TEST_CLUSTER_NAME,
     MEDICAL_TEST_DESTINATION_NAME,
+    MEDICAL_TEST_FULFILLMENT_REFERENCE,
     MEDICAL_TEST_LEAD_NAME,
+    MEDICAL_TEST_PURCHASE_REFERENCE,
     MEDICAL_TEST_PUBLICATION_TASK_NAME,
 )
 
@@ -395,3 +397,52 @@ class AiOperationsCase(TransactionCase):
         health = self.service.get_account_environment_health(project_id=self.project.id)
         self.assertFalse(health["setup_required"])
         self.assertEqual(health["summary"]["clusters"], 1)
+
+    def test_complete_medical_scenario_builds_procurement_inventory_flow(self):
+        worker = self.env["psc.local.worker.node"].create({"name": "[AUTO TEST] Stock worker"})
+        environment = self.env["psc.bitbrowser.environment"].create({
+            "name": "[AUTO TEST] Stock environment",
+            "environment_id": "auto-test-stock-environment",
+            "worker_node_id": worker.id,
+            "state": "open",
+            "available": True,
+        })
+        prepared = self.service.prepare_action(
+            action_type="complete_medical_test_scenario",
+            title="[AUTO TEST] Complete procurement and inventory flow",
+            reason="Validate the CRM-to-fulfillment workflow.",
+            payload={
+                "project_id": self.project.id,
+                "dataset": "medical_procurement_smoke_v1",
+                "worker_node_id": worker.id,
+                "environment_id": environment.id,
+                "include_procurement_inventory": True,
+            },
+        )
+        result = self.service.commit_action(prepared["action_token"], str(uuid.uuid4()))
+        records = result["test_records"]
+        sale_order = self.env["sale.order"].browse(records["fulfillment_order"])
+        purchase_order = self.env["purchase.order"].browse(records["purchase_order"])
+        receipts = self.env["stock.picking"].browse(records["receipt_pickings"])
+        deliveries = self.env["stock.picking"].browse(records["delivery_pickings"])
+
+        self.assertEqual(sale_order.client_order_ref, MEDICAL_TEST_FULFILLMENT_REFERENCE)
+        self.assertEqual(sale_order.opportunity_id, self.lead)
+        self.assertEqual(sale_order.psc_project_id, self.project)
+        self.assertEqual(purchase_order.partner_ref, MEDICAL_TEST_PURCHASE_REFERENCE)
+        self.assertEqual(purchase_order.origin, sale_order.name)
+        self.assertEqual(purchase_order.state, "purchase")
+        self.assertTrue(receipts)
+        self.assertTrue(deliveries)
+        self.assertTrue(all(picking.state == "done" for picking in receipts | deliveries))
+        self.assertEqual(records["purchased_qty"], 2.0)
+        self.assertEqual(records["delivered_qty"], 2.0)
+        self.assertEqual(records["internal_stock_qty"], 0.0)
+
+        cleanup = self.env["res.config.settings"].create({})._cleanup_medical_test_data()
+        self.assertFalse(self.project.exists())
+        self.assertTrue(sale_order.exists())
+        self.assertTrue(purchase_order.exists())
+        self.assertIn(sale_order.id, cleanup["retained_audit"]["sale.order"])
+        self.assertIn(purchase_order.id, cleanup["retained_audit"]["purchase.order"])
+        self.assertFalse(sale_order.order_line.product_id.active)
