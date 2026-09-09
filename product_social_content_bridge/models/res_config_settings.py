@@ -610,7 +610,8 @@ class ResConfigSettings(models.TransientModel):
         lead = self.env["crm.lead"].search([
             ("name", "=", MEDICAL_TEST_LEAD_NAME), ("psc_project_id", "=", project.id),
         ], limit=1)
-        lead.probability = 40.0
+        if not lead.stage_id.is_won:
+            lead.probability = 40.0
         touchpoint_model = self.env["psc.customer.touchpoint"]
         for sequence, event_type in enumerate(("impression", "visit", "click", "inquiry"), start=1):
             reference = "%s%s" % (MEDICAL_TEST_TOUCHPOINT_PREFIX, sequence)

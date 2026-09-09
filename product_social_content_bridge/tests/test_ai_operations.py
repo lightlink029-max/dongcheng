@@ -346,6 +346,9 @@ class AiOperationsCase(TransactionCase):
             "state": "open",
             "available": True,
         })
+        won_stage = self.env["crm.stage"].search([("is_won", "=", True)], limit=1)
+        self.assertTrue(won_stage)
+        self.lead.stage_id = won_stage
         prepared = self.service.prepare_action(
             action_type="complete_medical_test_scenario",
             title="[AUTO TEST] Complete medical test scenario",
@@ -362,6 +365,7 @@ class AiOperationsCase(TransactionCase):
         self.assertEqual(product_item.status, "active")
         self.assertTrue(product_item.hard_gate_passed)
         self.assertEqual(product_item.compliance_state, "passed")
+        self.assertTrue(self.lead.stage_id.is_won)
         performance = self.service.get_campaign_performance(self.project.id)
         self.assertEqual(performance["totals"]["impressions"], 1)
         self.assertEqual(performance["totals"]["clicks"], 1)
