@@ -452,3 +452,53 @@ class AiOperationsCase(TransactionCase):
         self.assertIn(sale_order.id, cleanup["retained_audit"]["sale.order"])
         self.assertIn(purchase_order.id, cleanup["retained_audit"]["purchase.order"])
         self.assertFalse(sale_order.order_line.product_id.active)
+
+    def test_complete_medical_scenario_builds_finance_and_return_flow(self):
+        journals = self.env["account.journal"].search([
+            ("company_id", "=", self.env.company.id),
+            ("type", "in", ("sale", "purchase", "bank", "cash")),
+        ])
+        if not {"sale", "purchase"}.issubset(set(journals.mapped("type"))) or not journals.filtered(
+            lambda journal: journal.type in ("bank", "cash")
+        ):
+            self.skipTest("Accounting journals are not configured in this test database.")
+        worker = self.env["psc.local.worker.node"].create({"name": "[AUTO TEST] Finance worker"})
+        environment = self.env["psc.bitbrowser.environment"].create({
+            "name": "[AUTO TEST] Finance environment",
+            "environment_id": "auto-test-finance-environment",
+            "worker_node_id": worker.id,
+            "state": "open",
+            "available": True,
+        })
+        prepared = self.service.prepare_action(
+            action_type="complete_medical_test_scenario",
+            title="[AUTO TEST] Complete finance and return flow",
+            reason="Validate invoices, payments, returns and refunds.",
+            payload={
+                "project_id": self.project.id,
+                "dataset": "medical_procurement_smoke_v1",
+                "worker_node_id": worker.id,
+                "environment_id": environment.id,
+                "include_procurement_inventory": True,
+                "include_finance_workflow": True,
+            },
+        )
+        result = self.service.commit_action(prepared["action_token"], str(uuid.uuid4()))
+        records = result["test_records"]
+        moves = self.env["account.move"].browse([
+            records["customer_invoice"],
+            records["vendor_bill"],
+            records["customer_refund"],
+            records["vendor_refund"],
+        ])
+        returns = self.env["stock.picking"].browse([
+            records["customer_return"], records["vendor_return"],
+        ])
+
+        self.assertTrue(all(move.state == "posted" for move in moves))
+        self.assertTrue(all(move.payment_state in ("paid", "in_payment") for move in moves))
+        self.assertTrue(all(move.currency_id.is_zero(move.amount_residual) for move in moves))
+        self.assertTrue(all(picking.state == "done" for picking in returns))
+        self.assertEqual(records["customer_return_qty"], 2.0)
+        self.assertEqual(records["vendor_return_qty"], 2.0)
+        self.assertEqual(records["internal_stock_after_returns"], 0.0)

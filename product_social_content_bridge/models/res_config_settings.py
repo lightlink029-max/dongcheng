@@ -20,6 +20,10 @@ MEDICAL_TEST_QUOTATION_REFERENCE = "[TEST] Medical attribution quotation"
 MEDICAL_TEST_FULFILLMENT_REFERENCE = "[TEST] CRM procurement inventory order"
 MEDICAL_TEST_PURCHASE_REFERENCE = "[TEST] Purchase for CRM inventory flow"
 MEDICAL_TEST_VENDOR_NAME = "[TEST] Shenzhen Medical Equipment Supplier"
+MEDICAL_TEST_CUSTOMER_INVOICE_REFERENCE = "[TEST] Customer invoice for CRM fulfillment"
+MEDICAL_TEST_VENDOR_BILL_REFERENCE = "[TEST] Vendor bill for CRM fulfillment"
+MEDICAL_TEST_CUSTOMER_REFUND_REFERENCE = "[TEST] Customer refund for returned goods"
+MEDICAL_TEST_VENDOR_REFUND_REFERENCE = "[TEST] Vendor refund for returned goods"
 MEDICAL_TEST_TOUCHPOINT_PREFIX = "test-medical-funnel-"
 MEDICAL_TEST_PRODUCT_NAMES = (
     "[TEST] Portable Patient Monitor",
@@ -376,8 +380,181 @@ class ResConfigSettings(models.TransientModel):
             "internal_stock_qty": sum(internal_quants.mapped("quantity")),
         }
 
+    def _complete_test_return(self, picking, quantity, label):
+        """Create and validate one repeatable return for a completed test picking."""
+        returned = self.env["stock.picking"].search([
+            ("move_ids.origin_returned_move_id", "in", picking.move_ids.ids),
+            ("state", "!=", "cancel"),
+        ], order="id", limit=1)
+        if not returned:
+            wizard = self.env["stock.return.picking"].with_context(
+                active_model="stock.picking",
+                active_id=picking.id,
+                active_ids=picking.ids,
+            ).create({})
+            return_lines = wizard.product_return_moves.filtered(
+                lambda line: line.product_id in picking.move_ids.product_id
+            )
+            if not return_lines:
+                raise UserError(_("%s没有可退回的产品。") % label)
+            wizard.product_return_moves.quantity = 0.0
+            return_lines[:1].quantity = quantity
+            action = wizard.action_create_returns()
+            returned = self.env["stock.picking"].browse(action.get("res_id")).exists()
+        if not returned:
+            raise UserError(_("%s未生成退货单。") % label)
+        if returned.state not in ("done", "cancel"):
+            returned.action_assign()
+            for move in returned.move_ids.filtered(lambda item: item.state not in ("done", "cancel")):
+                move.write({"quantity": move.product_uom_qty, "picked": True})
+            returned.with_context(
+                skip_backorder=True,
+                picking_ids_not_to_backorder=returned.ids,
+                skip_sms=True,
+            ).button_validate()
+        if returned.state != "done":
+            raise UserError(_("%s未完成。") % label)
+        return returned
+
+    def _register_test_payment(self, move, label):
+        """Register a synthetic payment/refund against one posted test document."""
+        payments = move.reconciled_payment_ids | move.matched_payment_ids
+        if move.payment_state not in ("paid", "in_payment"):
+            payments |= self.env["account.payment.register"].with_context(
+                active_model="account.move",
+                active_id=move.id,
+                active_ids=move.ids,
+            ).create({
+                "payment_date": fields.Date.context_today(self),
+            })._create_payments()
+            move.invalidate_recordset(["payment_state", "amount_residual"])
+        if (
+            move.payment_state not in ("paid", "in_payment")
+            or not move.currency_id.is_zero(move.amount_residual)
+        ):
+            raise UserError(_("%s未进入已付款或付款中状态。") % label)
+        return payments
+
+    def _complete_medical_finance_return_flow(self, project, product_item, flow):
+        """Complete invoices, payments, returns and refunds for the test flow."""
+        sale_order = self.env["sale.order"].browse(flow["fulfillment_order"]).exists()
+        purchase_order = self.env["purchase.order"].browse(flow["purchase_order"]).exists()
+        if (
+            not sale_order or not purchase_order
+            or sale_order.psc_project_id != project
+        ):
+            raise UserError(_("缺少测试销售订单或采购订单。"))
+
+        customer_invoice = sale_order.invoice_ids.filtered(
+            lambda move: move.move_type == "out_invoice" and move.state != "cancel"
+        )[:1]
+        if not customer_invoice:
+            customer_invoice = sale_order._create_invoices()[:1]
+        if not customer_invoice:
+            raise UserError(_("测试销售订单未生成客户发票。"))
+        if customer_invoice.state == "draft":
+            customer_invoice.write({
+                "invoice_date": fields.Date.context_today(self),
+                "ref": MEDICAL_TEST_CUSTOMER_INVOICE_REFERENCE,
+            })
+            customer_invoice.action_post()
+        customer_payments = self._register_test_payment(
+            customer_invoice, _("[TEST] Customer payment for %s") % sale_order.name,
+        )
+
+        vendor_bill = purchase_order.invoice_ids.filtered(
+            lambda move: move.move_type == "in_invoice" and move.state != "cancel"
+        )[:1]
+        if not vendor_bill:
+            purchase_order.action_create_invoice()
+            purchase_order.invalidate_recordset(["invoice_ids"])
+            vendor_bill = purchase_order.invoice_ids.filtered(
+                lambda move: move.move_type == "in_invoice" and move.state != "cancel"
+            )[:1]
+        if not vendor_bill:
+            raise UserError(_("测试采购订单未生成供应商账单。"))
+        if vendor_bill.state == "draft":
+            vendor_bill.write({
+                "invoice_date": fields.Date.context_today(self),
+                "ref": MEDICAL_TEST_VENDOR_BILL_REFERENCE,
+            })
+            vendor_bill.action_post()
+        vendor_payments = self._register_test_payment(
+            vendor_bill, _("[TEST] Vendor payment for %s") % purchase_order.name,
+        )
+
+        delivery = self.env["stock.picking"].browse(flow["delivery_pickings"][:1]).exists()
+        receipt = self.env["stock.picking"].browse(flow["receipt_pickings"][:1]).exists()
+        customer_return = self._complete_test_return(delivery, 2.0, _("测试客户退货"))
+        vendor_return = self._complete_test_return(receipt, 2.0, _("测试供应商退货"))
+
+        customer_refund = self.env["account.move"].search([
+            ("reversed_entry_id", "=", customer_invoice.id),
+            ("ref", "=", MEDICAL_TEST_CUSTOMER_REFUND_REFERENCE),
+            ("state", "!=", "cancel"),
+        ], limit=1)
+        if not customer_refund:
+            customer_refund = customer_invoice._reverse_moves([{
+                "date": fields.Date.context_today(self),
+                "ref": MEDICAL_TEST_CUSTOMER_REFUND_REFERENCE,
+            }], cancel=False)
+        if customer_refund.state == "draft":
+            customer_refund.action_post()
+        customer_refund_payments = self._register_test_payment(
+            customer_refund, _("[TEST] Customer refund for %s") % customer_invoice.name,
+        )
+
+        vendor_refund = self.env["account.move"].search([
+            ("reversed_entry_id", "=", vendor_bill.id),
+            ("ref", "=", MEDICAL_TEST_VENDOR_REFUND_REFERENCE),
+            ("state", "!=", "cancel"),
+        ], limit=1)
+        if not vendor_refund:
+            vendor_refund = vendor_bill._reverse_moves([{
+                "date": fields.Date.context_today(self),
+                "ref": MEDICAL_TEST_VENDOR_REFUND_REFERENCE,
+            }], cancel=False)
+        if vendor_refund.state == "draft":
+            vendor_refund.action_post()
+        vendor_refund_payments = self._register_test_payment(
+            vendor_refund, _("[TEST] Vendor refund for %s") % vendor_bill.name,
+        )
+
+        product = product_item.product_id.product_variant_id
+        internal_quants = self.env["stock.quant"].search([
+            ("product_id", "=", product.id),
+            ("location_id.usage", "=", "internal"),
+            ("company_id", "=", sale_order.company_id.id),
+        ])
+        return {
+            "customer_invoice": customer_invoice.id,
+            "customer_invoice_state": customer_invoice.state,
+            "customer_invoice_payment_state": customer_invoice.payment_state,
+            "customer_invoice_residual": customer_invoice.amount_residual,
+            "customer_payments": customer_payments.ids,
+            "vendor_bill": vendor_bill.id,
+            "vendor_bill_state": vendor_bill.state,
+            "vendor_bill_payment_state": vendor_bill.payment_state,
+            "vendor_bill_residual": vendor_bill.amount_residual,
+            "vendor_payments": vendor_payments.ids,
+            "customer_return": customer_return.id,
+            "customer_return_qty": sum(customer_return.move_ids.mapped("quantity")),
+            "vendor_return": vendor_return.id,
+            "vendor_return_qty": sum(vendor_return.move_ids.mapped("quantity")),
+            "customer_refund": customer_refund.id,
+            "customer_refund_payment_state": customer_refund.payment_state,
+            "customer_refund_residual": customer_refund.amount_residual,
+            "customer_refund_payments": customer_refund_payments.ids,
+            "vendor_refund": vendor_refund.id,
+            "vendor_refund_payment_state": vendor_refund.payment_state,
+            "vendor_refund_residual": vendor_refund.amount_residual,
+            "vendor_refund_payments": vendor_refund_payments.ids,
+            "internal_stock_after_returns": sum(internal_quants.mapped("quantity")),
+        }
+
     def _complete_medical_test_scenario(
         self, worker_node_id=None, environment_id=None, include_procurement_inventory=False,
+        include_finance_workflow=False,
     ):
         """Complete the fixed dataset with safe synthetic records for end-to-end testing."""
         self.ensure_one()
@@ -484,6 +661,13 @@ class ResConfigSettings(models.TransientModel):
         if include_procurement_inventory:
             procurement_inventory = self._complete_medical_procurement_inventory_flow(
                 project, lead, product_item,
+            )
+        finance_workflow = {}
+        if include_finance_workflow:
+            if not procurement_inventory:
+                raise UserError(_("财务退货测试必须同时启用采购库存测试。"))
+            finance_workflow = self._complete_medical_finance_return_flow(
+                project, product_item, procurement_inventory,
             )
 
         worker = self.env["psc.local.worker.node"].browse(worker_node_id).exists()
@@ -621,6 +805,7 @@ class ResConfigSettings(models.TransientModel):
             "publication_task": publication_task.id,
         }
         test_records.update(procurement_inventory)
+        test_records.update(finance_workflow)
         return {
             "model": project._name,
             "id": project.id,
@@ -713,6 +898,23 @@ class ResConfigSettings(models.TransientModel):
         audit_pickings = fulfillment_orders.picking_ids | purchase_orders.picking_ids
         if audit_pickings:
             retained_audit["stock.picking"] = audit_pickings.ids
+        audit_move_domain = [("ref", "in", (
+            MEDICAL_TEST_CUSTOMER_INVOICE_REFERENCE,
+            MEDICAL_TEST_VENDOR_BILL_REFERENCE,
+            MEDICAL_TEST_CUSTOMER_REFUND_REFERENCE,
+            MEDICAL_TEST_VENDOR_REFUND_REFERENCE,
+        ))]
+        if fulfillment_orders:
+            audit_move_domain = [
+                "|", *audit_move_domain,
+                ("invoice_origin", "in", fulfillment_orders.mapped("name")),
+            ]
+        audit_moves = self.env["account.move"].search(audit_move_domain)
+        if audit_moves:
+            retained_audit["account.move"] = audit_moves.ids
+            audit_payments = audit_moves.reconciled_payment_ids | audit_moves.matched_payment_ids
+            if audit_payments:
+                retained_audit["account.payment"] = audit_payments.ids
         if lead:
             remove("mail.activity", [
                 ("res_model_id", "=", self.env["ir.model"]._get_id("crm.lead")),
