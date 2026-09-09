@@ -133,6 +133,80 @@ class AiOperationsCase(TransactionCase):
         self.assertEqual(plan.content_id, content)
         self.assertEqual(plan.state, "prepared")
 
+    def test_close_optimization_supports_every_review_decision(self):
+        for decision in ("adopt", "iterate", "rollback"):
+            optimization = self.env["psc.optimization.action"].create({
+                "name": "[AUTO TEST] Optimization %s" % decision,
+                "project_id": self.project.id,
+                "evidence": "Synthetic test evidence.",
+                "proposed_action": "Exercise the review decision workflow.",
+            })
+            prepared = self.service.prepare_action(
+                action_type="close_optimization",
+                title="[AUTO TEST] Close optimization %s" % decision,
+                reason="Verify the %s review decision." % decision,
+                payload={
+                    "optimization_id": optimization.id,
+                    "actual_value": 0.02,
+                    "final_decision": decision,
+                    "result": "[AUTO TEST] Synthetic review result.",
+                },
+            )
+            self.service.commit_action(prepared["action_token"], str(uuid.uuid4()))
+            self.assertEqual(optimization.state, "done")
+            self.assertEqual(optimization.final_decision, decision)
+            self.assertEqual(optimization.actual_value, 0.02)
+
+    def test_ai_publication_retry_allows_only_transient_failures(self):
+        channel = self.project.channel_ids.filtered(lambda item: item.platform == "website")[:1]
+        website = self.env["website"].search([], limit=1)
+        content = self.env["psc.content.variant"].create({
+            "project_id": self.project.id,
+            "product_id": self.project.product_ids[:1].id,
+            "market_id": self.project.market_ids[:1].id,
+            "channel_id": channel.id,
+            "language_id": self.project.market_ids[:1].lang_id.id,
+            "title": "[AUTO TEST] Safe publication retry",
+            "caption": "[AUTO TEST] Verified synthetic content.",
+            "ai_state": "done",
+            "state": "failed",
+        })
+        destination = self.env["psc.publishing.destination"].create({
+            "name": "[AUTO TEST] Website destination",
+            "destination_type": "website",
+            "product_line_id": self.project.product_line_id.id,
+            "market_id": self.project.market_ids[:1].id,
+            "channel_id": channel.id,
+            "website_id": website.id,
+            "state": "ready",
+        })
+        task = self.env["psc.publication.task"].create({
+            "name": "[AUTO TEST] Website publication retry",
+            "content_id": content.id,
+            "project_id": self.project.id,
+            "destination_id": destination.id,
+            "state": "failed",
+        })
+
+        unsafe = self.service.prepare_action(
+            action_type="retry_publication",
+            title="[AUTO TEST] Reject unsafe publication retry",
+            reason="Authentication failures require user configuration.",
+            payload={"task_id": task.id, "failure_class": "authentication"},
+        )
+        with self.assertRaises(UserError):
+            self.service.commit_action(unsafe["action_token"], str(uuid.uuid4()))
+        self.assertEqual(task.state, "failed")
+
+        safe = self.service.prepare_action(
+            action_type="retry_publication",
+            title="[AUTO TEST] Retry transient publication failure",
+            reason="A confirmed temporary network failure can be retried safely.",
+            payload={"task_id": task.id, "failure_class": "network"},
+        )
+        self.service.commit_action(safe["action_token"], str(uuid.uuid4()))
+        self.assertEqual(task.state, "published")
+
     def test_ai_run_lifecycle_and_account_health_are_available(self):
         started = self.service.start_ai_run("[AUTO TEST] Daily cockpit", project_id=self.project.id)
         finished = self.service.finish_ai_run(started["run_id"], summary="Snapshot reviewed.")
