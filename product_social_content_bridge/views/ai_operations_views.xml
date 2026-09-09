@@ -5,7 +5,7 @@
     <record id="view_psc_ai_action_search" model="ir.ui.view">
         <field name="name">psc.ai.action.search</field>
         <field name="model">psc.ai.action</field>
-        <field name="arch" type="xml"><search><field name="name"/><field name="project_id"/><field name="action_type"/><filter name="waiting" string="待批准" domain="[('state', '=', 'waiting_approval')]"/><filter name="failed" string="失败" domain="[('state', '=', 'failed')]"/><group expand="0" string="分组"><filter string="项目" context="{'group_by': 'project_id'}"/><filter string="状态" context="{'group_by': 'state'}"/></group></search></field>
+        <field name="arch" type="xml"><search><field name="name"/><field name="project_id"/><field name="action_type"/><filter name="waiting" string="待批准" domain="[('state', '=', 'waiting_approval')]"/><filter name="failed" string="失败" domain="[('state', '=', 'failed')]"/><group expand="0" string="分组"><filter name="group_project" string="项目" context="{'group_by': 'project_id'}"/><filter name="group_state" string="状态" context="{'group_by': 'state'}"/></group></search></field>
     </record>
 
     <record id="view_psc_ai_action_list" model="ir.ui.view">
