@@ -7,6 +7,12 @@ MEDICAL_TEST_PRODUCT_LINE_NAME = "[TEST] 西非医疗综合采购产品线"
 MEDICAL_TEST_PRODUCT_LINE_CODE = "test_medical_west_africa"
 MEDICAL_TEST_MARKET_NAME = "[TEST] Nigeria Medical B2B"
 MEDICAL_TEST_CHANNEL_NAME = "[TEST] Website - Nigeria Medical"
+MEDICAL_TEST_SOCIAL_CHANNEL_NAME = "[TEST] Instagram - Nigeria Medical"
+MEDICAL_TEST_CLUSTER_NAME = "[TEST] Existing BitBrowser Placeholder Cluster"
+MEDICAL_TEST_ACCOUNT_NAME = "[TEST] Placeholder Instagram Account"
+MEDICAL_TEST_DESTINATION_NAME = "[TEST] Placeholder Instagram Destination"
+MEDICAL_TEST_PUBLICATION_TASK_NAME = "[TEST] Placeholder publication task"
+MEDICAL_TEST_SOCIAL_CONTENT_TITLE = "[TEST] Instagram placeholder workflow draft"
 MEDICAL_TEST_PARTNER_NAME = "[TEST] Lagos Integrated Medical Procurement Ltd."
 MEDICAL_TEST_LEAD_NAME = "[TEST] Lagos 综合医疗采购项目"
 MEDICAL_TEST_REQUIREMENT_NAME = "[TEST] 基础诊疗设备与医用耗材综合采购"
@@ -234,7 +240,7 @@ class ResConfigSettings(models.TransientModel):
             requirement_model.create(requirement_values)
         return project
 
-    def _complete_medical_test_scenario(self):
+    def _complete_medical_test_scenario(self, worker_node_id=None, environment_id=None):
         """Complete the fixed dataset with safe synthetic records for end-to-end testing."""
         self.ensure_one()
         project = self._upsert_medical_test_data()
@@ -323,6 +329,140 @@ class ResConfigSettings(models.TransientModel):
                 "opportunity_id": lead.id,
                 "client_order_ref": MEDICAL_TEST_QUOTATION_REFERENCE,
             })
+
+        if not quotation.order_line:
+            self.env["sale.order.line"].create({
+                "order_id": quotation.id,
+                "product_id": product_item.product_id.product_variant_id.id,
+                "name": "[TEST] Portable Patient Monitor workflow validation item",
+                "product_uom_qty": 2.0,
+                "product_uom_id": product_item.product_id.uom_id.id,
+                "price_unit": 1000.0,
+            })
+        if quotation.state in ("draft", "sent"):
+            quotation.action_confirm()
+
+        worker = self.env["psc.local.worker.node"].browse(worker_node_id).exists()
+        environment = self.env["psc.bitbrowser.environment"].browse(environment_id).exists()
+        if not worker or not environment or environment.worker_node_id != worker or not environment.available:
+            raise UserError(_("现有 Windows 工作节点或比特环境不存在、未同步或不可用。"))
+
+        social_channel = self.env["psc.publishing.channel"].search([
+            ("name", "=", MEDICAL_TEST_SOCIAL_CHANNEL_NAME),
+        ], limit=1)
+        social_channel_values = {
+            "name": MEDICAL_TEST_SOCIAL_CHANNEL_NAME,
+            "platform": "instagram",
+            "image_ratio": "1_1",
+            "max_caption_length": 2200,
+            "default_instructions": "[TEST] Placeholder channel; never publish before replacing account authorization.",
+            "active": True,
+        }
+        if social_channel:
+            social_channel.write(social_channel_values)
+        else:
+            social_channel = self.env["psc.publishing.channel"].create(social_channel_values)
+        project.channel_ids = [(4, social_channel.id)]
+
+        cluster = self.env["psc.social.account.cluster"].search([
+            ("name", "=", MEDICAL_TEST_CLUSTER_NAME),
+        ], limit=1)
+        cluster_values = {
+            "name": MEDICAL_TEST_CLUSTER_NAME,
+            "project_ids": [(4, project.id)],
+            "track_id": project.track_id.id,
+            "product_line_id": project.product_line_id.id,
+            "target_market_id": project.market_ids[:1].id,
+            "persona": "[TEST] Pending real platform authorization",
+            "positioning": "[TEST] Placeholder only; replace proxy, platform identity and authorization before publishing.",
+            "worker_node_id": worker.id,
+            "bitbrowser_environment_id": environment.id,
+            "expected_ip": "[TEST] pending-real-fixed-ip",
+            "expected_country_id": project.market_ids[:1].country_id.id,
+            "expected_timezone": "Africa/Lagos",
+            "state": "draft",
+        }
+        if cluster:
+            cluster.write(cluster_values)
+        else:
+            cluster = self.env["psc.social.account.cluster"].create(cluster_values)
+
+        account = self.env["psc.social.publishing.account"].search([
+            ("name", "=", MEDICAL_TEST_ACCOUNT_NAME),
+            ("cluster_id", "=", cluster.id),
+        ], limit=1)
+        account_values = {
+            "name": MEDICAL_TEST_ACCOUNT_NAME,
+            "cluster_id": cluster.id,
+            "channel_id": social_channel.id,
+            "username": "[TEST] pending-real-username",
+            "platform_account_id": "[TEST] pending-real-account-id",
+            "account_state": "pending",
+            "daily_publish_limit": 3,
+        }
+        if account:
+            account.write(account_values)
+        else:
+            account = self.env["psc.social.publishing.account"].create(account_values)
+
+        destination = self.env["psc.publishing.destination"].search([
+            ("name", "=", MEDICAL_TEST_DESTINATION_NAME),
+        ], limit=1)
+        destination_values = {
+            "name": MEDICAL_TEST_DESTINATION_NAME,
+            "destination_type": "social",
+            "product_line_id": project.product_line_id.id,
+            "market_id": project.market_ids[:1].id,
+            "channel_id": social_channel.id,
+            "publishing_account_id": account.id,
+            "notes": "[TEST] Placeholder destination; intentionally blocked until real account validation passes.",
+            "state": "draft",
+        }
+        if destination:
+            destination.write(destination_values)
+        else:
+            destination = self.env["psc.publishing.destination"].create(destination_values)
+
+        content = self.env["psc.content.variant"].search([
+            ("project_id", "=", project.id),
+            ("channel_id", "=", social_channel.id),
+            ("title", "=", MEDICAL_TEST_SOCIAL_CONTENT_TITLE),
+        ], limit=1)
+        if not content:
+            content = self.env["psc.content.variant"].create({
+                "project_id": project.id,
+                "pillar_id": project.content_plan_ids[:1].pillar_id.id,
+                "product_id": product_item.product_id.id,
+                "market_id": project.market_ids[:1].id,
+                "channel_id": social_channel.id,
+                "language_id": project.market_ids[:1].lang_id.id,
+                "title": MEDICAL_TEST_SOCIAL_CONTENT_TITLE,
+                "caption": "[TEST] Synthetic workflow-validation copy; not approved for external publication.",
+                "state": "draft",
+                "ai_state": "done",
+                "ai_model": "LightLink test fixture",
+                "ai_generated_at": fields.Datetime.now(),
+            })
+
+        publication_task = self.env["psc.publication.task"].search([
+            ("name", "=", MEDICAL_TEST_PUBLICATION_TASK_NAME),
+            ("project_id", "=", project.id),
+        ], limit=1)
+        publication_values = {
+            "name": MEDICAL_TEST_PUBLICATION_TASK_NAME,
+            "content_id": content.id,
+            "project_id": project.id,
+            "destination_id": destination.id,
+            "state": "failed",
+            "status_message": "[TEST] Blocked as expected: real platform authorization is not configured.",
+            "error_message": "[TEST] Authentication/configuration placeholder; automatic retry is forbidden.",
+            "finished_at": fields.Datetime.now(),
+        }
+        if publication_task:
+            publication_task.write(publication_values)
+        else:
+            publication_task = self.env["psc.publication.task"].create(publication_values)
+
         self.env["psc.performance.snapshot"].cron_build_project_snapshots()
         return {
             "model": project._name,
@@ -333,6 +473,12 @@ class ResConfigSettings(models.TransientModel):
                 "content_plans": project.content_plan_ids.ids,
                 "lead": lead.id,
                 "quotation": quotation.id,
+                "order": quotation.id,
+                "content": content.id,
+                "account_cluster": cluster.id,
+                "publishing_account": account.id,
+                "publishing_destination": destination.id,
+                "publication_task": publication_task.id,
             },
         }
 
@@ -360,6 +506,9 @@ class ResConfigSettings(models.TransientModel):
         channel = self.env["psc.publishing.channel"].search([
             ("name", "=", MEDICAL_TEST_CHANNEL_NAME),
         ], limit=1)
+        social_channel = self.env["psc.publishing.channel"].search([
+            ("name", "=", MEDICAL_TEST_SOCIAL_CHANNEL_NAME),
+        ], limit=1)
         shared_domains = []
         if product_line:
             shared_domains.append([("product_line_id", "=", product_line.id)])
@@ -369,11 +518,18 @@ class ResConfigSettings(models.TransientModel):
             shared_domains.append([("market_ids", "in", market.ids)])
         if channel:
             shared_domains.append([("channel_ids", "in", channel.ids)])
+        if social_channel:
+            shared_domains.append([("channel_ids", "in", social_channel.ids)])
         for shared_domain in shared_domains:
             if self.env["psc.publishing.project"].search_count([
                 ("id", "!=", project.id), *shared_domain,
             ]):
                 raise UserError(_("测试产品、产品线、市场或渠道已被非测试项目引用，已拒绝清理。"))
+        cluster = self.env["psc.social.account.cluster"].search([
+            ("name", "=", MEDICAL_TEST_CLUSTER_NAME),
+        ], limit=1)
+        if cluster and cluster.project_ids.filtered(lambda item: item != project):
+            raise UserError(_("测试账号集群已被非测试项目引用，已拒绝清理。"))
 
         deleted = {}
 
@@ -403,10 +559,19 @@ class ResConfigSettings(models.TransientModel):
                 ("res_id", "=", lead.id),
                 ("summary", "like", "[TEST]"),
             ])
-            remove("sale.order", [
+            test_orders = self.env["sale.order"].search([
                 ("opportunity_id", "=", lead.id),
                 ("client_order_ref", "=", MEDICAL_TEST_QUOTATION_REFERENCE),
             ])
+            if test_orders:
+                for order in test_orders.filtered(lambda item: item.state not in ("draft", "cancel")):
+                    order.action_cancel()
+                deleted["sale.order"] = test_orders.ids
+                test_orders.unlink()
+        remove("psc.publication.task", [("name", "=", MEDICAL_TEST_PUBLICATION_TASK_NAME)])
+        remove("psc.publishing.destination", [("name", "=", MEDICAL_TEST_DESTINATION_NAME)])
+        remove("psc.social.publishing.account", [("name", "=", MEDICAL_TEST_ACCOUNT_NAME)])
+        remove("psc.social.account.cluster", [("name", "=", MEDICAL_TEST_CLUSTER_NAME)])
         remove("psc.customer.requirement", [
             ("name", "=", MEDICAL_TEST_REQUIREMENT_NAME),
             ("project_id", "=", project.id),
@@ -419,6 +584,7 @@ class ResConfigSettings(models.TransientModel):
         remove("res.partner", [("name", "=", MEDICAL_TEST_PARTNER_NAME)])
         remove("psc.target.market", [("name", "=", MEDICAL_TEST_MARKET_NAME)])
         remove("psc.publishing.channel", [("name", "=", MEDICAL_TEST_CHANNEL_NAME)])
+        remove("psc.publishing.channel", [("name", "=", MEDICAL_TEST_SOCIAL_CHANNEL_NAME)])
         remove("psc.product.line", [("code", "=", MEDICAL_TEST_PRODUCT_LINE_CODE)])
         remove("product.template", [("name", "in", list(MEDICAL_TEST_PRODUCT_NAMES))])
         return {

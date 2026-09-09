@@ -5,7 +5,13 @@ from odoo import fields
 from odoo.exceptions import AccessError, UserError
 from odoo.tests.common import TransactionCase
 
-from ..models.res_config_settings import MEDICAL_TEST_LEAD_NAME
+from ..models.res_config_settings import (
+    MEDICAL_TEST_ACCOUNT_NAME,
+    MEDICAL_TEST_CLUSTER_NAME,
+    MEDICAL_TEST_DESTINATION_NAME,
+    MEDICAL_TEST_LEAD_NAME,
+    MEDICAL_TEST_PUBLICATION_TASK_NAME,
+)
 
 
 class AiOperationsCase(TransactionCase):
@@ -268,7 +274,18 @@ class AiOperationsCase(TransactionCase):
 
     def test_medical_test_data_cleanup_is_approved_and_scoped(self):
         unrelated = self.env["product.template"].create({"name": "Production product"})
-        scenario = self.env["res.config.settings"].create({})._complete_medical_test_scenario()
+        worker = self.env["psc.local.worker.node"].create({"name": "[AUTO TEST] Cleanup worker"})
+        environment = self.env["psc.bitbrowser.environment"].create({
+            "name": "[AUTO TEST] Cleanup environment",
+            "environment_id": "auto-test-cleanup-environment",
+            "worker_node_id": worker.id,
+            "state": "open",
+            "available": True,
+        })
+        scenario = self.env["res.config.settings"].create({})._complete_medical_test_scenario(
+            worker_node_id=worker.id,
+            environment_id=environment.id,
+        )
         quotation = self.env["sale.order"].browse(scenario["test_records"]["quotation"])
         touchpoint = self.env["psc.customer.touchpoint"].search([
             ("lead_id", "=", self.lead.id), ("external_reference", "like", "test-medical-funnel-"),
@@ -319,11 +336,24 @@ class AiOperationsCase(TransactionCase):
         ], limit=1))
 
     def test_complete_medical_scenario_builds_full_funnel(self):
+        worker = self.env["psc.local.worker.node"].create({"name": "[AUTO TEST] Worker"})
+        environment = self.env["psc.bitbrowser.environment"].create({
+            "name": "[AUTO TEST] Existing environment",
+            "environment_id": "auto-test-existing-environment",
+            "worker_node_id": worker.id,
+            "state": "open",
+            "available": True,
+        })
         prepared = self.service.prepare_action(
             action_type="complete_medical_test_scenario",
             title="[AUTO TEST] Complete medical test scenario",
             reason="Build the fixed end-to-end test dataset.",
-            payload={"project_id": self.project.id, "dataset": "medical_procurement_smoke_v1"},
+            payload={
+                "project_id": self.project.id,
+                "dataset": "medical_procurement_smoke_v1",
+                "worker_node_id": worker.id,
+                "environment_id": environment.id,
+            },
         )
         result = self.service.commit_action(prepared["action_token"], str(uuid.uuid4()))
         product_item = self.env["psc.project.product"].browse(result["test_records"]["project_product"])
@@ -335,6 +365,33 @@ class AiOperationsCase(TransactionCase):
         self.assertEqual(performance["totals"]["clicks"], 1)
         self.assertEqual(performance["totals"]["inquiries"], 1)
         self.assertEqual(performance["totals"]["quotations"], 1)
+        self.assertEqual(performance["totals"]["orders"], 1)
+        self.assertGreater(performance["totals"]["revenue"], 0)
         self.assertEqual(performance["recent_orders"][0]["opportunity"]["id"], self.lead.id)
         self.assertEqual(performance["recent_orders"][0]["market"]["id"], self.project.market_ids[:1].id)
-        self.assertEqual(performance["recent_orders"][0]["channel"]["id"], self.project.channel_ids[:1].id)
+        self.assertEqual(performance["recent_orders"][0]["channel"]["id"], self.lead.psc_channel_id.id)
+        order = self.env["sale.order"].browse(result["test_records"]["order"])
+        self.assertEqual(order.state, "sale")
+        cluster = self.env["psc.social.account.cluster"].browse(
+            result["test_records"]["account_cluster"]
+        )
+        account = self.env["psc.social.publishing.account"].browse(
+            result["test_records"]["publishing_account"]
+        )
+        destination = self.env["psc.publishing.destination"].browse(
+            result["test_records"]["publishing_destination"]
+        )
+        publication_task = self.env["psc.publication.task"].browse(
+            result["test_records"]["publication_task"]
+        )
+        self.assertEqual(cluster.name, MEDICAL_TEST_CLUSTER_NAME)
+        self.assertEqual(cluster.state, "draft")
+        self.assertEqual(account.name, MEDICAL_TEST_ACCOUNT_NAME)
+        self.assertEqual(account.account_state, "pending")
+        self.assertEqual(destination.name, MEDICAL_TEST_DESTINATION_NAME)
+        self.assertEqual(destination.state, "draft")
+        self.assertEqual(publication_task.name, MEDICAL_TEST_PUBLICATION_TASK_NAME)
+        self.assertEqual(publication_task.state, "failed")
+        health = self.service.get_account_environment_health(project_id=self.project.id)
+        self.assertFalse(health["setup_required"])
+        self.assertEqual(health["summary"]["clusters"], 1)

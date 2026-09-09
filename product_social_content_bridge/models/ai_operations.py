@@ -312,6 +312,7 @@ class AiAction(models.Model):
             "psc.content.pillar", "psc.target.market", "psc.publishing.channel",
             "crm.lead", "psc.optimization.action", "psc.publication.task", "psc.ai.action",
             "product.template", "psc.product.line", "psc.project.blueprint",
+            "psc.local.worker.node", "psc.bitbrowser.environment",
         }
         for item in preconditions:
             model_name = item.get("model")
@@ -473,7 +474,10 @@ class AiAction(models.Model):
         elif self.action_type == "complete_medical_test_scenario":
             if values.get("dataset") != "medical_procurement_smoke_v1":
                 raise ValidationError(_("不支持的测试数据集。"))
-            return self.env["res.config.settings"].create({})._complete_medical_test_scenario()
+            return self.env["res.config.settings"].create({})._complete_medical_test_scenario(
+                worker_node_id=values.get("worker_node_id"),
+                environment_id=values.get("environment_id"),
+            )
         elif self.action_type == "cleanup_medical_test_data":
             return self.env["res.config.settings"].create({})._cleanup_medical_test_data(
                 exclude_action_id=self.id,
@@ -689,6 +693,7 @@ class AiOperationsService(models.AbstractModel):
             "record_feedback": [("psc.ai.action", "action_id", "AI行动", True)],
             "complete_medical_test_scenario": [
                 ("psc.publishing.project", "project_id", "测试运营项目", True),
+                ("psc.bitbrowser.environment", "environment_id", "比特环境", True),
             ],
             "cleanup_medical_test_data": [
                 ("psc.publishing.project", "project_id", "测试运营项目", True),
@@ -720,9 +725,16 @@ class AiOperationsService(models.AbstractModel):
                 raise ValidationError(_("只能初始化内置的医疗测试数据集。"))
         if action_type == "complete_medical_test_scenario":
             project = next((record for record in records if record._name == "psc.publishing.project"), False)
+            worker = self._required_record(
+                "psc.local.worker.node", payload.get("worker_node_id"), _("Windows工作节点"),
+            )
+            environment = next((
+                record for record in records if record._name == "psc.bitbrowser.environment"
+            ), False)
             if (
                 payload.get("dataset") != "medical_procurement_smoke_v1"
                 or not project or project.name != "[TEST] 西非医疗类综合采购商运营项目"
+                or not environment or environment.worker_node_id != worker or not environment.available
             ):
                 raise ValidationError(_("只能补齐内置的医疗测试数据集。"))
         if action_type == "cleanup_medical_test_data":
