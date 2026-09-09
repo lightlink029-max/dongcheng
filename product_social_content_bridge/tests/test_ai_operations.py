@@ -169,3 +169,18 @@ class AiOperationsCase(TransactionCase):
         retained_action = self.env["psc.ai.action"].browse(old_preview["action_id"])
         self.assertEqual(retained_action.state, "rejected")
         self.assertIn("psc.publishing.project", result["deleted"])
+
+        initialize = self.service.prepare_action(
+            action_type="initialize_medical_test_data",
+            title="[AUTO TEST] Initialize medical smoke data",
+            reason="Rebuild the fixed medical smoke dataset.",
+            payload={"dataset": "medical_procurement_smoke_v1"},
+        )
+        initialized = self.service.commit_action(initialize["action_token"], str(uuid.uuid4()))
+        rebuilt_project = self.env["psc.publishing.project"].browse(initialized["id"])
+        self.assertEqual(rebuilt_project.name, "[TEST] 西非医疗类综合采购商运营项目")
+        self.assertTrue(rebuilt_project.project_product_ids)
+        self.assertTrue(self.env["crm.lead"].search([
+            ("name", "=", MEDICAL_TEST_LEAD_NAME),
+            ("psc_project_id", "=", rebuilt_project.id),
+        ], limit=1))

@@ -210,6 +210,7 @@ class AiAction(models.Model):
         ("close_optimization", "完成优化复盘"),
         ("retry_publication", "重试发布任务"),
         ("record_feedback", "记录AI建议反馈"),
+        ("initialize_medical_test_data", "初始化医疗测试数据"),
         ("cleanup_medical_test_data", "清理医疗测试数据"),
     ], string="动作类型", required=True, index=True)
     priority = fields.Selection([
@@ -464,6 +465,10 @@ class AiAction(models.Model):
                 "reason": values.get("reason") or "",
                 "actual_effect": values.get("actual_effect") or "",
             })
+        elif self.action_type == "initialize_medical_test_data":
+            if values.get("dataset") != "medical_procurement_smoke_v1":
+                raise ValidationError(_("不支持的测试数据集。"))
+            record = self.env["res.config.settings"].create({})._upsert_medical_test_data()
         elif self.action_type == "cleanup_medical_test_data":
             return self.env["res.config.settings"].create({})._cleanup_medical_test_data(
                 exclude_action_id=self.id,
@@ -699,6 +704,9 @@ class AiOperationsService(models.AbstractModel):
                 ], limit=1)
                 if project_product:
                     records.append(project_product)
+        if action_type == "initialize_medical_test_data":
+            if payload.get("dataset") != "medical_procurement_smoke_v1":
+                raise ValidationError(_("只能初始化内置的医疗测试数据集。"))
         if action_type == "cleanup_medical_test_data":
             project = next((record for record in records if record._name == "psc.publishing.project"), False)
             if not project or project.name != "[TEST] 西非医疗类综合采购商运营项目":
@@ -1063,9 +1071,13 @@ class AiOperationsService(models.AbstractModel):
                 "action_type": action_type,
                 "target": payload,
                 "target_records": [self._record_ref(record) for record in target_records],
-                "effect": _("将删除内置医疗测试数据及其测试依赖；任何目标变化或非测试引用都会拒绝执行。")
-                if action_type == "cleanup_medical_test_data"
-                else _("仅创建或更新预览中列出的业务记录；目标发生变化时执行将被拒绝。"),
+                "effect": (
+                    _("将删除内置医疗测试数据及其测试依赖；任何目标变化或非测试引用都会拒绝执行。")
+                    if action_type == "cleanup_medical_test_data"
+                    else _("将创建或修复带[TEST]标识的内置医疗业务测试数据，不修改真实业务记录。")
+                    if action_type == "initialize_medical_test_data"
+                    else _("仅创建或更新预览中列出的业务记录；目标发生变化时执行将被拒绝。")
+                ),
                 "requires_approval": True,
             }),
         })
