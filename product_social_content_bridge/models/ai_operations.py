@@ -1097,9 +1097,11 @@ class AiOperationsService(models.AbstractModel):
             "impressions", "views", "clicks", "inquiries", "qualified_leads",
             "quotations", "orders", "revenue", "purchase_cost", "traffic_cost",
         )}
-        project_order_names = self.env["sale.order"].search([
+        project_orders = self.env["sale.order"].search([
             ("psc_project_id", "=", project.id),
-        ]).mapped("name")
+        ])
+        project_order_names = project_orders.mapped("name")
+        project_orders_by_name = {order.name: order for order in project_orders}
         purchase_domain = [
             ("state", "in", ("purchase", "done")),
             ("company_id", "=", project.company_id.id),
@@ -1116,7 +1118,7 @@ class AiOperationsService(models.AbstractModel):
         purchase_orders = self.env["purchase.order"].search(purchase_domain)
         totals["purchase_cost"] = sum(
             order.currency_id._convert(
-                order.amount_total,
+                order.amount_untaxed,
                 project.company_id.currency_id,
                 project.company_id,
                 fields.Date.to_date(order.date_approve) or fields.Date.context_today(self),
@@ -1149,8 +1151,10 @@ class AiOperationsService(models.AbstractModel):
                 **self._record_ref(order),
                 "state": order.state,
                 "origin": order.origin,
-                "sale_order": self._record_ref(order.psc_sale_order_id)
-                if order.psc_sale_order_id else None,
+                "sale_order": self._record_ref(
+                    order.psc_sale_order_id or project_orders_by_name.get(order.origin)
+                ) if order.psc_sale_order_id or project_orders_by_name.get(order.origin) else None,
+                "amount_untaxed": order.amount_untaxed,
                 "amount_total": order.amount_total,
                 "currency": order.currency_id.name,
             } for order in purchase_orders.sorted(
@@ -1297,7 +1301,7 @@ class PerformanceSnapshotAutomation(models.Model):
                 "revenue": sum(confirmed.mapped("amount_total")),
                 "purchase_cost": sum(
                     order.currency_id._convert(
-                        order.amount_total,
+                        order.amount_untaxed,
                         project.company_id.currency_id,
                         project.company_id,
                         fields.Date.to_date(order.date_approve) or snapshot_date,
