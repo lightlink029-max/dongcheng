@@ -494,8 +494,10 @@ class ResConfigSettings(models.TransientModel):
             ("state", "!=", "cancel"),
         ], limit=1)
         if not customer_refund:
+            refund_date = fields.Date.context_today(self)
             customer_refund = customer_invoice._reverse_moves([{
-                "date": fields.Date.context_today(self),
+                "date": refund_date,
+                "invoice_date": refund_date,
                 "ref": MEDICAL_TEST_CUSTOMER_REFUND_REFERENCE,
             }], cancel=False)
         if customer_refund.state == "draft":
@@ -510,8 +512,10 @@ class ResConfigSettings(models.TransientModel):
             ("state", "!=", "cancel"),
         ], limit=1)
         if not vendor_refund:
+            refund_date = fields.Date.context_today(self)
             vendor_refund = vendor_bill._reverse_moves([{
-                "date": fields.Date.context_today(self),
+                "date": refund_date,
+                "invoice_date": refund_date,
                 "ref": MEDICAL_TEST_VENDOR_REFUND_REFERENCE,
             }], cancel=False)
         if vendor_refund.state == "draft":

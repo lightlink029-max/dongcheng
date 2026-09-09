@@ -500,6 +500,7 @@ class AiOperationsCase(TransactionCase):
         ])
 
         self.assertTrue(all(move.state == "posted" for move in moves))
+        self.assertTrue(all(move.invoice_date for move in moves))
         self.assertTrue(all(move.payment_state in ("paid", "in_payment") for move in moves))
         self.assertTrue(all(move.currency_id.is_zero(move.amount_residual) for move in moves))
         self.assertTrue(all(picking.state == "done" for picking in returns))
