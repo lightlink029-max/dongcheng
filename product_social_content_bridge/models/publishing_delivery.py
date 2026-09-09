@@ -158,6 +158,34 @@ class PublicationTask(models.Model):
             else:
                 content.state = "ready"
 
+    def apply_environment_validation(self, actual_ip, actual_country, actual_timezone, actual_username):
+        """Apply worker-reported environment facts and return mismatch labels."""
+        self.ensure_one()
+        account = self.publishing_account_id
+        mismatches = []
+        if actual_ip != (account.expected_ip or "").strip():
+            mismatches.append("IP")
+        if actual_country.upper() != (account.expected_country_id.code or "").upper():
+            mismatches.append("国家")
+        if actual_timezone != (account.expected_timezone or "").strip():
+            mismatches.append("时区")
+        if actual_username.casefold() != (account.username or "").strip().casefold():
+            mismatches.append("登录账号")
+        if mismatches:
+            message = _("%s不匹配，已停止发布") % "、".join(mismatches)
+            self.write({
+                "actual_ip": actual_ip, "state": "failed", "status_message": message,
+                "error_message": message, "finished_at": fields.Datetime.now(),
+            })
+            self._sync_content_state()
+            self._sync_project_state()
+        else:
+            self.write({
+                "actual_ip": actual_ip, "state": "publishing",
+                "status_message": _("环境和账号校验通过，正在发布"),
+            })
+        return mismatches
+
     def action_publish_website(self):
         for task in self:
             if task.destination_type != "website":

@@ -73,23 +73,12 @@ class RegistrationWorkerController(LocalWorkerController):
         actual_ip = str(payload.get("actual_ip") or "").strip()[:128]
         actual_country = str(payload.get("actual_country_code") or "").strip().upper()[:8]
         actual_timezone = str(payload.get("actual_timezone") or "").strip()[:128]
-        mismatches = []
-        if actual_ip != task.expected_ip.strip():
-            mismatches.append("IP")
-        if actual_country != (task.expected_country_id.code or "").upper():
-            mismatches.append("国家")
-        if actual_timezone != task.expected_timezone.strip():
-            mismatches.append("时区")
-        values = {
-            "actual_ip": actual_ip, "actual_country_code": actual_country,
-            "actual_timezone": actual_timezone,
-        }
+        mismatches = task.apply_environment_validation(
+            actual_ip, actual_country, actual_timezone,
+        )
         if mismatches:
-            message = "%s不匹配，已停止注册" % "、".join(mismatches)
-            task.write({**values, "state": "environment_mismatch", "error_message": message,
-                        "status_message": message, "finished_at": fields.Datetime.now()})
+            message = task.status_message
             return request.make_json_response({"error": "environment_mismatch", "message": message}, status=409)
-        task.write({**values, "state": "awaiting_verification", "status_message": "环境校验通过，等待人工验证码和身份验证"})
         return request.make_json_response({"ok": True})
 
     @http.route("/psc/local-worker/registration/tasks/<int:task_id>/complete", type="http", auth="none", methods=["POST"], csrf=False)

@@ -81,29 +81,12 @@ class PublishingWorkerController(LocalWorkerController):
         actual_country = str(payload.get("actual_country_code") or "").strip().upper()[:8]
         actual_timezone = str(payload.get("actual_timezone") or "").strip()[:128]
         actual_username = str(payload.get("actual_username") or "").strip()[:256]
-        account = task.publishing_account_id
-        mismatches = []
-        if actual_ip != (account.expected_ip or "").strip():
-            mismatches.append("IP")
-        if actual_country != (account.expected_country_id.code or "").upper():
-            mismatches.append("国家")
-        if actual_timezone != (account.expected_timezone or "").strip():
-            mismatches.append("时区")
-        if actual_username.casefold() != (account.username or "").strip().casefold():
-            mismatches.append("登录账号")
+        mismatches = task.apply_environment_validation(
+            actual_ip, actual_country, actual_timezone, actual_username,
+        )
         if mismatches:
-            message = "%s不匹配，已停止发布" % "、".join(mismatches)
-            task.write({
-                "actual_ip": actual_ip, "state": "failed", "status_message": message,
-                "error_message": message, "finished_at": fields.Datetime.now(),
-            })
-            task._sync_content_state()
-            task._sync_project_state()
+            message = task.status_message
             return request.make_json_response({"error": "environment_mismatch", "message": message}, status=409)
-        task.write({
-            "actual_ip": actual_ip, "state": "publishing",
-            "status_message": "环境和账号校验通过，正在发布",
-        })
         return request.make_json_response({"ok": True})
 
     @http.route(

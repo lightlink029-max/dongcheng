@@ -114,3 +114,31 @@ class SocialRegistrationTask(models.Model):
             "started_at": False, "finished_at": False,
         })
         return True
+
+    def apply_environment_validation(self, actual_ip, actual_country, actual_timezone):
+        """Apply worker-reported environment facts and return mismatch labels."""
+        self.ensure_one()
+        actual_country = actual_country.upper()
+        mismatches = []
+        if actual_ip != (self.expected_ip or "").strip():
+            mismatches.append("IP")
+        if actual_country != (self.expected_country_id.code or "").upper():
+            mismatches.append("国家")
+        if actual_timezone != (self.expected_timezone or "").strip():
+            mismatches.append("时区")
+        values = {
+            "actual_ip": actual_ip, "actual_country_code": actual_country,
+            "actual_timezone": actual_timezone,
+        }
+        if mismatches:
+            message = _("%s不匹配，已停止注册") % "、".join(mismatches)
+            self.write({
+                **values, "state": "environment_mismatch", "error_message": message,
+                "status_message": message, "finished_at": fields.Datetime.now(),
+            })
+        else:
+            self.write({
+                **values, "state": "awaiting_verification",
+                "status_message": _("环境校验通过，等待人工验证码和身份验证"),
+            })
+        return mismatches

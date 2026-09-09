@@ -1,6 +1,6 @@
 {
     "name": "产品线社媒发布中心",
-    "version": "19.0.4.1.0",
+    "version": "19.0.4.2.0",
     "summary": "从赛道、产品池到多渠道发布和客户归因的市场运营中心",
     "category": "Marketing/Social Marketing",
     "author": "LightLink",

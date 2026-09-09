@@ -146,6 +146,32 @@ class ResConfigSettings(models.TransientModel):
         else:
             project = project_model.create(project_values)
         project.action_sync_product_pool()
+        for pool_item in project.project_product_ids:
+            existing_rules = pool_item.score_line_ids.mapped("rule_id")
+            missing_rules = track.scoring_rule_ids.filtered(
+                lambda rule: rule.active and rule not in existing_rules
+            )
+            if missing_rules:
+                pool_item.score_line_ids = [(0, 0, {
+                    "rule_id": rule.id,
+                    "name": rule.name,
+                    "sequence": rule.sequence,
+                    "weight": rule.weight,
+                    "hard_gate": rule.hard_gate,
+                    "gate_passed": not rule.hard_gate,
+                }) for rule in missing_rules]
+            existing_attributes = pool_item.attribute_value_ids.mapped("attribute_id")
+            missing_attributes = track.product_attribute_ids.filtered(
+                lambda attribute: attribute.active and attribute not in existing_attributes
+            )
+            if missing_attributes:
+                pool_item.attribute_value_ids = [(0, 0, {
+                    "attribute_id": attribute.id,
+                    "name": attribute.name,
+                    "required_for_publish": attribute.required_for_publish,
+                    "hard_gate": attribute.hard_gate,
+                    "sequence": attribute.sequence,
+                }) for attribute in missing_attributes]
 
         partner_model = self.env["res.partner"]
         partner = partner_model.search([("name", "=", MEDICAL_TEST_PARTNER_NAME)], limit=1)

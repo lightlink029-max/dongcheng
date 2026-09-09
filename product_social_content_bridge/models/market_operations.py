@@ -287,6 +287,8 @@ class ProjectProduct(models.Model):
         for record in self:
             if not record.product_id:
                 raise UserError(_("进入可运营状态前，必须先关联 Odoo 正式产品。"))
+            if record.material_state != "complete":
+                raise UserError(_("产品资料尚未完整，不能批准运营。"))
             missing_attributes = record.attribute_value_ids.filtered(
                 lambda line: line.required_for_publish and (not line.value or not line.verified)
             )
