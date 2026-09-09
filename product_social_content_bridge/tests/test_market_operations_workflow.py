@@ -371,7 +371,7 @@ class MarketOperationsWorkflowCase(TransactionCase):
         user = self.env["res.users"].create({
             "name": "[AUTO TEST] Basic User",
             "login": "market-operations-basic-user",
-            "groups_id": [(6, 0, [self.env.ref("base.group_user").id])],
+            "group_ids": [(6, 0, [self.env.ref("base.group_user").id])],
         })
         with self.assertRaises(AccessError):
             self.env["res.config.settings"].with_user(user).create({})._upsert_medical_test_data()
