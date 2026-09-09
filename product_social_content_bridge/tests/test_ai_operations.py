@@ -147,6 +147,12 @@ class AiOperationsCase(TransactionCase):
             ("product_id", "=", False),
         ]), 1)
 
+    def test_project_snapshot_accepts_planning_project(self):
+        self.project.operation_state = "planning"
+        snapshot = self.service.get_daily_operations_snapshot(project_id=self.project.id)
+        self.assertEqual(snapshot["project_count"], 1)
+        self.assertEqual(snapshot["summary"]["active_opportunities"], 1)
+
     def test_medical_test_data_cleanup_is_approved_and_scoped(self):
         unrelated = self.env["product.template"].create({"name": "Production product"})
         old_preview = self.service.prepare_action(

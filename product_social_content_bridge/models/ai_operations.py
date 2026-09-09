@@ -753,12 +753,11 @@ class AiOperationsService(models.AbstractModel):
 
     @api.model
     def get_daily_operations_snapshot(self, project_id=None, limit=12):
-        project_domain = [
-            ("operation_state", "=", "active"),
-            ("company_id", "in", self.env.companies.ids),
-        ]
+        project_domain = [("company_id", "in", self.env.companies.ids)]
         if project_id:
             project_domain.append(("id", "=", project_id))
+        else:
+            project_domain.append(("operation_state", "=", "active"))
         projects = self.env["psc.publishing.project"].search(project_domain, limit=100)
         if project_id and not projects:
             raise UserError(_("运营项目不存在或当前无权访问。"))
