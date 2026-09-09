@@ -1190,6 +1190,14 @@ class AiOperationsService(models.AbstractModel):
         if company not in self.env.companies:
             raise AccessError(_("当前用户无权为该公司准备行动。"))
         run = self.env["psc.ai.run"].browse(metadata.get("run_id")).exists()
+        payload_json = _json_dumps(payload)
+        self.env["psc.ai.action"].search([
+            ("company_id", "=", company.id),
+            ("project_id", "=", project.id),
+            ("action_type", "=", action_type),
+            ("payload_json", "=", payload_json),
+            ("state", "=", "waiting_approval"),
+        ]).action_reject()
         action = self.env["psc.ai.action"].create({
             "name": title,
             "company_id": company.id,
@@ -1202,7 +1210,7 @@ class AiOperationsService(models.AbstractModel):
             "risk_level": "high" if action_type == "cleanup_medical_test_data"
             else metadata.get("risk_level") or "medium",
             "estimated_impact": metadata.get("estimated_impact") or "",
-            "payload_json": _json_dumps(payload),
+            "payload_json": payload_json,
             "precondition_json": _json_dumps({"records": [{
                 "model": record._name,
                 "id": record.id,

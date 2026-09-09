@@ -78,6 +78,24 @@ class AiOperationsCase(TransactionCase):
         self.assertEqual(optimization.target_metric, "qualified inquiry rate")
         self.assertEqual(optimization.observation_days, 14)
 
+    def test_new_identical_preview_rejects_previous_pending_preview(self):
+        values = {
+            "action_type": "create_optimization",
+            "title": "[AUTO TEST] Replace duplicate preview",
+            "reason": "Only the newest identical approval request should remain pending.",
+            "payload": {
+                "project_id": self.project.id,
+                "name": "[AUTO TEST] Duplicate preview",
+            },
+        }
+        first = self.service.prepare_action(**values)
+        second = self.service.prepare_action(**values)
+
+        first_action = self.env["psc.ai.action"].browse(first["action_id"])
+        second_action = self.env["psc.ai.action"].browse(second["action_id"])
+        self.assertEqual(first_action.state, "rejected")
+        self.assertEqual(second_action.state, "waiting_approval")
+
     def test_failed_action_rolls_back_business_changes_and_keeps_audit(self):
         original_name = self.project.name
         prepared = self.service.prepare_action(
