@@ -10,6 +10,8 @@ MEDICAL_TEST_CHANNEL_NAME = "[TEST] Website - Nigeria Medical"
 MEDICAL_TEST_PARTNER_NAME = "[TEST] Lagos Integrated Medical Procurement Ltd."
 MEDICAL_TEST_LEAD_NAME = "[TEST] Lagos 综合医疗采购项目"
 MEDICAL_TEST_REQUIREMENT_NAME = "[TEST] 基础诊疗设备与医用耗材综合采购"
+MEDICAL_TEST_QUOTATION_REFERENCE = "[TEST] Medical attribution quotation"
+MEDICAL_TEST_TOUCHPOINT_PREFIX = "test-medical-funnel-"
 MEDICAL_TEST_PRODUCT_NAMES = (
     "[TEST] Portable Patient Monitor",
     "[TEST] Manual Hospital Bed",
@@ -232,6 +234,108 @@ class ResConfigSettings(models.TransientModel):
             requirement_model.create(requirement_values)
         return project
 
+    def _complete_medical_test_scenario(self):
+        """Complete the fixed dataset with safe synthetic records for end-to-end testing."""
+        self.ensure_one()
+        project = self._upsert_medical_test_data()
+        project.operation_state = "active"
+
+        product_item = project.project_product_ids.filtered(
+            lambda item: item.product_id.name == MEDICAL_TEST_PRODUCT_NAMES[0]
+        )[:1]
+        if not product_item:
+            raise UserError(_("医疗测试项目缺少主测试产品。"))
+        product_item.write({
+            "compliance_state": "passed",
+            "material_state": "complete",
+            "positioning": "[TEST] Synthetic positioning for workflow validation only.",
+            "selling_points": "[TEST] Synthetic selling points; not approved for external use.",
+            "target_purchase_price": 100.0,
+            "target_sale_price": 150.0,
+            "minimum_order_qty": 1.0,
+            "lead_time_days": 30,
+        })
+        product_item.attribute_value_ids.write({
+            "value": "[TEST] Synthetic verified value",
+            "verified": True,
+            "evidence": "[TEST] Synthetic evidence for workflow validation only.",
+        })
+        product_item.score_line_ids.write({"score": 80.0, "gate_passed": True})
+        product_item.action_activate()
+
+        plan_model = self.env["psc.content.plan"]
+        pillars = project.track_id.content_pillar_ids.filtered(
+            lambda pillar: pillar.active
+            and (not pillar.role_ids or project.business_role_id in pillar.role_ids)
+        )
+        for pillar in pillars:
+            plan = plan_model.search([
+                ("project_id", "=", project.id),
+                ("pillar_id", "=", pillar.id),
+                ("market_id", "=", project.market_ids[:1].id),
+                ("channel_id", "=", project.channel_ids[:1].id),
+            ], limit=1)
+            if not plan:
+                plan_model.create({
+                    "name": "[TEST] %s · %s" % (pillar.name, project.market_ids[:1].name),
+                    "project_id": project.id,
+                    "pillar_id": pillar.id,
+                    "product_id": product_item.product_id.id,
+                    "market_id": project.market_ids[:1].id,
+                    "channel_id": project.channel_ids[:1].id,
+                    "brief": "[TEST] Synthetic content plan; no external publication.",
+                })
+
+        lead = self.env["crm.lead"].search([
+            ("name", "=", MEDICAL_TEST_LEAD_NAME), ("psc_project_id", "=", project.id),
+        ], limit=1)
+        lead.probability = 40.0
+        touchpoint_model = self.env["psc.customer.touchpoint"]
+        for sequence, event_type in enumerate(("impression", "visit", "click", "inquiry"), start=1):
+            reference = "%s%s" % (MEDICAL_TEST_TOUCHPOINT_PREFIX, sequence)
+            touchpoint = touchpoint_model.search([
+                ("lead_id", "=", lead.id), ("external_reference", "=", reference),
+            ], limit=1)
+            values = {
+                "lead_id": lead.id,
+                "event_type": event_type,
+                "source_type": "website",
+                "project_id": project.id,
+                "market_id": project.market_ids[:1].id,
+                "channel_id": project.channel_ids[:1].id,
+                "product_id": product_item.product_id.id,
+                "external_reference": reference,
+                "verified": True,
+                "notes": "[TEST] Synthetic funnel event for workflow validation.",
+            }
+            if touchpoint:
+                touchpoint.write(values)
+            else:
+                touchpoint_model.create(values)
+
+        quotation = self.env["sale.order"].search([
+            ("opportunity_id", "=", lead.id),
+            ("client_order_ref", "=", MEDICAL_TEST_QUOTATION_REFERENCE),
+        ], limit=1)
+        if not quotation:
+            quotation = self.env["sale.order"].create({
+                "partner_id": lead.partner_id.id,
+                "opportunity_id": lead.id,
+                "client_order_ref": MEDICAL_TEST_QUOTATION_REFERENCE,
+            })
+        self.env["psc.performance.snapshot"].cron_build_project_snapshots()
+        return {
+            "model": project._name,
+            "id": project.id,
+            "display_name": project.display_name,
+            "test_records": {
+                "project_product": product_item.id,
+                "content_plans": project.content_plan_ids.ids,
+                "lead": lead.id,
+                "quotation": quotation.id,
+            },
+        }
+
     def _cleanup_medical_test_data(self, exclude_action_id=None):
         """Delete only the fixed smoke-test dataset, inside one transaction."""
         self.ensure_one()
@@ -289,6 +393,20 @@ class ResConfigSettings(models.TransientModel):
         if pending_actions:
             deleted["rejected_psc.ai.action"] = pending_actions.ids
             pending_actions.action_reject()
+        lead = self.env["crm.lead"].search([
+            ("name", "=", MEDICAL_TEST_LEAD_NAME),
+            ("psc_project_id", "=", project.id),
+        ], limit=1)
+        if lead:
+            remove("mail.activity", [
+                ("res_model_id", "=", self.env["ir.model"]._get_id("crm.lead")),
+                ("res_id", "=", lead.id),
+                ("summary", "like", "[TEST]"),
+            ])
+            remove("sale.order", [
+                ("opportunity_id", "=", lead.id),
+                ("client_order_ref", "=", MEDICAL_TEST_QUOTATION_REFERENCE),
+            ])
         remove("psc.customer.requirement", [
             ("name", "=", MEDICAL_TEST_REQUIREMENT_NAME),
             ("project_id", "=", project.id),

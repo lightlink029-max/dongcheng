@@ -115,6 +115,7 @@ class AiOperationsCase(TransactionCase):
         self.assertEqual(finished["state"], "done")
         health = self.service.get_account_environment_health(project_id=self.project.id)
         self.assertIn("unhealthy_accounts", health["summary"])
+        self.assertTrue(health["setup_required"])
 
     def test_daily_snapshot_and_priority_leads_are_traceable(self):
         snapshot = self.service.get_daily_operations_snapshot(project_id=self.project.id)
@@ -169,6 +170,17 @@ class AiOperationsCase(TransactionCase):
 
     def test_medical_test_data_cleanup_is_approved_and_scoped(self):
         unrelated = self.env["product.template"].create({"name": "Production product"})
+        scenario = self.env["res.config.settings"].create({})._complete_medical_test_scenario()
+        quotation = self.env["sale.order"].browse(scenario["test_records"]["quotation"])
+        touchpoint = self.env["psc.customer.touchpoint"].search([
+            ("lead_id", "=", self.lead.id), ("external_reference", "like", "test-medical-funnel-"),
+        ], limit=1)
+        activity = self.env["mail.activity"].create({
+            "res_model_id": self.env["ir.model"]._get_id("crm.lead"),
+            "res_id": self.lead.id,
+            "activity_type_id": self.env.ref("mail.mail_activity_data_todo").id,
+            "summary": "[TEST] Cleanup activity",
+        })
         old_preview = self.service.prepare_action(
             action_type="create_optimization",
             title="[AUTO TEST] Pending preview",
@@ -185,6 +197,9 @@ class AiOperationsCase(TransactionCase):
         result = self.service.commit_action(prepared["action_token"], str(uuid.uuid4()))
         self.assertFalse(self.project.exists())
         self.assertFalse(self.lead.exists())
+        self.assertFalse(quotation.exists())
+        self.assertFalse(touchpoint.exists())
+        self.assertFalse(activity.exists())
         self.assertTrue(unrelated.exists())
         retained_action = self.env["psc.ai.action"].browse(old_preview["action_id"])
         self.assertEqual(retained_action.state, "rejected")
@@ -204,3 +219,24 @@ class AiOperationsCase(TransactionCase):
             ("name", "=", MEDICAL_TEST_LEAD_NAME),
             ("psc_project_id", "=", rebuilt_project.id),
         ], limit=1))
+
+    def test_complete_medical_scenario_builds_full_funnel(self):
+        prepared = self.service.prepare_action(
+            action_type="complete_medical_test_scenario",
+            title="[AUTO TEST] Complete medical test scenario",
+            reason="Build the fixed end-to-end test dataset.",
+            payload={"project_id": self.project.id, "dataset": "medical_procurement_smoke_v1"},
+        )
+        result = self.service.commit_action(prepared["action_token"], str(uuid.uuid4()))
+        product_item = self.env["psc.project.product"].browse(result["test_records"]["project_product"])
+        self.assertEqual(product_item.status, "active")
+        self.assertTrue(product_item.hard_gate_passed)
+        self.assertEqual(product_item.compliance_state, "passed")
+        performance = self.service.get_campaign_performance(self.project.id)
+        self.assertEqual(performance["totals"]["impressions"], 1)
+        self.assertEqual(performance["totals"]["clicks"], 1)
+        self.assertEqual(performance["totals"]["inquiries"], 1)
+        self.assertEqual(performance["totals"]["quotations"], 1)
+        self.assertEqual(performance["recent_orders"][0]["opportunity"]["id"], self.lead.id)
+        self.assertEqual(performance["recent_orders"][0]["market"]["id"], self.project.market_ids[:1].id)
+        self.assertEqual(performance["recent_orders"][0]["channel"]["id"], self.project.channel_ids[:1].id)

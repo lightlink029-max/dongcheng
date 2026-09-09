@@ -211,6 +211,7 @@ class AiAction(models.Model):
         ("retry_publication", "重试发布任务"),
         ("record_feedback", "记录AI建议反馈"),
         ("initialize_medical_test_data", "初始化医疗测试数据"),
+        ("complete_medical_test_scenario", "补齐医疗全业务测试场景"),
         ("cleanup_medical_test_data", "清理医疗测试数据"),
     ], string="动作类型", required=True, index=True)
     priority = fields.Selection([
@@ -469,6 +470,10 @@ class AiAction(models.Model):
             if values.get("dataset") != "medical_procurement_smoke_v1":
                 raise ValidationError(_("不支持的测试数据集。"))
             record = self.env["res.config.settings"].create({})._upsert_medical_test_data()
+        elif self.action_type == "complete_medical_test_scenario":
+            if values.get("dataset") != "medical_procurement_smoke_v1":
+                raise ValidationError(_("不支持的测试数据集。"))
+            return self.env["res.config.settings"].create({})._complete_medical_test_scenario()
         elif self.action_type == "cleanup_medical_test_data":
             return self.env["res.config.settings"].create({})._cleanup_medical_test_data(
                 exclude_action_id=self.id,
@@ -679,6 +684,9 @@ class AiOperationsService(models.AbstractModel):
             "close_optimization": [("psc.optimization.action", "optimization_id", "优化实验", True)],
             "retry_publication": [("psc.publication.task", "task_id", "发布任务", True)],
             "record_feedback": [("psc.ai.action", "action_id", "AI行动", True)],
+            "complete_medical_test_scenario": [
+                ("psc.publishing.project", "project_id", "测试运营项目", True),
+            ],
             "cleanup_medical_test_data": [
                 ("psc.publishing.project", "project_id", "测试运营项目", True),
             ],
@@ -707,6 +715,13 @@ class AiOperationsService(models.AbstractModel):
         if action_type == "initialize_medical_test_data":
             if payload.get("dataset") != "medical_procurement_smoke_v1":
                 raise ValidationError(_("只能初始化内置的医疗测试数据集。"))
+        if action_type == "complete_medical_test_scenario":
+            project = next((record for record in records if record._name == "psc.publishing.project"), False)
+            if (
+                payload.get("dataset") != "medical_procurement_smoke_v1"
+                or not project or project.name != "[TEST] 西非医疗类综合采购商运营项目"
+            ):
+                raise ValidationError(_("只能补齐内置的医疗测试数据集。"))
         if action_type == "cleanup_medical_test_data":
             project = next((record for record in records if record._name == "psc.publishing.project"), False)
             if not project or project.name != "[TEST] 西非医疗类综合采购商运营项目":
@@ -796,6 +811,7 @@ class AiOperationsService(models.AbstractModel):
                     ("project_id", "in", project_ids), ("state", "=", "waiting_approval"),
                 ]),
                 "unhealthy_accounts": account_health["summary"]["unhealthy_accounts"],
+                "account_setup_required": account_health.get("setup_required", False),
             },
             "blockers": [{
                 "kind": "product",
@@ -821,7 +837,13 @@ class AiOperationsService(models.AbstractModel):
                 "reason": item["reason"],
                 "priority": "P0" if item["state"] in ("failed", "suspended") else "P1",
                 "evidence": item["evidence"],
-            } for item in account_health["unhealthy"]],
+            } for item in account_health["unhealthy"]] + ([{
+                "kind": "account_setup",
+                "title": _("需要配置发布账号环境"),
+                "reason": account_health["setup_reason"],
+                "priority": "P1",
+                "evidence": [self._record_ref(projects[:1])],
+            }] if account_health.get("setup_required") else []),
             "opportunities": [{
                 "kind": "lead",
                 "title": lead.display_name,
@@ -845,6 +867,7 @@ class AiOperationsService(models.AbstractModel):
             ("company_id", "in", self.env.companies.ids),
         ])
         cluster_domain = [("project_ids", "in", allowed_projects.ids)]
+        project = self.env["psc.publishing.project"]
         if project_id:
             project = self._required_record("psc.publishing.project", project_id, _("运营项目"))
             if project.company_id not in self.env.companies:
@@ -884,8 +907,12 @@ class AiOperationsService(models.AbstractModel):
                 "evidence": [self._record_ref(cluster)],
             })
         unhealthy = [row for row in rows if not row["healthy"]]
+        setup_required = bool(project_id and not clusters)
         return {
             "summary": {"clusters": len(rows), "unhealthy_accounts": len(unhealthy)},
+            "setup_required": setup_required,
+            "setup_reason": _("项目尚未关联账号集群和发布账号；需要用户配置真实平台账号、环境及授权。")
+            if setup_required else False,
             "unhealthy": unhealthy,
             "clusters": rows,
         }
@@ -1025,6 +1052,9 @@ class AiOperationsService(models.AbstractModel):
         if date_to:
             domain.append(("snapshot_date", "<=", date_to))
         snapshots = self.env["psc.performance.snapshot"].search(domain)
+        recent_orders = self.env["sale.order"].search([
+            ("psc_project_id", "=", project.id),
+        ], order="create_date desc, id desc", limit=20)
         totals = {field: sum(snapshots.mapped(field)) for field in (
             "impressions", "views", "clicks", "inquiries", "qualified_leads",
             "quotations", "orders", "revenue", "purchase_cost", "traffic_cost",
@@ -1042,6 +1072,15 @@ class AiOperationsService(models.AbstractModel):
             "date_from": date_from,
             "date_to": date_to,
             "totals": totals,
+            "recent_orders": [{
+                **self._record_ref(order),
+                "state": order.state,
+                "opportunity": self._record_ref(order.opportunity_id) if order.opportunity_id else None,
+                "market": self._record_ref(order.psc_market_id) if order.psc_market_id else None,
+                "channel": self._record_ref(order.psc_channel_id) if order.psc_channel_id else None,
+                "amount_total": order.amount_total,
+                "currency": order.currency_id.name,
+            } for order in recent_orders],
         }
 
     @api.model
@@ -1098,6 +1137,8 @@ class AiOperationsService(models.AbstractModel):
                     if action_type == "cleanup_medical_test_data"
                     else _("将创建或修复带[TEST]标识的内置医疗业务测试数据，不修改真实业务记录。")
                     if action_type == "initialize_medical_test_data"
+                    else _("将补齐[TEST]产品成功门槛、内容计划、漏斗触点、测试报价和经营快照；不发布内容，不创建真实账号。")
+                    if action_type == "complete_medical_test_scenario"
                     else _("仅创建或更新预览中列出的业务记录；目标发生变化时执行将被拒绝。")
                 ),
                 "requires_approval": True,
