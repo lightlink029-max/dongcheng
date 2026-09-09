@@ -390,12 +390,29 @@ class AiOperationsCase(TransactionCase):
         self.assertEqual(performance["totals"]["inquiries"], 1)
         self.assertEqual(performance["totals"]["quotations"], 1)
         self.assertEqual(performance["totals"]["orders"], 1)
-        self.assertGreater(performance["totals"]["revenue"], 0)
+        self.assertGreater(performance["totals"]["order_value"], 0)
+        self.assertEqual(performance["totals"]["revenue"], 0.0)
         self.assertEqual(performance["recent_orders"][0]["opportunity"]["id"], self.lead.id)
         self.assertEqual(performance["recent_orders"][0]["market"]["id"], self.project.market_ids[:1].id)
         self.assertEqual(performance["recent_orders"][0]["channel"]["id"], self.lead.psc_channel_id.id)
         order = self.env["sale.order"].browse(result["test_records"]["order"])
         self.assertEqual(order.state, "sale")
+        requirement = self.lead.psc_requirement_ids.filtered(
+            lambda item: item.project_id == self.project
+        )[:1]
+        self.assertEqual(requirement.stage, "won")
+        self.assertTrue(requirement.target_purchase_date)
+        requirement.write({"stage": "new", "target_purchase_date": False})
+        sync = self.service.prepare_action(
+            action_type="sync_project_business_state",
+            title="[AUTO TEST] Sync project business state",
+            reason="Repair existing requirement stages from confirmed orders.",
+            payload={"project_id": self.project.id},
+        )
+        sync_result = self.service.commit_action(sync["action_token"], str(uuid.uuid4()))
+        self.assertIn(requirement.id, sync_result["updated_requirements"])
+        self.assertEqual(requirement.stage, "won")
+        self.assertTrue(requirement.target_purchase_date)
         cluster = self.env["psc.social.account.cluster"].browse(
             result["test_records"]["account_cluster"]
         )
@@ -463,8 +480,9 @@ class AiOperationsCase(TransactionCase):
         self.assertEqual(records["delivered_qty"], 2.0)
         self.assertEqual(records["internal_stock_qty"], 0.0)
         performance = self.service.get_campaign_performance(self.project.id)
-        self.assertEqual(performance["totals"]["purchase_cost"], 1200.0)
-        self.assertEqual(performance["totals"]["gross_profit"], 2800.0)
+        self.assertEqual(performance["totals"]["purchase_order_value"], 1200.0)
+        self.assertEqual(performance["totals"]["purchase_cost"], 0.0)
+        self.assertEqual(performance["totals"]["gross_profit"], 0.0)
         self.assertEqual(performance["recent_purchase_orders"][0]["id"], purchase_order.id)
 
         cleanup = self.env["res.config.settings"].create({})._cleanup_medical_test_data()
@@ -525,3 +543,23 @@ class AiOperationsCase(TransactionCase):
         self.assertEqual(records["customer_return_qty"], 2.0)
         self.assertEqual(records["vendor_return_qty"], 2.0)
         self.assertEqual(records["internal_stock_after_returns"], 0.0)
+        performance = self.service.get_campaign_performance(self.project.id)
+        totals = performance["totals"]
+        self.assertEqual(totals["quotations"], 2)
+        self.assertEqual(totals["orders"], 2)
+        self.assertEqual(totals["quoted_leads"], 1)
+        self.assertEqual(totals["ordered_leads"], 1)
+        self.assertEqual(totals["quote_rate"], 1.0)
+        self.assertEqual(totals["order_rate"], 1.0)
+        self.assertEqual(totals["order_value"], 4000.0)
+        self.assertEqual(totals["gross_revenue"], 2000.0)
+        self.assertEqual(totals["refund_amount"], 2000.0)
+        self.assertEqual(totals["net_revenue"], 0.0)
+        self.assertEqual(totals["revenue"], 0.0)
+        self.assertEqual(totals["purchase_order_value"], 1200.0)
+        self.assertEqual(totals["gross_purchase_cost"], 1200.0)
+        self.assertEqual(totals["vendor_refund_amount"], 1200.0)
+        self.assertEqual(totals["net_purchase_cost"], 0.0)
+        self.assertEqual(totals["purchase_cost"], 0.0)
+        self.assertEqual(totals["net_gross_profit"], 0.0)
+        self.assertEqual(totals["gross_profit"], 0.0)

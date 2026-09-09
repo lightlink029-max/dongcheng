@@ -149,7 +149,7 @@ export async function createServer(): Promise<McpServer> {
 
   server.registerTool("get_campaign_performance", {
     title: "读取经营效果",
-    description: "汇总曝光、点击、询盘、有效客户、报价、订单、收入和毛利漏斗，用于复盘和提出可衡量实验。",
+    description: "汇总曝光、点击、询盘、有效客户、全部报价、订单值、已开票净收入、退款、净采购成本和净毛利，用于复盘和提出可衡量实验。",
     inputSchema: {
       project_id: projectId,
       date_from: z.string().date().optional(),
@@ -170,7 +170,7 @@ export async function createServer(): Promise<McpServer> {
         "create_lead_followup", "create_project_task", "create_optimization",
         "close_optimization", "retry_publication", "record_feedback",
         "initialize_medical_test_data", "complete_medical_test_scenario",
-        "cleanup_medical_test_data",
+        "sync_project_business_state", "cleanup_medical_test_data",
       ]),
       title: z.string().min(1).max(200),
       reason: z.string().min(1).max(4000),

@@ -212,6 +212,7 @@ class AiAction(models.Model):
         ("record_feedback", "记录AI建议反馈"),
         ("initialize_medical_test_data", "初始化医疗测试数据"),
         ("complete_medical_test_scenario", "补齐医疗全业务测试场景"),
+        ("sync_project_business_state", "同步项目业务阶段"),
         ("cleanup_medical_test_data", "清理医疗测试数据"),
     ], string="动作类型", required=True, index=True)
     priority = fields.Selection([
@@ -480,6 +481,28 @@ class AiAction(models.Model):
                 include_procurement_inventory=bool(values.get("include_procurement_inventory")),
                 include_finance_workflow=bool(values.get("include_finance_workflow")),
             )
+        elif self.action_type == "sync_project_business_state":
+            project = self.env["psc.publishing.project"].browse(values.get("project_id")).exists()
+            if not project:
+                raise ValidationError(_("运营项目不存在。"))
+            confirmed_orders = self.env["sale.order"].search([
+                ("psc_project_id", "=", project.id),
+                ("state", "in", ("sale", "done")),
+            ])
+            requirements = confirmed_orders._sync_psc_customer_requirements()
+            return {
+                "model": project._name,
+                "id": project.id,
+                "display_name": project.display_name,
+                "confirmed_orders": confirmed_orders.ids,
+                "updated_requirements": requirements.ids,
+                "requirement_states": [{
+                    "id": requirement.id,
+                    "stage": requirement.stage,
+                    "target_purchase_date": fields.Date.to_string(requirement.target_purchase_date)
+                    if requirement.target_purchase_date else None,
+                } for requirement in requirements],
+            }
         elif self.action_type == "cleanup_medical_test_data":
             return self.env["res.config.settings"].create({})._cleanup_medical_test_data(
                 exclude_action_id=self.id,
@@ -644,6 +667,34 @@ class SaleOrderAttribution(models.Model):
             self.psc_market_id = self.opportunity_id.psc_market_id
             self.psc_channel_id = self.opportunity_id.psc_channel_id
 
+    def _sync_psc_customer_requirements(self):
+        """Keep operational requirements aligned with confirmed sales orders."""
+        updated = self.env["psc.customer.requirement"]
+        confirmed_orders = self.filtered(
+            lambda item: item.state in ("sale", "done")
+        ).sorted(key=lambda item: (item.date_order, item.id))
+        for order in confirmed_orders:
+            requirements = order.opportunity_id.psc_requirement_ids.filtered(
+                lambda requirement: requirement.project_id == order.psc_project_id
+            )
+            for requirement in requirements:
+                values = {}
+                if requirement.stage != "won":
+                    values["stage"] = "won"
+                if not requirement.target_purchase_date:
+                    values["target_purchase_date"] = (
+                        fields.Date.to_date(order.date_order) or fields.Date.context_today(self)
+                    )
+                if values:
+                    requirement.write(values)
+                updated |= requirement
+        return updated
+
+    def action_confirm(self):
+        result = super().action_confirm()
+        self._sync_psc_customer_requirements()
+        return result
+
 
 class PurchaseOrderAttribution(models.Model):
     _inherit = "purchase.order"
@@ -715,6 +766,9 @@ class AiOperationsService(models.AbstractModel):
             "close_optimization": [("psc.optimization.action", "optimization_id", "优化实验", True)],
             "retry_publication": [("psc.publication.task", "task_id", "发布任务", True)],
             "record_feedback": [("psc.ai.action", "action_id", "AI行动", True)],
+            "sync_project_business_state": [
+                ("psc.publishing.project", "project_id", "运营项目", True),
+            ],
             "complete_medical_test_scenario": [
                 ("psc.publishing.project", "project_id", "测试运营项目", True),
                 ("psc.bitbrowser.environment", "environment_id", "比特环境", True),
@@ -1091,25 +1145,41 @@ class AiOperationsService(models.AbstractModel):
         if date_to:
             domain.append(("snapshot_date", "<=", date_to))
         snapshots = self.env["psc.performance.snapshot"].search(domain)
-        recent_orders = self.env["sale.order"].search([
-            ("psc_project_id", "=", project.id),
-        ], order="create_date desc, id desc", limit=20)
         totals = {field: sum(snapshots.mapped(field)) for field in (
             "impressions", "views", "clicks", "inquiries", "qualified_leads",
             "quotations", "orders", "revenue", "purchase_cost", "traffic_cost",
         )}
-        project_orders = self.env["sale.order"].search([
+        all_project_orders = self.env["sale.order"].search([
             ("psc_project_id", "=", project.id),
         ])
-        project_order_names = project_orders.mapped("name")
-        project_orders_by_name = {order.name: order for order in project_orders}
+        project_order_names = all_project_orders.mapped("name")
+        project_orders_by_name = {order.name: order for order in all_project_orders}
+        sale_domain = [
+            ("psc_project_id", "=", project.id),
+            ("state", "in", ("draft", "sent", "sale", "done")),
+        ]
+        if date_from:
+            sale_domain.append(("date_order", ">=", fields.Datetime.to_datetime(date_from)))
+        if date_to:
+            sale_domain.append((
+                "date_order", "<", fields.Datetime.to_datetime(date_to) + relativedelta(days=1),
+            ))
+        sale_orders = self.env["sale.order"].search(sale_domain)
+        confirmed_orders = sale_orders.filtered(lambda order: order.state in ("sale", "done"))
+
         purchase_domain = [
             ("state", "in", ("purchase", "done")),
             ("company_id", "=", project.company_id.id),
-            "|",
-            ("psc_project_id", "=", project.id),
-            ("origin", "in", project_order_names or [False]),
         ]
+        if project_order_names:
+            purchase_domain += [
+                "|",
+                ("psc_project_id", "=", project.id),
+                ("origin", "in", project_order_names),
+            ]
+        else:
+            purchase_domain.append(("psc_project_id", "=", project.id))
+        all_purchase_orders = self.env["purchase.order"].search(purchase_domain)
         if date_from:
             purchase_domain.append(("date_approve", ">=", fields.Datetime.to_datetime(date_from)))
         if date_to:
@@ -1117,7 +1187,53 @@ class AiOperationsService(models.AbstractModel):
                 "date_approve", "<", fields.Datetime.to_datetime(date_to) + relativedelta(days=1),
             ))
         purchase_orders = self.env["purchase.order"].search(purchase_domain)
-        totals["purchase_cost"] = sum(
+
+        customer_moves = all_project_orders.invoice_ids.filtered(
+            lambda move: move.state == "posted"
+            and move.move_type in ("out_invoice", "out_refund")
+        )
+        vendor_moves = all_purchase_orders.invoice_ids.filtered(
+            lambda move: move.state == "posted"
+            and move.move_type in ("in_invoice", "in_refund")
+        )
+        date_from_value = fields.Date.to_date(date_from) if date_from else None
+        date_to_value = fields.Date.to_date(date_to) if date_to else None
+
+        def move_in_range(move):
+            move_date = move.invoice_date or move.date
+            return (
+                (not date_from_value or move_date >= date_from_value)
+                and (not date_to_value or move_date <= date_to_value)
+            )
+
+        customer_moves = customer_moves.filtered(move_in_range)
+        vendor_moves = vendor_moves.filtered(move_in_range)
+        gross_revenue = sum(
+            abs(move.amount_untaxed_signed)
+            for move in customer_moves.filtered(lambda move: move.move_type == "out_invoice")
+        )
+        refund_amount = sum(
+            abs(move.amount_untaxed_signed)
+            for move in customer_moves.filtered(lambda move: move.move_type == "out_refund")
+        )
+        gross_purchase_cost = sum(
+            abs(move.amount_untaxed_signed)
+            for move in vendor_moves.filtered(lambda move: move.move_type == "in_invoice")
+        )
+        vendor_refund_amount = sum(
+            abs(move.amount_untaxed_signed)
+            for move in vendor_moves.filtered(lambda move: move.move_type == "in_refund")
+        )
+        order_value = sum(
+            order.currency_id._convert(
+                order.amount_untaxed,
+                project.company_id.currency_id,
+                project.company_id,
+                fields.Date.to_date(order.date_order) or fields.Date.context_today(self),
+            )
+            for order in confirmed_orders
+        )
+        purchase_order_value = sum(
             order.currency_id._convert(
                 order.amount_untaxed,
                 project.company_id.currency_id,
@@ -1126,12 +1242,34 @@ class AiOperationsService(models.AbstractModel):
             )
             for order in purchase_orders
         )
+        net_revenue = gross_revenue - refund_amount
+        net_purchase_cost = gross_purchase_cost - vendor_refund_amount
+        totals.update({
+            "quotations": len(sale_orders),
+            "orders": len(confirmed_orders),
+            "quoted_leads": len(sale_orders.opportunity_id),
+            "ordered_leads": len(confirmed_orders.opportunity_id),
+            "order_value": order_value,
+            "gross_revenue": gross_revenue,
+            "refund_amount": refund_amount,
+            "net_revenue": net_revenue,
+            "revenue": net_revenue,
+            "purchase_order_value": purchase_order_value,
+            "gross_purchase_cost": gross_purchase_cost,
+            "vendor_refund_amount": vendor_refund_amount,
+            "net_purchase_cost": net_purchase_cost,
+            "purchase_cost": net_purchase_cost,
+        })
+        net_gross_profit = net_revenue - net_purchase_cost - totals["traffic_cost"]
         totals.update({
             "click_rate": totals["clicks"] / totals["impressions"] if totals["impressions"] else 0.0,
             "inquiry_rate": totals["inquiries"] / totals["clicks"] if totals["clicks"] else 0.0,
-            "quote_rate": totals["quotations"] / totals["qualified_leads"] if totals["qualified_leads"] else 0.0,
-            "order_rate": totals["orders"] / totals["quotations"] if totals["quotations"] else 0.0,
-            "gross_profit": totals["revenue"] - totals["purchase_cost"] - totals["traffic_cost"],
+            "quote_rate": totals["quoted_leads"] / totals["qualified_leads"]
+            if totals["qualified_leads"] else 0.0,
+            "order_rate": totals["ordered_leads"] / totals["quoted_leads"]
+            if totals["quoted_leads"] else 0.0,
+            "net_gross_profit": net_gross_profit,
+            "gross_profit": net_gross_profit,
         })
         return {
             "project": self._record_ref(project),
@@ -1147,7 +1285,9 @@ class AiOperationsService(models.AbstractModel):
                 "channel": self._record_ref(order.psc_channel_id) if order.psc_channel_id else None,
                 "amount_total": order.amount_total,
                 "currency": order.currency_id.name,
-            } for order in recent_orders],
+            } for order in sale_orders.sorted(
+                key=lambda item: (item.create_date, item.id), reverse=True,
+            )[:20]],
             "recent_purchase_orders": [{
                 **self._record_ref(order),
                 "state": order.state,
@@ -1223,6 +1363,8 @@ class AiOperationsService(models.AbstractModel):
                 "effect": (
                     _("将删除内置医疗测试数据及其测试依赖；任何目标变化或非测试引用都会拒绝执行。")
                     if action_type == "cleanup_medical_test_data"
+                    else _("将根据项目内已确认销售订单，把关联客户需求同步为已成交，并为空白的预计采购日期补入订单日期。")
+                    if action_type == "sync_project_business_state"
                     else _("将创建或修复带[TEST]标识的内置医疗业务测试数据，不修改真实业务记录。")
                     if action_type == "initialize_medical_test_data"
                     else (
@@ -1282,21 +1424,11 @@ class PerformanceSnapshotAutomation(models.Model):
                 ("occurred_at", ">=", day_start), ("occurred_at", "<", day_end),
                 ("verified", "=", True),
             ])
-            orders = self.env["sale.order"].search([
-                ("psc_project_id", "=", project.id),
-                ("date_order", ">=", day_start), ("date_order", "<", day_end),
-                ("state", "in", ("draft", "sent", "sale", "done")),
-            ])
-            confirmed = orders.filtered(lambda order: order.state in ("sale", "done"))
-            quotations = orders.filtered(lambda order: order.state in ("draft", "sent"))
-            purchase_orders = self.env["purchase.order"].search([
-                ("state", "in", ("purchase", "done")),
-                ("company_id", "=", project.company_id.id),
-                ("date_approve", ">=", day_start), ("date_approve", "<", day_end),
-                "|",
-                ("psc_project_id", "=", project.id),
-                ("origin", "in", orders.mapped("name") or [False]),
-            ])
+            transaction_totals = self.env["psc.ai.service"].get_campaign_performance(
+                project.id,
+                date_from=fields.Date.to_string(snapshot_date),
+                date_to=fields.Date.to_string(snapshot_date),
+            )["totals"]
             leads = self.env["crm.lead"].search([
                 ("psc_project_id", "=", project.id),
                 ("create_date", ">=", day_start), ("create_date", "<", day_end),
@@ -1307,18 +1439,10 @@ class PerformanceSnapshotAutomation(models.Model):
                 "clicks": len(touchpoints.filtered(lambda row: row.event_type == "click")),
                 "inquiries": len(touchpoints.filtered(lambda row: row.event_type == "inquiry")),
                 "qualified_leads": len(leads.filtered(lambda lead: lead.probability >= 30)),
-                "quotations": len(quotations),
-                "orders": len(confirmed),
-                "revenue": sum(confirmed.mapped("amount_total")),
-                "purchase_cost": sum(
-                    order.currency_id._convert(
-                        order.amount_untaxed,
-                        project.company_id.currency_id,
-                        project.company_id,
-                        fields.Date.to_date(order.date_approve) or snapshot_date,
-                    )
-                    for order in purchase_orders
-                ),
+                "quotations": transaction_totals["quotations"],
+                "orders": transaction_totals["orders"],
+                "revenue": transaction_totals["net_revenue"],
+                "purchase_cost": transaction_totals["net_purchase_cost"],
             }
             snapshot = self.search([
                 ("snapshot_date", "=", snapshot_date), ("project_id", "=", project.id),
