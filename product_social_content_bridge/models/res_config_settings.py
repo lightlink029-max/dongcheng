@@ -261,7 +261,7 @@ class ResConfigSettings(models.TransientModel):
             "evidence": "[TEST] Synthetic evidence for workflow validation only.",
         })
         product_item.score_line_ids.write({"score": 80.0, "gate_passed": True})
-        product_item.action_activate()
+        product_item.action_mark_active()
 
         plan_model = self.env["psc.content.plan"]
         pillars = project.track_id.content_pillar_ids.filtered(
