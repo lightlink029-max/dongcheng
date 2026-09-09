@@ -22,6 +22,12 @@
                             <field name="psc_local_worker_lease_seconds"/>
                         </setting>
                     </block>
+                    <block title="测试加速" help="服务端一次性准备测试数据，浏览器只负责验收关键页面。">
+                        <setting string="医疗综合采购测试数据" help="初始化或修复固定的 [TEST] 数据集；重复执行不会创建重复记录，也不会修改非测试数据。">
+                            <button name="action_prepare_medical_test_data" type="object"
+                                    string="初始化/修复并打开测试项目" class="btn-secondary"/>
+                        </setting>
+                    </block>
                 </app>
             </xpath>
         </field>
