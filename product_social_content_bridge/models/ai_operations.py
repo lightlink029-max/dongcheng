@@ -800,7 +800,13 @@ class AiOperationsService(models.AbstractModel):
             "blockers": [{
                 "kind": "product",
                 "title": item.display_name,
-                "reason": item.compliance_state if item.compliance_state != "passed" else item.material_state,
+                "reason": "；".join(filter(None, [
+                    _("合规状态：%s") % item.compliance_state
+                    if item.compliance_state != "passed" else None,
+                    _("资料状态：%s") % item.material_state
+                    if item.material_state != "complete" else None,
+                    _("硬性门槛未通过") if not item.hard_gate_passed else None,
+                ])),
                 "priority": "P0" if item.compliance_state == "blocked" else "P1",
                 "evidence": [self._record_ref(item)],
             } for item in blocked_products] + [{

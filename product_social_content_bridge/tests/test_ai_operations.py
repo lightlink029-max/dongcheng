@@ -120,6 +120,8 @@ class AiOperationsCase(TransactionCase):
         snapshot = self.service.get_daily_operations_snapshot(project_id=self.project.id)
         self.assertEqual(snapshot["project_count"], 1)
         self.assertIn("blocked_products", snapshot["summary"])
+        self.assertIn("资料状态", snapshot["blockers"][0]["reason"])
+        self.assertIn("硬性门槛", snapshot["blockers"][0]["reason"])
         leads = self.service.get_priority_leads(project_id=self.project.id)
         self.assertEqual(leads["leads"][0]["id"], self.lead.id)
         self.assertTrue(leads["leads"][0]["url"])
