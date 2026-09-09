@@ -644,6 +644,28 @@ class SaleOrderAttribution(models.Model):
             self.psc_channel_id = self.opportunity_id.psc_channel_id
 
 
+class PurchaseOrderAttribution(models.Model):
+    _inherit = "purchase.order"
+
+    psc_sale_order_id = fields.Many2one("sale.order", string="来源销售订单", index=True)
+    psc_project_id = fields.Many2one("psc.publishing.project", string="市场运营项目", index=True)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for values in vals_list:
+            sale_order = self.env["sale.order"].browse(values.get("psc_sale_order_id")).exists()
+            if sale_order:
+                values.setdefault("origin", sale_order.name)
+                values.setdefault("psc_project_id", sale_order.psc_project_id.id)
+        return super().create(vals_list)
+
+    @api.onchange("psc_sale_order_id")
+    def _onchange_psc_sale_order_id(self):
+        if self.psc_sale_order_id:
+            self.origin = self.psc_sale_order_id.name
+            self.psc_project_id = self.psc_sale_order_id.psc_project_id
+
+
 class AiOperationsService(models.AbstractModel):
     _name = "psc.ai.service"
     _description = "LightLink AI运营服务"
@@ -1075,6 +1097,32 @@ class AiOperationsService(models.AbstractModel):
             "impressions", "views", "clicks", "inquiries", "qualified_leads",
             "quotations", "orders", "revenue", "purchase_cost", "traffic_cost",
         )}
+        project_order_names = self.env["sale.order"].search([
+            ("psc_project_id", "=", project.id),
+        ]).mapped("name")
+        purchase_domain = [
+            ("state", "in", ("purchase", "done")),
+            ("company_id", "=", project.company_id.id),
+            "|",
+            ("psc_project_id", "=", project.id),
+            ("origin", "in", project_order_names or [False]),
+        ]
+        if date_from:
+            purchase_domain.append(("date_approve", ">=", fields.Datetime.to_datetime(date_from)))
+        if date_to:
+            purchase_domain.append((
+                "date_approve", "<", fields.Datetime.to_datetime(date_to) + relativedelta(days=1),
+            ))
+        purchase_orders = self.env["purchase.order"].search(purchase_domain)
+        totals["purchase_cost"] = sum(
+            order.currency_id._convert(
+                order.amount_total,
+                project.company_id.currency_id,
+                project.company_id,
+                fields.Date.to_date(order.date_approve) or fields.Date.context_today(self),
+            )
+            for order in purchase_orders
+        )
         totals.update({
             "click_rate": totals["clicks"] / totals["impressions"] if totals["impressions"] else 0.0,
             "inquiry_rate": totals["inquiries"] / totals["clicks"] if totals["clicks"] else 0.0,
@@ -1097,6 +1145,17 @@ class AiOperationsService(models.AbstractModel):
                 "amount_total": order.amount_total,
                 "currency": order.currency_id.name,
             } for order in recent_orders],
+            "recent_purchase_orders": [{
+                **self._record_ref(order),
+                "state": order.state,
+                "origin": order.origin,
+                "sale_order": self._record_ref(order.psc_sale_order_id)
+                if order.psc_sale_order_id else None,
+                "amount_total": order.amount_total,
+                "currency": order.currency_id.name,
+            } for order in purchase_orders.sorted(
+                key=lambda item: (item.date_approve or item.create_date, item.id), reverse=True,
+            )[:20]],
         }
 
     @api.model
@@ -1215,6 +1274,14 @@ class PerformanceSnapshotAutomation(models.Model):
             ])
             confirmed = orders.filtered(lambda order: order.state in ("sale", "done"))
             quotations = orders.filtered(lambda order: order.state in ("draft", "sent"))
+            purchase_orders = self.env["purchase.order"].search([
+                ("state", "in", ("purchase", "done")),
+                ("company_id", "=", project.company_id.id),
+                ("date_approve", ">=", day_start), ("date_approve", "<", day_end),
+                "|",
+                ("psc_project_id", "=", project.id),
+                ("origin", "in", orders.mapped("name") or [False]),
+            ])
             leads = self.env["crm.lead"].search([
                 ("psc_project_id", "=", project.id),
                 ("create_date", ">=", day_start), ("create_date", "<", day_end),
@@ -1228,6 +1295,15 @@ class PerformanceSnapshotAutomation(models.Model):
                 "quotations": len(quotations),
                 "orders": len(confirmed),
                 "revenue": sum(confirmed.mapped("amount_total")),
+                "purchase_cost": sum(
+                    order.currency_id._convert(
+                        order.amount_total,
+                        project.company_id.currency_id,
+                        project.company_id,
+                        fields.Date.to_date(order.date_approve) or snapshot_date,
+                    )
+                    for order in purchase_orders
+                ),
             }
             snapshot = self.search([
                 ("snapshot_date", "=", snapshot_date), ("project_id", "=", project.id),

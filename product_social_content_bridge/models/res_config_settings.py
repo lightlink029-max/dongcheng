@@ -329,8 +329,13 @@ class ResConfigSettings(models.TransientModel):
             purchase_order = self.env["purchase.order"].create({
                 "partner_id": vendor.id,
                 "partner_ref": MEDICAL_TEST_PURCHASE_REFERENCE,
-                "origin": sale_order.name,
+                "psc_sale_order_id": sale_order.id,
                 "picking_type_id": sale_order.warehouse_id.in_type_id.id,
+            })
+        elif not purchase_order.psc_sale_order_id:
+            purchase_order.write({
+                "psc_sale_order_id": sale_order.id,
+                "psc_project_id": project.id,
             })
         if not purchase_order.order_line:
             self.env["purchase.order.line"].create({

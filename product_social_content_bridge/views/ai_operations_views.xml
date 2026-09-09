@@ -133,6 +133,13 @@
         <field name="arch" type="xml"><xpath expr="//field[@name='opportunity_id']" position="after"><field name="psc_project_id"/><field name="psc_market_id"/><field name="psc_channel_id"/></xpath></field>
     </record>
 
+    <record id="view_purchase_order_form_psc_attribution" model="ir.ui.view">
+        <field name="name">purchase.order.form.psc.attribution</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml"><xpath expr="//field[@name='origin']" position="after"><field name="psc_sale_order_id"/><field name="psc_project_id"/></xpath></field>
+    </record>
+
     <record id="action_psc_ai_cockpit" model="ir.actions.act_window"><field name="name">AI运营驾驶舱</field><field name="res_model">psc.ai.action</field><field name="view_mode">list,form</field><field name="domain">[('state', 'not in', ('rejected', 'expired'))]</field><field name="context">{'search_default_waiting': 1}</field></record>
     <record id="action_psc_ai_runs" model="ir.actions.act_window"><field name="name">AI运行记录</field><field name="res_model">psc.ai.run</field><field name="view_mode">list,form</field></record>
     <record id="action_psc_project_blueprints" model="ir.actions.act_window"><field name="name">运营项目蓝图</field><field name="res_model">psc.project.blueprint</field><field name="view_mode">list,form</field></record>
