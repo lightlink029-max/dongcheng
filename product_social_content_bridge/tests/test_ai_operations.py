@@ -153,6 +153,13 @@ class AiOperationsCase(TransactionCase):
         self.assertEqual(snapshot["project_count"], 1)
         self.assertEqual(snapshot["summary"]["active_opportunities"], 1)
 
+    def test_content_backlog_exposes_action_inputs(self):
+        backlog = self.service.get_content_backlog(self.project.id)
+        self.assertTrue(backlog["available"]["pillars"])
+        self.assertTrue(backlog["available"]["products"])
+        self.assertTrue(backlog["available"]["markets"])
+        self.assertTrue(backlog["available"]["channels"])
+
     def test_medical_test_data_cleanup_is_approved_and_scoped(self):
         unrelated = self.env["product.template"].create({"name": "Production product"})
         old_preview = self.service.prepare_action(

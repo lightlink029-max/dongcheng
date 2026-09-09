@@ -924,10 +924,22 @@ class AiOperationsService(models.AbstractModel):
         project = self.env["psc.publishing.project"].browse(project_id).exists()
         if not project or project.company_id not in self.env.companies:
             raise UserError(_("运营项目不存在或当前无权访问。"))
+        pillars = project.track_id.content_pillar_ids.filtered(
+            lambda pillar: pillar.active
+            and (not pillar.role_ids or project.business_role_id in pillar.role_ids)
+        )
         plans = self.env["psc.content.plan"].search([
             ("project_id", "=", project.id), ("state", "in", ("draft", "prepared", "ready")),
         ], order="scheduled_at, id", limit=min(limit, 100))
-        return {"project": self._record_ref(project), "plans": [{
+        return {
+            "project": self._record_ref(project),
+            "available": {
+                "pillars": [self._record_ref(pillar) for pillar in pillars],
+                "products": [self._record_ref(product) for product in project.product_ids],
+                "markets": [self._record_ref(market) for market in project.market_ids],
+                "channels": [self._record_ref(channel) for channel in project.channel_ids],
+            },
+            "plans": [{
             **self._record_ref(plan),
             "state": plan.state,
             "pillar": plan.pillar_id.name,
@@ -936,7 +948,8 @@ class AiOperationsService(models.AbstractModel):
             "channel": plan.channel_id.name,
             "scheduled_at": fields.Datetime.to_string(plan.scheduled_at) if plan.scheduled_at else None,
             "brief": plan.brief,
-        } for plan in plans]}
+        } for plan in plans],
+        }
 
     @api.model
     def get_publication_exceptions(self, project_id=None, limit=30):
