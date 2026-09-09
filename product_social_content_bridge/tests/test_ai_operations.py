@@ -160,6 +160,11 @@ class AiOperationsCase(TransactionCase):
         self.assertTrue(backlog["available"]["markets"])
         self.assertTrue(backlog["available"]["channels"])
 
+    def test_priority_leads_exposes_activity_types(self):
+        result = self.service.get_priority_leads(project_id=self.project.id)
+        self.assertTrue(result["available_activity_types"])
+        self.assertEqual(result["leads"][0]["id"], self.lead.id)
+
     def test_medical_test_data_cleanup_is_approved_and_scoped(self):
         unrelated = self.env["product.template"].create({"name": "Production product"})
         old_preview = self.service.prepare_action(

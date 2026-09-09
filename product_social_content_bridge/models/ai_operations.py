@@ -982,7 +982,10 @@ class AiOperationsService(models.AbstractModel):
         if days:
             domain.append(("write_date", ">=", fields.Datetime.now() - relativedelta(days=min(days, 365))))
         leads = self.env["crm.lead"].search(domain, order="expected_revenue desc, write_date desc", limit=min(limit, 100))
-        return {"leads": [{
+        activity_types = self.env["mail.activity.type"].search([], order="sequence, id", limit=100)
+        return {
+            "available_activity_types": [self._record_ref(activity_type) for activity_type in activity_types],
+            "leads": [{
             **self._record_ref(lead),
             "project": lead.psc_project_id.display_name,
             "country": lead.country_id.name,
@@ -1002,7 +1005,8 @@ class AiOperationsService(models.AbstractModel):
                 "target_purchase_date": fields.Date.to_string(requirement.target_purchase_date)
                 if requirement.target_purchase_date else None,
             } for requirement in lead.psc_requirement_ids],
-        } for lead in leads]}
+        } for lead in leads],
+        }
 
     @api.model
     def get_campaign_performance(self, project_id, date_from=None, date_to=None):
