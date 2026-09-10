@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem id="menu_psc_root" name="市场运营" sequence="35"/>
+    <menuitem id="menu_psc_root" name="LightLink 业务中心" sequence="10"/>
+    <menuitem id="menu_psc_business_hub" name="业务总览" parent="menu_psc_root" action="action_psc_business_hub" sequence="1"/>
     <menuitem id="menu_psc_workflow" name="项目运营" parent="menu_psc_root" sequence="10"/>
     <menuitem id="menu_psc_projects" name="市场运营项目" parent="menu_psc_workflow" action="action_psc_project" sequence="10"/>
     <menuitem id="menu_psc_readiness" name="今日上线准备" parent="menu_psc_workflow" action="action_psc_project_readiness_items" sequence="15"/>

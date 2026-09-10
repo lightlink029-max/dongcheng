@@ -46,3 +46,4 @@ access_psc_ai_execution_user,psc.ai.execution user,model_psc_ai_execution,base.g
 access_psc_ai_execution_admin,psc.ai.execution admin,model_psc_ai_execution,base.group_system,1,1,1,1
 access_psc_ai_feedback_user,psc.ai.feedback user,model_psc_ai_feedback,base.group_user,1,1,1,0
 access_psc_ai_feedback_admin,psc.ai.feedback admin,model_psc_ai_feedback,base.group_system,1,1,1,1
+access_psc_business_hub_user,psc.business.hub user,model_psc_business_hub,base.group_user,1,0,0,0

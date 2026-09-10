@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="business_hub_main" model="psc.business.hub">
+        <field name="name">LightLink 业务中心</field>
+    </record>
+
+    <record id="view_psc_business_hub_form" model="ir.ui.view">
+        <field name="name">psc.business.hub.form</field>
+        <field name="model">psc.business.hub</field>
+        <field name="arch" type="xml">
+            <form string="LightLink 业务中心" create="false" edit="false" delete="false">
+                <header>
+                    <button name="action_refresh" type="object" string="刷新数据" icon="fa-refresh" class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+                        <div>
+                            <h1 class="mb-1">LightLink 业务中心</h1>
+                            <p class="text-muted mb-0">按业务场景进入系统，从市场运营到回款复盘，一页找到下一步。</p>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge rounded-pill text-bg-danger p-2">逾期 <field name="overdue_task_count" nolabel="1"/></span>
+                            <span class="badge rounded-pill text-bg-warning p-2">待批准 <field name="waiting_approval_count" nolabel="1"/></span>
+                            <span class="badge rounded-pill text-bg-danger p-2">发布失败 <field name="failed_publication_count" nolabel="1"/></span>
+                        </div>
+                    </div>
+
+                    <div class="border rounded-3 bg-light p-3 mb-4">
+                        <div class="fw-bold mb-2">完整业务流程</div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 text-center">
+                            <span class="badge rounded-pill text-bg-primary p-2">1 市场项目</span><i class="fa fa-angle-right text-muted"/>
+                            <span class="badge rounded-pill text-bg-primary p-2">2 内容发布</span><i class="fa fa-angle-right text-muted"/>
+                            <span class="badge rounded-pill text-bg-primary p-2">3 客户线索</span><i class="fa fa-angle-right text-muted"/>
+                            <span class="badge rounded-pill text-bg-primary p-2">4 报价订单</span><i class="fa fa-angle-right text-muted"/>
+                            <span class="badge rounded-pill text-bg-primary p-2">5 采购库存</span><i class="fa fa-angle-right text-muted"/>
+                            <span class="badge rounded-pill text-bg-primary p-2">6 交付回款</span><i class="fa fa-angle-right text-muted"/>
+                            <span class="badge rounded-pill text-bg-success p-2">7 数据复盘</span>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 w-100 m-0">
+                        <div class="col-12 col-md-6 col-xl-4 px-2">
+                            <div class="border rounded-3 p-4 h-100 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                    <div><h2 class="h4 mb-1"><i class="fa fa-check-square-o text-primary me-2"/>今日工作台</h2><p class="text-muted mb-0">先处理今天必须完成、异常和待批准事项。</p></div>
+                                    <div class="text-center"><div class="fs-2 fw-bold"><field name="today_task_count" nolabel="1"/></div><small class="text-muted">今日待办</small></div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button name="action_open_today" type="object" string="今日任务" icon="fa-list" class="btn-primary"/>
+                                    <button name="action_open_ai" type="object" string="待批准" icon="fa-check-circle-o" class="btn-secondary"/>
+                                    <button name="action_open_publication_failures" type="object" string="发布异常" icon="fa-exclamation-triangle" class="btn-secondary"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-4 px-2">
+                            <div class="border rounded-3 p-4 h-100 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                    <div><h2 class="h4 mb-1"><i class="fa fa-bullhorn text-primary me-2"/>市场增长</h2><p class="text-muted mb-0">管理运营项目、社媒内容、素材和发布节奏。</p></div>
+                                    <div class="text-center"><div class="fs-2 fw-bold"><field name="active_project_count" nolabel="1"/></div><small class="text-muted">运营项目</small></div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button name="action_open_projects" type="object" string="市场项目" icon="fa-briefcase" class="btn-primary"/>
+                                    <button name="action_open_content" type="object" string="社媒内容" icon="fa-file-text-o" class="btn-secondary"/>
+                                    <button name="action_open_assets" type="object" string="素材库" icon="fa-picture-o" class="btn-secondary"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-4 px-2">
+                            <div class="border rounded-3 p-4 h-100 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                    <div><h2 class="h4 mb-1"><i class="fa fa-handshake-o text-primary me-2"/>客户成交</h2><p class="text-muted mb-0">从客户线索、需求和跟进推进到报价与订单。</p></div>
+                                    <div class="text-center"><div class="fs-2 fw-bold"><field name="lead_followup_count" nolabel="1"/></div><small class="text-muted">待跟进</small></div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button name="action_open_crm" type="object" string="CRM" icon="fa-filter" class="btn-primary"/>
+                                    <button name="action_open_contacts" type="object" string="联系人" icon="fa-address-book-o" class="btn-secondary"/>
+                                    <button name="action_open_sales" type="object" string="销售订单" icon="fa-file-text" class="btn-secondary"/>
+                                </div>
+                                <div class="mt-3 text-muted">进行中销售订单：<field name="open_sale_count" nolabel="1" class="fw-bold"/></div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-4 px-2">
+                            <div class="border rounded-3 p-4 h-100 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                    <div><h2 class="h4 mb-1"><i class="fa fa-truck text-primary me-2"/>供应链交付</h2><p class="text-muted mb-0">集中处理采购、收货、库存、出库和交付。</p></div>
+                                    <div class="text-center"><div class="fs-2 fw-bold"><field name="open_purchase_count" nolabel="1"/></div><small class="text-muted">待处理采购</small></div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button name="action_open_purchase" type="object" string="采购" icon="fa-shopping-cart" class="btn-primary"/>
+                                    <button name="action_open_inventory" type="object" string="库存与交付" icon="fa-cubes" class="btn-secondary"/>
+                                </div>
+                                <div class="mt-3 text-muted">待处理收发货：<field name="pending_delivery_count" nolabel="1" class="fw-bold"/></div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-4 px-2">
+                            <div class="border rounded-3 p-4 h-100 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                    <div><h2 class="h4 mb-1"><i class="fa fa-line-chart text-primary me-2"/>财务与复盘</h2><p class="text-muted mb-0">查看开票回款、退款、净收入和渠道经营效果。</p></div>
+                                    <div class="text-center"><div class="fs-2 fw-bold"><field name="unpaid_invoice_count" nolabel="1"/></div><small class="text-muted">待收款发票</small></div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button name="action_open_invoices" type="object" string="客户发票" icon="fa-money" class="btn-primary"/>
+                                    <button name="action_open_performance" type="object" string="经营数据" icon="fa-bar-chart" class="btn-secondary"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-4 px-2">
+                            <div class="border rounded-3 p-4 h-100 shadow-sm">
+                                <div class="mb-3"><h2 class="h4 mb-1"><i class="fa fa-cogs text-primary me-2"/>协同与设置</h2><p class="text-muted mb-0">安排日程，维护账号集群、工作节点和系统参数。</p></div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button name="action_open_calendar" type="object" string="日历" icon="fa-calendar" class="btn-primary"/>
+                                    <button name="action_open_resources" type="object" string="账号集群" icon="fa-users" class="btn-secondary"/>
+                                    <button name="action_open_settings" type="object" string="本地工具设置" icon="fa-wrench" class="btn-secondary"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_psc_business_hub" model="ir.actions.act_window">
+        <field name="name">LightLink 业务中心</field>
+        <field name="res_model">psc.business.hub</field>
+        <field name="view_mode">form</field>
+        <field name="res_id" ref="business_hub_main"/>
+        <field name="target">current</field>
+    </record>
+</odoo>
