@@ -59,12 +59,41 @@
                 <group string="这一类具体要做什么"><field name="execution_goal" nolabel="1" colspan="2"/></group>
                 <notebook>
                     <page string="中英文对照文案模板">
-                        <group col="2">
-                            <group string="中文模板（制作参考）"><field name="copy_template_zh" nolabel="1" placeholder="填写适合当前赛道、角色和内容类型的中文制作模板。"/></group>
-                            <group string="English Template（发布参考）"><field name="copy_template" nolabel="1" placeholder="Enter the English publishing template for this track, role and content type."/></group>
-                        </group>
+                        <div class="row g-3 w-100 m-0" colspan="4">
+                            <div class="col-12 col-lg-6 px-2">
+                                <div class="border rounded-3 bg-light p-3 h-100">
+                                    <h4 class="mb-1">中文模板</h4>
+                                    <p class="text-muted small mb-3">制作与审核参考：先按中文结构准备事实、素材和表达重点。</p>
+                                    <field name="copy_template_zh" nolabel="1" class="w-100" placeholder="填写适合当前赛道、角色和内容类型的中文制作模板。"/>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-6 px-2">
+                                <div class="border rounded-3 bg-light p-3 h-100">
+                                    <h4 class="mb-1">English Template</h4>
+                                    <p class="text-muted small mb-3">Publishing reference: use this structure for English website and social content.</p>
+                                    <field name="copy_template" nolabel="1" class="w-100" placeholder="Enter the English publishing template for this track, role and content type."/>
+                                </div>
+                            </div>
+                        </div>
                     </page>
-                    <page string="发布前准备"><field name="required_evidence" nolabel="1"/><field name="notes" nolabel="1" placeholder="记录后续根据流量、询盘和成交数据得出的调整建议。"/></page>
+                    <page string="发布前准备">
+                        <div class="row g-3 w-100 m-0" colspan="4">
+                            <div class="col-12 col-lg-7 px-2">
+                                <div class="border rounded-3 bg-light p-3 h-100">
+                                    <h4 class="mb-1">必须准备的事实与素材</h4>
+                                    <p class="text-muted small mb-3">没有可靠依据的项目应删除或暂缓发布，不由 AI 补写。</p>
+                                    <field name="required_evidence" nolabel="1" class="w-100"/>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-5 px-2">
+                                <div class="border rounded-3 bg-light p-3 h-100">
+                                    <h4 class="mb-1">运营调整记录</h4>
+                                    <p class="text-muted small mb-3">根据流量、询盘、报价与成交数据记录下一轮优化。</p>
+                                    <field name="notes" nolabel="1" class="w-100" placeholder="记录后续调整建议。"/>
+                                </div>
+                            </div>
+                        </div>
+                    </page>
                 </notebook>
             </sheet></form>
         </field>
