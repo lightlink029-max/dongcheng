@@ -357,6 +357,8 @@ class AiAction(models.Model):
                 raise ValidationError(_("内容计划不符合项目的市场或渠道范围。"))
             if clusters - project.account_cluster_ids:
                 raise ValidationError(_("目标账号集群不属于当前项目。"))
+            if products - project.product_ids:
+                raise ValidationError(_("关联产品不属于当前项目。"))
             if scope.code == "product_category" and not products:
                 raise ValidationError(_("“产品或品类介绍”内容必须关联真实产品。"))
             record = self.env["psc.content.plan"].create({

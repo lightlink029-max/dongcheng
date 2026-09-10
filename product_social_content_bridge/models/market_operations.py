@@ -707,6 +707,16 @@ class ContentPlan(models.Model):
             products = plan.product_ids | plan.product_id
             if plan.scope_id.code == "product_category" and not products:
                 raise UserError(_("“产品或品类介绍”内容必须至少关联一个真实产品。"))
+            if plan.scope_id.code == "product_category":
+                approved_products = plan.project_id.project_product_ids.filtered(
+                    lambda item: item.product_id in products
+                    and item.status == "active"
+                    and item.compliance_state == "passed"
+                    and item.material_state == "complete"
+                    and item.hard_gate_passed
+                ).mapped("product_id")
+                if products - approved_products:
+                    raise UserError(_("产品类内容只能使用已完成资料、合规和硬门槛审核的项目产品。"))
             existing = {(content.market_id.id, content.channel_id.id) for content in plan.content_ids}
             created = self.env["psc.content.variant"]
             for market in markets:
