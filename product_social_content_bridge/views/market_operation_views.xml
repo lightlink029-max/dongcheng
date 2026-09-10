@@ -171,7 +171,7 @@
             <xpath expr="//sheet/notebook/page[1]" position="before">
                 <page string="上线准备" name="launch_readiness">
                     <div class="alert alert-info" role="alert">只有进度达到 100%、全部硬门槛有真实依据且首发产品通过审核后，项目才能启动运营或创建发布任务。</div>
-                    <group string="上线状态" col="6">
+                    <group string="上线状态" col="6" colspan="2">
                         <field name="readiness_progress" widget="progressbar" options="{'max_value': 100}" readonly="1"/>
                         <field name="readiness_done_count" readonly="1"/>
                         <field name="readiness_total_count" readonly="1"/>
@@ -179,10 +179,12 @@
                         <field name="readiness_overdue_count" readonly="1"/>
                         <field name="launch_ready" readonly="1"/>
                     </group>
-                    <field name="readiness_blocker_summary" nolabel="1" readonly="1" invisible="not readiness_blocker_summary"/>
-                    <button name="action_open_readiness_items" type="object" string="查看完整准备清单" icon="fa-list" class="btn-secondary mb-2"/>
-                    <field name="readiness_item_ids" context="{'default_project_id': id}" mode="list,form">
-                        <list limit="8" decoration-success="state == 'done'" decoration-danger="state == 'blocked'" decoration-warning="state == 'doing'">
+                    <field name="readiness_blocker_summary" nolabel="1" colspan="2" readonly="1" invisible="not readiness_blocker_summary"/>
+                    <div class="d-flex justify-content-end mb-2" colspan="2">
+                        <button name="action_open_readiness_items" type="object" string="查看完整准备清单" icon="fa-list" class="btn-secondary"/>
+                    </div>
+                    <field name="readiness_item_ids" nolabel="1" colspan="2" class="w-100" context="{'default_project_id': id}" mode="list,form">
+                        <list limit="8" create="false" delete="false" decoration-success="state == 'done'" decoration-danger="state == 'blocked'" decoration-warning="state == 'doing'">
                             <field name="name"/>
                             <field name="responsibility" widget="badge"/>
                             <field name="due_date"/>
