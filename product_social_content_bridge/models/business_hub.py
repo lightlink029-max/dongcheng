@@ -152,7 +152,45 @@ class BusinessHub(models.Model):
             ])
             for sequence, menu in enumerate(custom_menus, start=1):
                 menu.write({"parent_id": other.id, "sequence": sequence * 10})
+        self._ensure_dashboard_performance_menu()
         return True
+
+    @api.model
+    def _ensure_dashboard_performance_menu(self):
+        """Expose the same operating data action inside the optional Dashboards app."""
+        dashboard = self.env.ref(
+            "spreadsheet_dashboard.spreadsheet_dashboard_menu_root",
+            raise_if_not_found=False,
+        )
+        action = self.env.ref(
+            "product_social_content_bridge.action_psc_performance_snapshots",
+            raise_if_not_found=False,
+        )
+        if not dashboard or not action:
+            return False
+
+        menu = self.env.ref(
+            "product_social_content_bridge.menu_psc_dashboard_performance",
+            raise_if_not_found=False,
+        )
+        values = {
+            "name": _("经营数据"),
+            "parent_id": dashboard.id,
+            "action": f"{action._name},{action.id}",
+            "sequence": 90,
+        }
+        if menu:
+            menu.write(values)
+        else:
+            menu = self.env["ir.ui.menu"].create(values)
+            self.env["ir.model.data"].create({
+                "module": "product_social_content_bridge",
+                "name": "menu_psc_dashboard_performance",
+                "model": "ir.ui.menu",
+                "res_id": menu.id,
+                "noupdate": False,
+            })
+        return menu
 
     @api.model
     def _category_records(self):
