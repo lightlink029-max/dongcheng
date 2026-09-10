@@ -165,6 +165,18 @@ class MarketOperationsWorkflowCase(TransactionCase):
         self.assertEqual(len(rules), 10)
         self.assertEqual(sum(rules.mapped("content_ratio")), 100)
         self.assertTrue(all(0 <= value <= 100 for value in rules.mapped("video_ratio")))
+        self.assertTrue(all(rules.mapped("execution_goal")))
+        self.assertTrue(all(rules.mapped("copy_template")))
+        self.assertTrue(all(rules.mapped("required_evidence")))
+
+        footwear_rule = self.env["psc.content.mix.rule"].search([
+            ("track_id", "=", self.env.ref("product_social_content_bridge.track_footwear_apparel").id),
+            ("role_id", "=", self.env.ref("product_social_content_bridge.role_sourcing_agent").id),
+            ("scope_id", "=", self.env.ref("product_social_content_bridge.content_scope_sourcing_service").id),
+        ], limit=1)
+        self.assertIn("footwear", footwear_rule.copy_template.lower())
+        self.assertIn("china sourcing", footwear_rule.copy_template.lower())
+        self.assertEqual(footwear_rule.action_open_guide()["res_id"], footwear_rule.id)
 
     def test_ai_content_and_website_publication_workflow(self):
         post = self._generate_channel_content()

@@ -48,7 +48,21 @@
     </record>
     <record id="view_psc_content_mix_rule_list" model="ir.ui.view">
         <field name="name">psc.content.mix.rule.list</field><field name="model">psc.content.mix.rule</field>
-        <field name="arch" type="xml"><list editable="bottom"><field name="track_id"/><field name="role_id"/><field name="scope_id"/><field name="content_ratio" sum="合计"/><field name="video_ratio"/><field name="notes" optional="hide"/><field name="active"/></list></field>
+        <field name="arch" type="xml"><list editable="bottom"><field name="track_id"/><field name="role_id"/><field name="scope_id"/><field name="execution_goal" optional="show"/><field name="content_ratio" sum="合计"/><field name="video_ratio"/><button name="action_open_guide" type="object" string="查看模板" icon="fa-book"/><field name="notes" optional="hide"/><field name="active"/></list></field>
+    </record>
+    <record id="view_psc_content_mix_rule_form" model="ir.ui.view">
+        <field name="name">psc.content.mix.rule.form</field><field name="model">psc.content.mix.rule</field>
+        <field name="arch" type="xml">
+            <form><sheet>
+                <div class="oe_title"><h1><field name="scope_id"/></h1></div>
+                <group><group><field name="track_id"/><field name="role_id"/><field name="active"/></group><group><field name="content_ratio"/><field name="video_ratio"/></group></group>
+                <group string="这一类具体要做什么"><field name="execution_goal" nolabel="1" colspan="2"/></group>
+                <notebook>
+                    <page string="可直接套用的英文文案模板"><field name="copy_template" nolabel="1" placeholder="填写适合当前赛道、角色和内容类型的英文文案结构及占位项。"/></page>
+                    <page string="发布前准备"><field name="required_evidence" nolabel="1"/><field name="notes" nolabel="1" placeholder="记录后续根据流量、询盘和成交数据得出的调整建议。"/></page>
+                </notebook>
+            </sheet></form>
+        </field>
     </record>
     <record id="view_psc_content_mix_rule_search" model="ir.ui.view">
         <field name="name">psc.content.mix.rule.search</field><field name="model">psc.content.mix.rule</field>
@@ -241,7 +255,7 @@
                             <button name="action_open_video_content_share" type="object" string="查看实际发布占比" icon="fa-pie-chart" class="btn-secondary"/>
                         </div>
                         <field name="content_mix_rule_ids" nolabel="1" colspan="4" class="w-100" readonly="1">
-                            <list create="false" delete="false" limit="10"><field name="scope_id"/><field name="content_ratio" sum="合计"/><field name="video_ratio"/><field name="notes" optional="hide"/></list>
+                            <list create="false" delete="false" limit="10"><field name="scope_id"/><field name="execution_goal" string="具体要做什么"/><field name="content_ratio" sum="合计"/><field name="video_ratio"/><button name="action_open_guide" type="object" string="查看模板" icon="fa-book"/><field name="notes" optional="hide"/></list>
                         </field>
                         <separator string="账号集群" colspan="4"/>
                         <div class="text-muted mb-2" colspan="4">选择本项目可用的账号集群；内容任务可以进一步指定发布到哪些集群。</div>

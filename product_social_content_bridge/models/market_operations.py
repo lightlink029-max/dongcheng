@@ -99,6 +99,175 @@ TRACK_VIDEO_MULTIPLIERS = {
     "footwear_apparel": 1.1, "daily_goods": 1.1,
 }
 
+TRACK_COPY_CONTEXT = {
+    "medical": {
+        "industry": "medical devices and medical supplies",
+        "buyers": "hospitals, clinics, medical distributors and institutional procurement teams",
+        "proof": "intended use, model/specification, applicable certification, registration status, training, warranty and delivery evidence",
+    },
+    "energy_storage": {
+        "industry": "energy-storage and renewable-energy systems",
+        "buyers": "installers, EPC contractors, energy distributors, project developers and commercial buyers",
+        "proof": "capacity, power, voltage, cell and BMS configuration, safety/transport certification, compatibility, warranty and project conditions",
+    },
+    "footwear_apparel": {
+        "industry": "footwear, apparel and accessories",
+        "buyers": "importers, wholesalers, private-label brands, retailers and e-commerce buyers",
+        "proof": "material, size range, colour, MOQ, sampling status, unit-price basis, production lead time, packaging, inspection and IP authorization",
+    },
+    "daily_goods": {
+        "industry": "household and daily-use consumer goods",
+        "buyers": "importers, wholesalers, supermarket chains, retailers and e-commerce sellers",
+        "proof": "material, dimensions, intended use, set configuration, MOQ, packaging, carton data, testing/label requirements and delivery terms",
+    },
+}
+
+ROLE_COPY_CONTEXT = {
+    "direct_factory": (
+        "the verified manufacturer",
+        "show the real facility, process, quality controls, capacity and delivery capability",
+        "Send your specification and target quantity for a manufacturability review",
+    ),
+    "oem_factory": (
+        "an OEM/ODM manufacturing partner",
+        "show how a buyer brief becomes a sample, approved specification and repeatable production order",
+        "Share your reference, specification and launch date to start a sampling review",
+    ),
+    "integrator": (
+        "a solution and system-integration partner",
+        "connect buyer requirements to product selection, system design, implementation and after-sales support",
+        "Send the application scenario and constraints for an initial solution review",
+    ),
+    "trading_company": (
+        "a multi-supplier export and trading partner",
+        "show product selection, supplier coordination, consolidated quality control and international delivery",
+        "Send your product list, quantities and destination for a coordinated quotation",
+    ),
+    "sourcing_agent": (
+        "a China sourcing and supplier-management partner",
+        "show supplier search, comparison, factory verification, inspection, follow-up and risk control without claiming partner factories as owned",
+        "Send your product brief, target price, quantity and delivery date for a sourcing assessment",
+    ),
+    "brand_owner": (
+        "the product brand owner",
+        "show the brand promise, differentiated product experience and channel value",
+        "Contact us for product details, wholesale terms or channel cooperation",
+    ),
+    "distributor": (
+        "a wholesale and regional distribution partner",
+        "show assortment, volume tiers, stock or replenishment capability, local delivery and service",
+        "Send your territory, channel and expected volume for wholesale terms",
+    ),
+    "epc": (
+        "an engineering and EPC delivery partner",
+        "show design assumptions, site execution, schedule, safety, commissioning and accountable delivery",
+        "Share the site conditions, scope and target schedule for a project review",
+    ),
+    "dtc": (
+        "the customer-facing product team",
+        "translate product facts into clear use cases, experience, proof and after-sales confidence",
+        "View the verified product details or contact support before ordering",
+    ),
+}
+
+CONTENT_EXECUTION_GOALS = {
+    "brand_positioning": "讲清服务谁、解决什么采购问题、承担什么角色，以及不承担什么；让客户在 10 秒内理解项目定位。",
+    "sourcing_service": "把寻源、筛选、比价、验厂、跟单和验货拆成透明步骤，说明客户每一步能得到的结果。",
+    "china_supply_chain": "用产业带、供应商网络、交期和协同实例说明中国供应链能力，不用空泛的资源宣传。",
+    "industry_knowledge": "围绕买家真实决策问题做一条可收藏的选型、采购、合规或风险清单。",
+    "supplier_quality": "展示供应商准入、验厂、生产检查或出货前验货的真实过程、判定标准和整改结果。",
+    "oem_sampling": "解释从需求、设计和材料确认到样品迭代及量产封样的完整路径。",
+    "packaging_delivery": "用真实包装、装箱、验货和运输信息说明如何降低破损、延误和到货差异。",
+    "product_category": "只基于已核实产品资料，说明适用买家、规格、采购价值和限制，并引导索取报价或样品。",
+    "customer_case": "在获得授权且事实可核实的前提下，用问题—行动—结果结构复盘客户案例；无授权时不得发布。",
+    "market_trends": "把市场、季节或渠道变化转成买家可执行的选品和采购建议，并标明数据时间与来源。",
+}
+
+CONTENT_EVIDENCE_GUIDES = {
+    "brand_positioning": "目标客户、服务范围、团队真实能力、合作边界和统一询盘入口",
+    "sourcing_service": "客户需求表、候选供应商比较、报价条件、检查节点和交付记录",
+    "china_supply_chain": "可核实产业带、合作供应商、MOQ、产能、交期和出口协调记录",
+    "industry_knowledge": "可追溯标准、法规、规格、采购数据或内部验证记录，并注明适用范围和日期",
+    "supplier_quality": "供应商授权、验厂清单、质检照片/视频、抽检标准、不合格项和整改证据",
+    "oem_sampling": "客户需求、材料/颜色/尺寸确认、样品版本、修改记录、封样和量产条件",
+    "packaging_delivery": "包装规格、装箱数据、验货结果、运输节点、交付文件和异常处理记录",
+    "product_category": "真实产品、规格、材质、MOQ、价格基础、交期、包装、测试和图片授权",
+    "customer_case": "客户书面授权、脱敏要求、问题背景、过程记录、可量化结果和结果口径",
+    "market_trends": "来源链接、发布日期、目标市场、样本口径、趋势期限和对应采购建议",
+}
+
+CONTENT_COPY_TEMPLATES = {
+    "brand_positioning": """Headline: We help [buyer segment] source {industry} from China with [verified outcome].
+Problem: [Describe one costly sourcing or delivery problem in the buyer's words].
+Our role: We work as {role_identity}. We {role_value}.
+How it works: 1) [requirement check] 2) [execution step] 3) [quality/delivery control].
+Proof: [Insert 2-3 verified facts from Odoo; remove this line if evidence is unavailable].
+Boundary: State clearly what is handled directly and what is delivered by verified partner factories.
+CTA: {cta}.""",
+    "sourcing_service": """Hook: Need a reliable source for [specific {industry} requirement] without losing visibility?
+Buyer brief: [specification] / [quantity] / [target price] / [delivery date].
+Our workflow as {role_identity}: requirement validation → supplier shortlist → comparable quotations → verification → sample/order follow-up → inspection and delivery coordination.
+Decision output: [what the buyer receives at each stage].
+Proof: [Insert a verified comparison, timeline, inspection record or delivery milestone].
+CTA: {cta}.""",
+    "china_supply_chain": """Headline: What China's {industry} supply chain can realistically deliver for [buyer segment].
+Buyer need: [product/specification/volume/timeline].
+Supply-chain map: [relevant production cluster] → [supplier type] → [key process] → [quality gate] → [export hand-off].
+Trade-off: [Explain the verified MOQ, cost, speed or customization trade-off].
+Our role: As {role_identity}, we {role_value}.
+CTA: {cta}.""",
+    "industry_knowledge": """Title: [Number] checks before buying [specific product/category] for [market or use case].
+1. [Selection criterion] — why it matters: [buyer impact].
+2. [Specification/compliance criterion] — verify: [document or test].
+3. [Commercial criterion] — compare: [MOQ, price basis, lead time or warranty].
+Common mistake: [one evidence-backed risk and how to avoid it].
+Buyer checklist: [3 questions to send suppliers].
+CTA: Save this checklist, then {cta_lower}.""",
+    "supplier_quality": """Hook: A supplier quote is not the same as a verified supply option.
+Scope: [factory audit / pre-production check / during-production inspection / pre-shipment inspection] for [product].
+We checked: [criterion 1], [criterion 2], [criterion 3].
+Finding: [verified pass/fail/observation; never invent a result].
+Action: [corrective action, recheck or buyer decision].
+Role clarity: We act as {role_identity}; identify partner factories accurately.
+CTA: {cta}.""",
+    "oem_sampling": """Title: From [buyer idea/reference] to an approved {industry} sample.
+Step 1 — brief: [use, target buyer, specification, quantity and launch date].
+Step 2 — development: [material/component/colour/branding decisions].
+Step 3 — sample review: [fit/function/appearance/test criteria].
+Step 4 — revision and approval: [version change and sign-off evidence].
+Step 5 — production hand-off: [sealed sample, specification and quality checkpoints].
+CTA: {cta}.""",
+    "packaging_delivery": """Hook: Good products still fail when packaging and delivery details are left too late.
+Order: [product] / [quantity] / [destination] / [required date].
+Packaging plan: [unit pack], [inner/carton], [dimensions/weight], [label and barcode].
+Pre-shipment check: [quantity, appearance, function and carton checks].
+Delivery control: [Incoterm], [documents], [handover milestone] and [exception plan].
+Verified result: [real inspection or delivery status].
+CTA: {cta}.""",
+    "product_category": """Headline: [Verified product/category] for [buyer segment and use case].
+Buyer value: [specific commercial or operational benefit supported by facts].
+Verified specification: [material/model/size/capacity] | MOQ: [value] | Lead time: [value] | Packaging: [value].
+Customization: [available verified options].
+Best fit: [buyer/use case]. Not suitable for: [known limitation].
+Proof: [approved product images, test documents or sample status].
+CTA: Request the verified specification sheet, sample terms or quotation.""",
+    "customer_case": """Title: How [authorized customer type, anonymized if required] solved [specific problem].
+Starting point: [verified requirement, constraint and target].
+Our role as {role_identity}: [actions actually completed].
+Solution: [selection, supplier, customization, quality and delivery steps].
+Result: [authorized measurable result with period and calculation basis].
+What we learned: [one reusable buyer insight].
+Authorization note: [record approval scope; do not publish without it].
+CTA: {cta}.""",
+    "market_trends": """Headline: What [dated market/channel trend] means for {industry} buyers in [target market].
+Signal: [verified data point] from [source and date].
+Interpretation: [what changed and what did not].
+Buyer impact: [effect on assortment, specification, MOQ, price, inventory or lead time].
+Recommended action: [one action now], [one item to validate], [one trigger to monitor].
+Limit: State the geography, period and sample limitations.
+CTA: {cta}.""",
+}
+
 
 class BusinessCapability(models.Model):
     _name = "psc.business.capability"
@@ -298,6 +467,9 @@ class ContentMixRule(models.Model):
     sequence = fields.Integer(related="scope_id.sequence", store=True, readonly=True)
     content_ratio = fields.Float(string="建议内容占比 %", required=True)
     video_ratio = fields.Float(string="其中视频占比 %", required=True)
+    execution_goal = fields.Char(string="具体要做什么", translate=True)
+    copy_template = fields.Text(string="英文文案模板", translate=True)
+    required_evidence = fields.Text(string="发布前准备", translate=True)
     notes = fields.Text(string="运营说明", translate=True)
     active = fields.Boolean(default=True)
 
@@ -310,6 +482,62 @@ class ContentMixRule(models.Model):
         for record in self:
             if not 0 <= record.content_ratio <= 100 or not 0 <= record.video_ratio <= 100:
                 raise ValidationError(_("内容占比和视频占比必须在 0 到 100 之间。"))
+
+    @api.model
+    def _default_guide_values(self, track, role, scope):
+        track_context = TRACK_COPY_CONTEXT.get(track.code, {
+            "industry": track.name,
+            "buyers": track.default_customer_profile or _("目标买家"),
+            "proof": track.customer_requirement_template or track.compliance_notes or _("已核实业务事实"),
+        })
+        role_identity, role_value, cta = ROLE_COPY_CONTEXT.get(role.code, (
+            role.name,
+            role.content_focus or role.description or _("explain the verified value delivered to the buyer"),
+            _("Send your requirements for an initial review"),
+        ))
+        execution = CONTENT_EXECUTION_GOALS.get(scope.code, scope.description or scope.name)
+        evidence = CONTENT_EVIDENCE_GUIDES.get(scope.code, track_context["proof"])
+        if track.compliance_notes:
+            evidence = _("%(evidence)s；赛道合规边界：%(compliance)s", evidence=evidence,
+                         compliance=track.compliance_notes)
+        template = CONTENT_COPY_TEMPLATES.get(scope.code, CONTENT_COPY_TEMPLATES["industry_knowledge"])
+        return {
+            "execution_goal": _(
+                "面向“%(track)s”的目标客户，以“%(role)s”身份：%(execution)s",
+                track=track.name, role=role.name, execution=execution,
+            ),
+            "copy_template": template.format(
+                industry=track_context["industry"],
+                buyers=track_context["buyers"],
+                proof=track_context["proof"],
+                role_identity=role_identity,
+                role_value=role_value,
+                cta=cta,
+                cta_lower=cta[:1].lower() + cta[1:],
+            ),
+            "required_evidence": evidence,
+        }
+
+    @api.onchange("track_id", "role_id", "scope_id")
+    def _onchange_content_guide(self):
+        for record in self:
+            if not (record.track_id and record.role_id and record.scope_id):
+                continue
+            defaults = record._default_guide_values(record.track_id, record.role_id, record.scope_id)
+            for field_name, value in defaults.items():
+                if not record[field_name]:
+                    record[field_name] = value
+
+    def action_open_guide(self):
+        self.ensure_one()
+        return {
+            "name": _("内容执行模板"),
+            "type": "ir.actions.act_window",
+            "res_model": self._name,
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "new",
+        }
 
     @api.model
     def ensure_default_profiles(self):
@@ -355,6 +583,16 @@ class ContentMixRule(models.Model):
                     })
         if values_list:
             self.create(values_list)
+        profile_rules = self.search([
+            ("track_id.code", "in", tuple(TRACK_CONTENT_WEIGHTS)),
+            ("role_id.code", "in", tuple(ROLE_CONTENT_MULTIPLIERS)),
+            ("scope_id.code", "in", CONTENT_SCOPE_CODES),
+        ])
+        for rule in profile_rules:
+            defaults = self._default_guide_values(rule.track_id, rule.role_id, rule.scope_id)
+            missing = {name: value for name, value in defaults.items() if not rule[name]}
+            if missing:
+                rule.write(missing)
         return True
 
 class ProjectProduct(models.Model):

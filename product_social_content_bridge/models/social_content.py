@@ -740,6 +740,12 @@ class ContentVariant(models.Model):
         track = project.track_id
         role = project.business_role_id
         pillar = self.pillar_id
+        mix_rule = self.env["psc.content.mix.rule"].search([
+            ("track_id", "=", track.id),
+            ("role_id", "=", role.id),
+            ("scope_id", "=", self.scope_id.id),
+            ("active", "=", True),
+        ], limit=1) if track and role and self.scope_id else False
         return {
             "content_scope": self.scope_id.name if self.scope_id else "",
             "content_format": self.content_format or "",
@@ -773,6 +779,9 @@ class ContentVariant(models.Model):
             "track_compliance": track.compliance_notes if track else "",
             "business_role": role.name if role else "",
             "business_role_description": role.description if role else "",
+            "content_execution_goal": mix_rule.execution_goal if mix_rule else "",
+            "content_copy_template": mix_rule.copy_template if mix_rule else "",
+            "content_required_evidence": mix_rule.required_evidence if mix_rule else "",
             "verified_capabilities": project.capability_ids.mapped("name"),
             "business_goal": project.business_goal or "",
             "content_pillar": pillar.name if pillar else "",
@@ -803,6 +812,8 @@ class ContentVariant(models.Model):
             "Write all customer-facing output in the requested language. "
             "Return concise, platform-appropriate content and respect the caption limit. "
             "The video_script must be a practical 15-30 second shot list with voiceover and on-screen text. "
+            "When content_copy_template is supplied, follow its structure while replacing placeholders only "
+            "with verified context; omit unsupported sections instead of inventing facts. "
             "For product content, preserve the real product. For service or project content, use only supplied "
             "project facts and materials and describe a clean B2B commercial composition."
         )
