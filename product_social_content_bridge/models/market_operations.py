@@ -553,7 +553,7 @@ class ContentMixRule(models.Model):
     video_ratio = fields.Float(string="其中视频占比 %", required=True)
     execution_goal = fields.Char(string="具体要做什么", translate=True)
     copy_template_zh = fields.Text(string="中文文案模板")
-    copy_template = fields.Text(string="英文文案模板")
+    copy_template = fields.Text(string="英文文案模板", translate=True)
     required_evidence = fields.Text(string="发布前准备", translate=True)
     notes = fields.Text(string="运营说明", translate=True)
     active = fields.Boolean(default=True)
@@ -1598,12 +1598,17 @@ class PublishingProjectOperations(models.Model):
         self.ensure_one()
         if not (self.track_id and self.business_role_id):
             return ""
+        focus = (
+            self.business_role_id.content_focus
+            or self.business_role_id.description
+            or _("可核实的客户价值")
+        ).rstrip("。；; ")
         return _(
             "面向“%(track)s”赛道的目标客户，以“%(role)s”身份进行内容创作。重点展示：%(focus)s。"
             "所有产品、供应商、认证、价格、交期、案例和结果只能使用 Odoo 中已核实的事实；合规边界：%(compliance)s",
             track=self.track_id.name,
             role=self.business_role_id.name,
-            focus=self.business_role_id.content_focus or self.business_role_id.description or _("可核实的客户价值"),
+            focus=focus,
             compliance=self.track_id.compliance_notes or _("不得虚构或夸大任何业务事实。"),
         )
 
@@ -1612,10 +1617,10 @@ class PublishingProjectOperations(models.Model):
         projects = self.search([
             ("track_id", "!=", False),
             ("business_role_id", "!=", False),
-            ("content_brief_zh", "=", False),
         ])
         for project in projects:
-            project.content_brief_zh = project._default_content_brief_zh()
+            if not project.content_brief_zh or "。。" in project.content_brief_zh:
+                project.content_brief_zh = project._default_content_brief_zh()
         return True
 
     def action_activate_operation(self):

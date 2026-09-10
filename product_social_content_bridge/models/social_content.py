@@ -216,7 +216,7 @@ class PublishingProject(models.Model):
     user_id = fields.Many2one("res.users", string="负责人", default=lambda self: self.env.user)
     company_id = fields.Many2one("res.company", required=True, default=lambda self: self.env.company)
     scheduled_date = fields.Datetime(string="计划发布时间")
-    content_brief = fields.Text(string="项目内容总规则（英文）")
+    content_brief = fields.Text(string="项目内容总规则（英文）", translate=True)
     state = fields.Selection([
         ("draft", "草稿"), ("generated", "待确认"),
         ("ready", "待发布"), ("publishing", "发布中"),
