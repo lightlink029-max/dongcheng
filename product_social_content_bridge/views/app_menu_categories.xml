@@ -9,8 +9,7 @@
     <menuitem id="menu_psc_category_other" name="其他" sequence="100" web_icon="base,static/description/modules.png"/>
 
     <menuitem id="menu_psc_finance_performance" name="经营数据" parent="menu_psc_category_finance"
-              action="action_psc_performance_snapshots" sequence="30"
-              web_icon="spreadsheet_dashboard,static/description/icon.png"/>
+              action="action_psc_performance_snapshots" sequence="30"/>
 
     <function model="psc.business.hub" name="organize_application_menus"/>
 </odoo>
