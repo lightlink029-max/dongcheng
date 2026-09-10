@@ -63,6 +63,42 @@ FOOTWEAR_SOURCING_READINESS_TEMPLATE = (
      "每周基于渠道、产品、客户和净毛利数据生成保留、迭代或停止建议。"),
 )
 
+CONTENT_SCOPE_CODES = (
+    "brand_positioning", "sourcing_service", "china_supply_chain", "industry_knowledge",
+    "supplier_quality", "oem_sampling", "packaging_delivery", "product_category",
+    "customer_case", "market_trends",
+)
+
+TRACK_CONTENT_WEIGHTS = {
+    "medical": (10, 8, 10, 15, 18, 8, 8, 12, 7, 4),
+    "energy_storage": (8, 5, 10, 15, 20, 8, 7, 12, 10, 5),
+    "footwear_apparel": (8, 15, 15, 10, 15, 12, 10, 10, 3, 2),
+    "daily_goods": (8, 12, 12, 10, 12, 12, 12, 15, 4, 3),
+}
+
+ROLE_CONTENT_MULTIPLIERS = {
+    "direct_factory": (1.0, 0.4, 1.2, 0.8, 1.4, 1.3, 1.0, 1.2, 1.0, 0.7),
+    "oem_factory": (0.9, 0.5, 1.0, 0.8, 1.2, 1.8, 1.2, 1.1, 1.0, 0.6),
+    "integrator": (0.9, 0.8, 1.1, 1.4, 1.0, 0.6, 1.1, 0.8, 1.8, 0.8),
+    "trading_company": (0.8, 1.4, 1.3, 1.0, 1.3, 0.8, 1.3, 1.2, 0.8, 1.0),
+    "sourcing_agent": (0.8, 1.7, 1.5, 1.2, 1.6, 0.9, 1.3, 0.7, 0.8, 0.8),
+    "brand_owner": (1.6, 0.5, 0.8, 1.0, 0.9, 1.3, 1.1, 1.5, 1.4, 1.2),
+    "distributor": (1.0, 0.9, 1.0, 1.0, 1.0, 0.5, 1.4, 1.4, 1.2, 1.1),
+    "epc": (0.8, 0.6, 1.0, 1.2, 1.3, 0.5, 1.5, 0.8, 2.0, 0.6),
+    "dtc": (1.5, 0.3, 0.5, 0.9, 0.8, 0.6, 1.0, 1.8, 1.5, 1.5),
+}
+
+ROLE_VIDEO_MULTIPLIERS = {
+    "direct_factory": 1.05, "oem_factory": 1.05, "integrator": 0.95,
+    "trading_company": 0.95, "sourcing_agent": 1.0, "brand_owner": 1.1,
+    "distributor": 1.0, "epc": 1.0, "dtc": 1.15,
+}
+
+TRACK_VIDEO_MULTIPLIERS = {
+    "medical": 0.9, "energy_storage": 1.0,
+    "footwear_apparel": 1.1, "daily_goods": 1.1,
+}
+
 
 class BusinessCapability(models.Model):
     _name = "psc.business.capability"
@@ -211,6 +247,115 @@ class ContentPillar(models.Model):
             if not 0.0 <= pillar.default_ratio <= 100.0:
                 raise ValidationError(_("内容栏目占比必须在 0 到 100 之间。"))
 
+
+class ContentScope(models.Model):
+    _name = "psc.content.scope"
+    _description = "社媒内容类型"
+    _order = "sequence, name"
+
+    name = fields.Char(string="内容类型", required=True, translate=True)
+    code = fields.Char(string="代码", required=True, index=True)
+    sequence = fields.Integer(default=10)
+    description = fields.Text(string="定义与使用场景", translate=True)
+    default_video_ratio = fields.Float(string="默认视频占比 %", default=60.0)
+    active = fields.Boolean(default=True)
+
+    _code_unique = models.Constraint("UNIQUE(code)", "内容类型代码不能重复。")
+
+    @api.constrains("default_video_ratio")
+    def _check_default_video_ratio(self):
+        for record in self:
+            if not 0 <= record.default_video_ratio <= 100:
+                raise ValidationError(_("默认视频占比必须在 0 到 100 之间。"))
+
+
+class MediaTag(models.Model):
+    _name = "psc.media.tag"
+    _description = "社媒素材标签"
+    _order = "name"
+
+    name = fields.Char(string="标签", required=True)
+    color = fields.Integer(string="颜色")
+    active = fields.Boolean(default=True)
+
+    _name_unique = models.Constraint("UNIQUE(name)", "素材标签不能重复。")
+
+
+class ContentMixRule(models.Model):
+    _name = "psc.content.mix.rule"
+    _description = "赛道与角色内容比例"
+    _order = "track_id, role_id, sequence, id"
+
+    track_id = fields.Many2one(
+        "psc.industry.track", string="经营赛道", required=True, ondelete="cascade", index=True,
+    )
+    role_id = fields.Many2one(
+        "psc.business.role", string="主要经营角色", required=True, ondelete="cascade", index=True,
+    )
+    scope_id = fields.Many2one(
+        "psc.content.scope", string="内容类型", required=True, ondelete="cascade", index=True,
+    )
+    sequence = fields.Integer(related="scope_id.sequence", store=True, readonly=True)
+    content_ratio = fields.Float(string="建议内容占比 %", required=True)
+    video_ratio = fields.Float(string="其中视频占比 %", required=True)
+    notes = fields.Text(string="运营说明", translate=True)
+    active = fields.Boolean(default=True)
+
+    _profile_scope_unique = models.Constraint(
+        "UNIQUE(track_id, role_id, scope_id)", "同一赛道和角色的内容类型不能重复。",
+    )
+
+    @api.constrains("content_ratio", "video_ratio")
+    def _check_ratios(self):
+        for record in self:
+            if not 0 <= record.content_ratio <= 100 or not 0 <= record.video_ratio <= 100:
+                raise ValidationError(_("内容占比和视频占比必须在 0 到 100 之间。"))
+
+    @api.model
+    def ensure_default_profiles(self):
+        scopes = self.env["psc.content.scope"].search([
+            ("code", "in", CONTENT_SCOPE_CODES),
+        ])
+        scope_by_code = {scope.code: scope for scope in scopes}
+        if len(scope_by_code) != len(CONTENT_SCOPE_CODES):
+            return False
+        existing = set(self.search([]).mapped(lambda row: (
+            row.track_id.id, row.role_id.id, row.scope_id.id,
+        )))
+        roles = self.env["psc.business.role"].search([
+            ("code", "in", tuple(ROLE_CONTENT_MULTIPLIERS)), ("active", "=", True),
+        ])
+        values_list = []
+        for track in self.env["psc.industry.track"].search([
+            ("code", "in", tuple(TRACK_CONTENT_WEIGHTS)),
+        ]):
+            base_weights = TRACK_CONTENT_WEIGHTS[track.code]
+            for role in roles:
+                multipliers = ROLE_CONTENT_MULTIPLIERS.get(role.code, (1.0,) * len(CONTENT_SCOPE_CODES))
+                weighted = [base * multiplier for base, multiplier in zip(base_weights, multipliers)]
+                total = sum(weighted) or 1.0
+                ratios = [round(100.0 * value / total) for value in weighted]
+                ratios[weighted.index(max(weighted))] += 100 - sum(ratios)
+                video_multiplier = (
+                    TRACK_VIDEO_MULTIPLIERS.get(track.code, 1.0)
+                    * ROLE_VIDEO_MULTIPLIERS.get(role.code, 1.0)
+                )
+                for code, ratio in zip(CONTENT_SCOPE_CODES, ratios):
+                    scope = scope_by_code[code]
+                    key = (track.id, role.id, scope.id)
+                    if key in existing:
+                        continue
+                    values_list.append({
+                        "track_id": track.id,
+                        "role_id": role.id,
+                        "scope_id": scope.id,
+                        "content_ratio": ratio,
+                        "video_ratio": min(100.0, round(scope.default_video_ratio * video_multiplier)),
+                        "notes": _("系统经验初始值；可按真实发布、流量、询盘和成交数据调整。"),
+                    })
+        if values_list:
+            self.create(values_list)
+        return True
 
 class ProjectProduct(models.Model):
     _name = "psc.project.product"
@@ -480,7 +625,7 @@ class ProjectProductAttributeValue(models.Model):
 
 class ContentPlan(models.Model):
     _name = "psc.content.plan"
-    _description = "项目内容计划"
+    _description = "社媒内容任务"
     _order = "scheduled_at, id"
 
     name = fields.Char(string="内容主题", required=True, translate=True)
@@ -488,50 +633,126 @@ class ContentPlan(models.Model):
         "psc.publishing.project", string="市场运营项目", required=True,
         ondelete="cascade", index=True,
     )
-    pillar_id = fields.Many2one("psc.content.pillar", string="内容栏目", required=True)
-    product_id = fields.Many2one("product.template", string="关联产品")
-    market_id = fields.Many2one("psc.target.market", string="目标市场", required=True)
-    channel_id = fields.Many2one("psc.publishing.channel", string="发布渠道", required=True)
+    scope_id = fields.Many2one("psc.content.scope", string="内容类型", ondelete="restrict", index=True)
+    pillar_id = fields.Many2one("psc.content.pillar", string="原内容栏目", ondelete="set null")
+    content_format = fields.Selection([
+        ("short_video", "短视频"), ("image", "单图"),
+        ("carousel", "多图/轮播"), ("article", "文章/长文"),
+    ], string="内容形式", required=True, default="short_video", index=True)
+    objective = fields.Selection([
+        ("awareness", "建立认知"), ("trust", "建立信任"),
+        ("lead", "获取询盘"), ("conversion", "促进成交"),
+        ("retention", "客户维护"),
+    ], string="内容目标", required=True, default="trust")
+    product_id = fields.Many2one("product.template", string="主关联产品", ondelete="set null")
+    product_ids = fields.Many2many(
+        "product.template", "psc_content_plan_product_rel", "plan_id", "product_id",
+        string="关联产品",
+    )
+    market_id = fields.Many2one("psc.target.market", string="主目标市场")
+    market_ids = fields.Many2many(
+        "psc.target.market", "psc_content_plan_market_rel", "plan_id", "market_id",
+        string="目标市场",
+    )
+    channel_id = fields.Many2one("psc.publishing.channel", string="主发布渠道")
+    channel_ids = fields.Many2many(
+        "psc.publishing.channel", "psc_content_plan_channel_rel", "plan_id", "channel_id",
+        string="发布渠道",
+    )
+    cluster_ids = fields.Many2many(
+        "psc.social.account.cluster", "psc_content_plan_cluster_rel", "plan_id", "cluster_id",
+        string="目标账号集群",
+    )
+    tag_ids = fields.Many2many(
+        "psc.media.tag", "psc_content_plan_tag_rel", "plan_id", "tag_id",
+        string="内容标签",
+    )
     scheduled_at = fields.Datetime(string="计划发布时间")
     brief = fields.Text(string="内容要求", translate=True)
     state = fields.Selection([
         ("draft", "计划"), ("prepared", "已生成草稿"),
         ("ready", "待发布"), ("published", "已发布"), ("cancelled", "取消"),
     ], string="状态", default="draft", required=True, index=True)
-    content_id = fields.Many2one("psc.content.variant", string="渠道内容", readonly=True)
+    content_id = fields.Many2one("psc.content.variant", string="首个渠道版本", readonly=True)
+    content_ids = fields.One2many("psc.content.variant", "plan_id", string="渠道内容版本", readonly=True)
+    content_count = fields.Integer(string="渠道版本数", compute="_compute_content_count")
+
+    @api.depends("content_ids")
+    def _compute_content_count(self):
+        for plan in self:
+            plan.content_count = len(plan.content_ids)
+
+    @api.onchange("project_id")
+    def _onchange_project(self):
+        for plan in self:
+            if not plan.project_id:
+                continue
+            plan.market_ids = plan.project_id.market_ids
+            plan.channel_ids = plan.project_id.channel_ids
+            plan.cluster_ids = plan.project_id.account_cluster_ids
 
     def action_prepare_content(self):
         for plan in self:
-            if plan.content_id:
-                continue
-            product = plan.product_id or plan.project_id.project_product_ids.filtered(
-                lambda item: item.status == "active" and item.product_id
-            )[:1].product_id
-            if not product:
-                raise UserError(_("请先选择产品，或在项目产品池中批准至少一个可运营产品。"))
-            content = self.env["psc.content.variant"].create({
-                "project_id": plan.project_id.id,
-                "plan_id": plan.id,
-                "pillar_id": plan.pillar_id.id,
-                "product_id": product.id,
-                "market_id": plan.market_id.id,
-                "channel_id": plan.channel_id.id,
-                "language_id": plan.market_id.lang_id.id,
-                "title": plan.name,
-                "caption": plan.brief or plan.pillar_id.instructions or "",
-                "state": "draft",
-            })
-            plan.write({"content_id": content.id, "state": "prepared"})
+            markets = plan.market_ids or plan.market_id or plan.project_id.market_ids
+            channels = plan.channel_ids or plan.channel_id or plan.project_id.channel_ids
+            if plan.cluster_ids:
+                cluster_markets = plan.cluster_ids.mapped("target_market_id")
+                cluster_channels = plan.cluster_ids.mapped("account_ids.channel_id")
+                if not cluster_channels:
+                    raise UserError(_("所选账号集群还没有可用的平台账号，请先配置集群账号。"))
+                markets = markets & cluster_markets if markets else cluster_markets
+                channels = channels & cluster_channels if channels else cluster_channels
+            if not markets or not channels:
+                raise UserError(_("请先选择目标市场和发布渠道，或选择已经配置账号的目标集群。"))
+            products = plan.product_ids | plan.product_id
+            if plan.scope_id.code == "product_category" and not products:
+                raise UserError(_("“产品或品类介绍”内容必须至少关联一个真实产品。"))
+            existing = {(content.market_id.id, content.channel_id.id) for content in plan.content_ids}
+            created = self.env["psc.content.variant"]
+            for market in markets:
+                for channel in channels:
+                    if (market.id, channel.id) in existing:
+                        continue
+                    created |= self.env["psc.content.variant"].create({
+                        "project_id": plan.project_id.id,
+                        "plan_id": plan.id,
+                        "pillar_id": plan.pillar_id.id,
+                        "product_id": plan.product_id.id or products[:1].id or False,
+                        "product_ids": [(6, 0, products.ids)],
+                        "market_id": market.id,
+                        "channel_id": channel.id,
+                        "language_id": market.lang_id.id,
+                        "title": plan.name,
+                        "caption": plan.brief or plan.pillar_id.instructions or plan.scope_id.description or "",
+                        "tag_ids": [(6, 0, plan.tag_ids.ids)],
+                        "state": "draft",
+                    })
+            contents = plan.content_ids | created
+            if contents:
+                plan.write({
+                    "content_id": plan.content_id.id or contents[:1].id,
+                    "state": "prepared",
+                })
+                if plan.project_id.state == "draft":
+                    plan.project_id.state = "generated"
         return self.action_open_content()
 
     def action_open_content(self):
         self.ensure_one()
-        if not self.content_id:
+        contents = self.content_ids | self.content_id
+        if not contents:
             raise UserError(_("尚未生成渠道内容草稿。"))
-        return {
-            "type": "ir.actions.act_window", "res_model": "psc.content.variant",
-            "res_id": self.content_id.id, "view_mode": "form", "target": "current",
-        }
+        if len(contents) == 1:
+            return {
+                "type": "ir.actions.act_window", "res_model": "psc.content.variant",
+                "res_id": contents.id, "view_mode": "form", "target": "current",
+            }
+        action = self.env["ir.actions.actions"]._for_xml_id(
+            "product_social_content_bridge.action_psc_content"
+        )
+        action["domain"] = [("plan_id", "=", self.id)]
+        action["context"] = {"default_project_id": self.project_id.id, "default_plan_id": self.id}
+        return action
 
 
 class SocialAccountCluster(models.Model):
@@ -826,6 +1047,10 @@ class PublishingProjectOperations(models.Model):
         "psc.social.account.cluster", "psc_project_account_cluster_rel", "project_id", "cluster_id",
         string="账号集群",
     )
+    content_mix_rule_ids = fields.Many2many(
+        "psc.content.mix.rule", string="建议内容与视频比例",
+        compute="_compute_content_mix_rules",
+    )
     lead_ids = fields.One2many("crm.lead", "psc_project_id", string="客户与线索")
     performance_snapshot_ids = fields.One2many(
         "psc.performance.snapshot", "project_id", string="经营数据",
@@ -855,6 +1080,16 @@ class PublishingProjectOperations(models.Model):
     readiness_blocker_summary = fields.Text(
         string="上线阻塞摘要", compute="_compute_readiness",
     )
+
+    @api.depends("track_id", "business_role_id")
+    def _compute_content_mix_rules(self):
+        rule_model = self.env["psc.content.mix.rule"]
+        for project in self:
+            project.content_mix_rule_ids = rule_model.search([
+                ("track_id", "=", project.track_id.id),
+                ("role_id", "=", project.business_role_id.id),
+                ("active", "=", True),
+            ]) if project.track_id and project.business_role_id else rule_model
 
     @api.depends(
         "readiness_item_ids.state", "readiness_item_ids.weight",
@@ -925,6 +1160,35 @@ class PublishingProjectOperations(models.Model):
         action["context"] = {
             "default_project_id": self.id,
             "search_default_my_work": 1,
+        }
+        return action
+
+    def action_open_content_mix_rules(self):
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id(
+            "product_social_content_bridge.action_psc_content_mix_rules"
+        )
+        action["domain"] = [
+            ("track_id", "=", self.track_id.id),
+            ("role_id", "=", self.business_role_id.id),
+        ]
+        action["context"] = {
+            "default_track_id": self.track_id.id,
+            "default_role_id": self.business_role_id.id,
+        }
+        return action
+
+    def action_open_video_content_share(self):
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id(
+            "product_social_content_bridge.action_psc_video_content_share"
+        )
+        action["domain"] = [("project_id", "=", self.id)]
+        action["context"] = {
+            "search_default_published": 1,
+            "search_default_video": 1,
+            "search_default_group_cluster": 1,
+            "search_default_group_scope": 1,
         }
         return action
 
@@ -1002,6 +1266,20 @@ class ContentVariantOperations(models.Model):
 
     plan_id = fields.Many2one("psc.content.plan", string="内容计划", ondelete="set null", index=True)
     pillar_id = fields.Many2one("psc.content.pillar", string="内容栏目")
+    scope_id = fields.Many2one(
+        related="plan_id.scope_id", string="内容类型", store=True, readonly=True, index=True,
+    )
+    content_format = fields.Selection(
+        related="plan_id.content_format", string="内容形式", store=True, readonly=True,
+    )
+    product_ids = fields.Many2many(
+        "product.template", "psc_content_variant_product_rel", "content_id", "product_id",
+        string="关联产品",
+    )
+    tag_ids = fields.Many2many(
+        "psc.media.tag", "psc_content_variant_tag_rel", "content_id", "tag_id",
+        string="内容标签",
+    )
 
 
 class SocialPublishingAccountCluster(models.Model):

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="content_scope_brand_positioning" model="psc.content.scope">
+            <field name="name">项目品牌与定位</field><field name="code">brand_positioning</field><field name="sequence">10</field>
+            <field name="default_video_ratio">60</field><field name="description">说明项目服务对象、价值主张、经营边界和可信身份。</field>
+        </record>
+        <record id="content_scope_sourcing_service" model="psc.content.scope">
+            <field name="name">采购代理服务</field><field name="code">sourcing_service</field><field name="sequence">20</field>
+            <field name="default_video_ratio">75</field><field name="description">展示寻源、比价、供应商筛选、跟单和风险控制流程。</field>
+        </record>
+        <record id="content_scope_china_supply_chain" model="psc.content.scope">
+            <field name="name">中国供应链能力</field><field name="code">china_supply_chain</field><field name="sequence">30</field>
+            <field name="default_video_ratio">75</field><field name="description">展示产业带、供应商网络、成本、交期和出口协调能力。</field>
+        </record>
+        <record id="content_scope_industry_knowledge" model="psc.content.scope">
+            <field name="name">行业知识</field><field name="code">industry_knowledge</field><field name="sequence">40</field>
+            <field name="default_video_ratio">45</field><field name="description">帮助目标买家理解选型、采购、合规和常见风险。</field>
+        </record>
+        <record id="content_scope_supplier_quality" model="psc.content.scope">
+            <field name="name">供应商、验厂与质检</field><field name="code">supplier_quality</field><field name="sequence">50</field>
+            <field name="default_video_ratio">80</field><field name="description">用真实记录展示供应商评估、验厂、生产跟进和质量检查。</field>
+        </record>
+        <record id="content_scope_oem_sampling" model="psc.content.scope">
+            <field name="name">OEM/ODM 与打样</field><field name="code">oem_sampling</field><field name="sequence">60</field>
+            <field name="default_video_ratio">85</field><field name="description">展示设计沟通、材料选择、样品迭代、定制和量产衔接。</field>
+        </record>
+        <record id="content_scope_packaging_delivery" model="psc.content.scope">
+            <field name="name">包装、验货与交付</field><field name="code">packaging_delivery</field><field name="sequence">70</field>
+            <field name="default_video_ratio">80</field><field name="description">展示包装、装箱、出货前验货、物流和交付过程。</field>
+        </record>
+        <record id="content_scope_product_category" model="psc.content.scope">
+            <field name="name">产品或品类介绍</field><field name="code">product_category</field><field name="sequence">80</field>
+            <field name="default_video_ratio">90</field><field name="description">介绍已核实的产品、品类、款式、参数、用途和采购价值。</field>
+        </record>
+        <record id="content_scope_customer_case" model="psc.content.scope">
+            <field name="name">客户案例</field><field name="code">customer_case</field><field name="sequence">90</field>
+            <field name="default_video_ratio">80</field><field name="description">基于可公开、可核实和已授权的案例说明问题、过程与结果。</field>
+        </record>
+        <record id="content_scope_market_trends" model="psc.content.scope">
+            <field name="name">市场热点</field><field name="code">market_trends</field><field name="sequence">100</field>
+            <field name="default_video_ratio">65</field><field name="description">结合目标市场、渠道和季节变化解释趋势及采购机会。</field>
+        </record>
+
+        <record id="media_tag_person_on_camera" model="psc.media.tag"><field name="name">真人出镜</field><field name="color">1</field></record>
+        <record id="media_tag_factory_footage" model="psc.media.tag"><field name="name">工厂实拍</field><field name="color">2</field></record>
+        <record id="media_tag_supplier" model="psc.media.tag"><field name="name">供应商</field><field name="color">3</field></record>
+        <record id="media_tag_factory_audit" model="psc.media.tag"><field name="name">验厂</field><field name="color">4</field></record>
+        <record id="media_tag_quality_control" model="psc.media.tag"><field name="name">质检</field><field name="color">5</field></record>
+        <record id="media_tag_sampling" model="psc.media.tag"><field name="name">打样</field><field name="color">6</field></record>
+        <record id="media_tag_packaging" model="psc.media.tag"><field name="name">包装</field><field name="color">7</field></record>
+        <record id="media_tag_delivery" model="psc.media.tag"><field name="name">装柜交付</field><field name="color">8</field></record>
+        <record id="media_tag_product_detail" model="psc.media.tag"><field name="name">产品细节</field><field name="color">9</field></record>
+        <record id="media_tag_customer_authorized" model="psc.media.tag"><field name="name">客户授权</field><field name="color">10</field></record>
+        <record id="media_tag_data_chart" model="psc.media.tag"><field name="name">数据图表</field><field name="color">11</field></record>
+        <record id="media_tag_english" model="psc.media.tag"><field name="name">英文</field><field name="color">12</field></record>
+    </data>
+
+    <function model="psc.content.mix.rule" name="ensure_default_profiles"/>
+</odoo>

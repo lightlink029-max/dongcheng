@@ -92,8 +92,11 @@
                 <field name="scheduled_at"/>
                 <field name="name"/>
                 <field name="project_id"/>
+                <field name="content_scope_id"/>
+                <field name="content_format" widget="badge"/>
                 <field name="product_id"/>
                 <field name="market_id"/>
+                <field name="cluster_id" optional="show"/>
                 <field name="destination_id"/>
                 <field name="destination_type" widget="badge"/>
                 <field name="publishing_account_id" optional="show"/>
@@ -122,8 +125,8 @@
                 <sheet>
                     <div class="oe_title"><h1><field name="name"/></h1></div>
                     <group string="内容与目标">
-                        <group><field name="project_id"/><field name="content_id"/><field name="product_id"/><field name="market_id"/></group>
-                        <group><field name="destination_id"/><field name="destination_type"/><field name="publishing_account_id"/><field name="scheduled_at"/></group>
+                        <group><field name="project_id"/><field name="content_id"/><field name="content_scope_id"/><field name="content_format"/><field name="product_id"/><field name="market_id"/></group>
+                        <group><field name="cluster_id"/><field name="destination_id"/><field name="destination_type"/><field name="publishing_account_id"/><field name="scheduled_at"/></group>
                     </group>
                     <group string="执行环境" invisible="destination_type == 'website'">
                         <field name="worker_node_id"/><field name="bitbrowser_environment_id"/><field name="worker_id"/><field name="actual_ip"/>
@@ -142,19 +145,34 @@
         <field name="model">psc.publication.task</field>
         <field name="arch" type="xml">
             <search>
-                <field name="name"/><field name="project_id"/><field name="product_id"/><field name="market_id"/><field name="destination_id"/>
+                <field name="name"/><field name="project_id"/><field name="content_scope_id"/><field name="content_format"/><field name="cluster_id"/><field name="product_id"/><field name="market_id"/><field name="destination_id"/>
                 <filter name="queued" string="待发布" domain="[('state', '=', 'queued')]"/>
                 <filter name="in_progress" string="执行中" domain="[('state', 'in', ('validating', 'publishing'))]"/>
                 <filter name="published" string="已发布" domain="[('state', '=', 'published')]"/>
+                <filter name="video" string="短视频" domain="[('content_format', '=', 'short_video')]"/>
                 <filter name="failed" string="失败" domain="[('state', '=', 'failed')]"/>
                 <group>
                     <filter name="group_state" string="状态" context="{'group_by': 'state'}"/>
+                    <filter name="group_scope" string="内容类型" context="{'group_by': 'content_scope_id'}"/>
+                    <filter name="group_cluster" string="账号集群" context="{'group_by': 'cluster_id'}"/>
+                    <filter name="group_format" string="内容形式" context="{'group_by': 'content_format'}"/>
                     <filter name="group_destination" string="发布目标" context="{'group_by': 'destination_id'}"/>
                     <filter name="group_market" string="目标市场" context="{'group_by': 'market_id'}"/>
                     <filter name="group_project" string="发布项目" context="{'group_by': 'project_id'}"/>
                 </group>
             </search>
         </field>
+    </record>
+
+    <record id="view_psc_publication_task_graph" model="ir.ui.view">
+        <field name="name">psc.publication.task.graph</field>
+        <field name="model">psc.publication.task</field>
+        <field name="arch" type="xml"><graph string="实际发布内容占比" type="pie"><field name="content_scope_id"/></graph></field>
+    </record>
+    <record id="view_psc_publication_task_pivot" model="ir.ui.view">
+        <field name="name">psc.publication.task.pivot</field>
+        <field name="model">psc.publication.task</field>
+        <field name="arch" type="xml"><pivot string="实际发布内容占比"><field name="cluster_id" type="row"/><field name="content_scope_id" type="row"/><field name="content_format" type="col"/><field name="state" type="col"/></pivot></field>
     </record>
 
     <record id="action_psc_publishing_destinations" model="ir.actions.act_window">
@@ -164,6 +182,10 @@
     <record id="action_psc_publication_tasks" model="ir.actions.act_window">
         <field name="name">发布任务与结果</field><field name="res_model">psc.publication.task</field>
         <field name="view_mode">list,form</field><field name="search_view_id" ref="view_psc_publication_task_search"/>
+    </record>
+    <record id="action_psc_video_content_share" model="ir.actions.act_window">
+        <field name="name">实际发布视频内容占比</field><field name="res_model">psc.publication.task</field>
+        <field name="view_mode">graph,pivot,list,form</field><field name="search_view_id" ref="view_psc_publication_task_search"/>
     </record>
 
     <record id="action_queue_publication_tasks_server" model="ir.actions.server">

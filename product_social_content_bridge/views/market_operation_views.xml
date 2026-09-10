@@ -34,6 +34,27 @@
         <field name="arch" type="xml"><list editable="bottom"><field name="sequence" widget="handle"/><field name="name"/><field name="code"/><field name="description"/><field name="active"/></list></field>
     </record>
 
+    <record id="view_psc_content_scope_list" model="ir.ui.view">
+        <field name="name">psc.content.scope.list</field><field name="model">psc.content.scope</field>
+        <field name="arch" type="xml"><list editable="bottom"><field name="sequence" widget="handle"/><field name="name"/><field name="code"/><field name="default_video_ratio"/><field name="description"/><field name="active"/></list></field>
+    </record>
+    <record id="view_psc_content_scope_form" model="ir.ui.view">
+        <field name="name">psc.content.scope.form</field><field name="model">psc.content.scope</field>
+        <field name="arch" type="xml"><form><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group><field name="code"/><field name="sequence"/><field name="default_video_ratio"/><field name="active"/></group><group><field name="description" placeholder="说明该内容类型适合表达什么，以及必须使用哪些真实依据。"/></group></group></sheet></form></field>
+    </record>
+    <record id="view_psc_media_tag_list" model="ir.ui.view">
+        <field name="name">psc.media.tag.list</field><field name="model">psc.media.tag</field>
+        <field name="arch" type="xml"><list editable="bottom"><field name="name"/><field name="color" widget="color_picker"/><field name="active"/></list></field>
+    </record>
+    <record id="view_psc_content_mix_rule_list" model="ir.ui.view">
+        <field name="name">psc.content.mix.rule.list</field><field name="model">psc.content.mix.rule</field>
+        <field name="arch" type="xml"><list editable="bottom"><field name="track_id"/><field name="role_id"/><field name="scope_id"/><field name="content_ratio" sum="100"/><field name="video_ratio"/><field name="notes" optional="hide"/><field name="active"/></list></field>
+    </record>
+    <record id="view_psc_content_mix_rule_search" model="ir.ui.view">
+        <field name="name">psc.content.mix.rule.search</field><field name="model">psc.content.mix.rule</field>
+        <field name="arch" type="xml"><search><field name="track_id"/><field name="role_id"/><field name="scope_id"/><group><filter name="group_track" string="经营赛道" context="{'group_by': 'track_id'}"/><filter name="group_role" string="经营角色" context="{'group_by': 'role_id'}"/></group></search></field>
+    </record>
+
     <record id="view_psc_project_product_list" model="ir.ui.view">
         <field name="name">psc.project.product.list</field><field name="model">psc.project.product</field>
         <field name="arch" type="xml"><list decoration-success="status == 'active'" decoration-danger="status == 'rejected' or compliance_state == 'blocked'" decoration-warning="status in ('candidate', 'quotation', 'market_review', 'compliance_review')"><field name="priority" widget="badge"/><field name="name"/><field name="source"/><field name="market_ids" widget="many2many_tags"/><field name="fit_score"/><field name="hard_gate_passed"/><field name="compliance_state" widget="badge"/><field name="material_state" widget="badge"/><field name="target_purchase_price"/><field name="target_sale_price"/><field name="minimum_order_qty"/><field name="lead_time_days"/><field name="status" widget="badge"/><button name="action_open_source" type="object" string="打开产品" icon="fa-external-link"/><button name="action_link_candidate_product" type="object" string="转正式产品" icon="fa-link" invisible="not candidate_id or product_id"/><button name="action_mark_active" type="object" string="批准运营" icon="fa-check" invisible="status == 'active'"/></list></field>
@@ -45,11 +66,11 @@
 
     <record id="view_psc_content_plan_list" model="ir.ui.view">
         <field name="name">psc.content.plan.list</field><field name="model">psc.content.plan</field>
-        <field name="arch" type="xml"><list decoration-success="state == 'published'" decoration-muted="state == 'cancelled'"><field name="scheduled_at"/><field name="name"/><field name="pillar_id"/><field name="product_id"/><field name="market_id"/><field name="channel_id"/><field name="state" widget="badge"/><field name="content_id"/><button name="action_prepare_content" type="object" string="生成草稿" icon="fa-file-text-o" invisible="content_id"/><button name="action_open_content" type="object" string="打开内容" icon="fa-external-link" invisible="not content_id"/></list></field>
+        <field name="arch" type="xml"><list decoration-success="state == 'published'" decoration-muted="state == 'cancelled'"><field name="scheduled_at"/><field name="scope_id"/><field name="content_format" widget="badge"/><field name="name"/><field name="objective" optional="show"/><field name="product_ids" widget="many2many_tags" optional="hide"/><field name="market_ids" widget="many2many_tags" optional="show"/><field name="channel_ids" widget="many2many_tags" optional="show"/><field name="cluster_ids" widget="many2many_tags" optional="show"/><field name="content_count"/><field name="state" widget="badge"/><button name="action_prepare_content" type="object" string="生成渠道版本" icon="fa-file-text-o" invisible="content_count"/><button name="action_open_content" type="object" string="打开内容" icon="fa-external-link" invisible="not content_count"/></list></field>
     </record>
     <record id="view_psc_content_plan_form" model="ir.ui.view">
         <field name="name">psc.content.plan.form</field><field name="model">psc.content.plan</field>
-        <field name="arch" type="xml"><form><header><button name="action_prepare_content" type="object" string="生成渠道内容草稿" class="btn-primary" invisible="content_id"/><button name="action_open_content" type="object" string="打开渠道内容" invisible="not content_id"/><field name="state" widget="statusbar" statusbar_visible="draft,prepared,ready,published"/></header><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group><field name="project_id"/><field name="pillar_id"/><field name="product_id"/></group><group><field name="market_id"/><field name="channel_id"/><field name="scheduled_at"/><field name="content_id"/></group></group><field name="brief"/></sheet></form></field>
+        <field name="arch" type="xml"><form><header><button name="action_prepare_content" type="object" string="生成渠道内容" class="btn-primary" invisible="content_count"/><button name="action_open_content" type="object" string="打开渠道内容" invisible="not content_count"/><field name="state" widget="statusbar" statusbar_visible="draft,prepared,ready,published"/></header><sheet><div class="oe_title"><h1><field name="name" placeholder="例如：为什么欧洲鞋类批发商需要中国采购代理"/></h1></div><group><group><field name="project_id"/><field name="scope_id" required="1" options="{'no_create': True}"/><field name="content_format"/><field name="objective"/><field name="scheduled_at"/></group><group><field name="market_ids" widget="many2many_tags"/><field name="channel_ids" widget="many2many_tags"/><field name="cluster_ids" widget="many2many_tags"/><field name="product_ids" widget="many2many_tags"/><field name="tag_ids" widget="many2many_tags"/></group></group><group string="创作要求"><field name="brief" nolabel="1" colspan="2" placeholder="填写核心观点、证据、结构、行动号召和禁用表达。产品内容必须关联真实产品。"/></group><notebook><page string="渠道版本"><field name="content_ids" nolabel="1" readonly="1"><list><field name="market_id"/><field name="channel_id"/><field name="title"/><field name="ai_state" widget="badge"/><field name="state" widget="badge"/><field name="video_attachment_id" optional="hide"/></list></field></page><page string="兼容旧数据"><group><field name="pillar_id"/><field name="product_id"/><field name="market_id"/><field name="channel_id"/><field name="content_id"/></group></page></notebook></sheet></form></field>
     </record>
 
     <record id="view_psc_social_account_cluster_list" model="ir.ui.view">
@@ -158,6 +179,12 @@
                 <button name="action_sync_product_pool" type="object" string="同步所选产品到产品池" invisible="not product_ids"/>
                 <field name="operation_state" widget="badge"/>
             </xpath>
+            <xpath expr="//button[@name='action_generate_drafts']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//page[@string='③ 内容要求'] | //page[@string='④ 模板与素材'] | //page[@string='⑤ 内容制作、审核与发布'] | //page[@string='⑥ 发布任务与结果']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
             <xpath expr="//field[@name='product_line_id']" position="before">
                 <field name="track_id" required="1" options="{'no_create': True}"/>
                 <field name="business_role_id" required="1" options="{'no_create': True}"/>
@@ -202,12 +229,36 @@
                         </list>
                     </field>
                 </page>
-                <page string="内容计划与栏目">
-                    <field name="content_plan_ids" context="{'default_project_id': id}"><list editable="bottom"><field name="scheduled_at"/><field name="name"/><field name="pillar_id" domain="[('track_id', '=', parent.track_id)]"/><field name="product_id"/><field name="market_id" domain="[('id', 'in', parent.market_ids)]"/><field name="channel_id" domain="[('id', 'in', parent.channel_ids)]"/><field name="state" widget="badge"/><field name="content_id"/><button name="action_prepare_content" type="object" string="生成草稿" invisible="content_id"/><button name="action_open_content" type="object" string="打开内容" invisible="not content_id"/></list></field>
-                </page>
-                <page string="账号集群">
-                    <div class="alert alert-info" role="alert">一个比特环境对应一个账号集群；同一品牌身份可在该环境内维护 Facebook、Instagram、TikTok 等平台账号。</div>
-                    <field name="account_cluster_ids" widget="many2many" options="{'no_create': True}"><list><field name="name"/><field name="persona"/><field name="target_market_id"/><field name="bitbrowser_environment_id"/><field name="expected_ip"/><field name="expected_country_id"/><field name="state" widget="badge"/></list></field>
+                <page string="统一社媒内容工作台" name="social_content_workspace">
+                    <div class="alert alert-info" role="alert">先按项目定位、经营角色和内容类型制定任务，再复用到目标市场、渠道和账号集群。只有“产品或品类介绍”必须关联真实产品。</div>
+                    <group string="内容策略与素材" col="2" colspan="2">
+                        <field name="content_brief" nolabel="1" colspan="2" placeholder="项目级英文定位、受众、价值主张、事实边界和统一行动号召。"/>
+                        <field name="material_asset_ids" nolabel="1" colspan="2" widget="many2many_tags"/>
+                    </group>
+                    <div class="d-flex flex-wrap gap-2 align-items-center mt-2 mb-2" colspan="2">
+                        <button name="action_open_content_mix_rules" type="object" string="维护建议内容与视频比例" icon="fa-sliders" class="btn-secondary"/>
+                        <button name="action_open_video_content_share" type="object" string="查看实际发布占比" icon="fa-pie-chart" class="btn-secondary"/>
+                    </div>
+                    <field name="content_mix_rule_ids" nolabel="1" colspan="2" class="w-100" readonly="1">
+                        <list create="false" delete="false" limit="10"><field name="scope_id"/><field name="content_ratio" sum="100"/><field name="video_ratio"/><field name="notes" optional="hide"/></list>
+                    </field>
+                    <separator string="账号集群" colspan="2"/>
+                    <div class="text-muted mb-2" colspan="2">选择本项目可用的账号集群；内容任务可以进一步指定发布到哪些集群。</div>
+                    <field name="account_cluster_ids" nolabel="1" colspan="2" class="w-100" widget="many2many" options="{'no_create': True}">
+                        <list><field name="name"/><field name="persona"/><field name="target_market_id"/><field name="state" widget="badge"/></list>
+                    </field>
+                    <separator string="内容制作计划" colspan="2"/>
+                    <field name="content_plan_ids" nolabel="1" colspan="2" class="w-100" context="{'default_project_id': id}">
+                        <list editable="bottom" decoration-success="state == 'published'"><field name="scheduled_at"/><field name="scope_id" required="1"/><field name="content_format" widget="badge"/><field name="name"/><field name="objective" optional="show"/><field name="product_ids" widget="many2many_tags" optional="hide"/><field name="market_ids" widget="many2many_tags" optional="show"/><field name="channel_ids" widget="many2many_tags" optional="show"/><field name="cluster_ids" widget="many2many_tags" optional="show"/><field name="tag_ids" widget="many2many_tags" optional="hide"/><field name="content_count"/><field name="state" widget="badge"/><button name="action_prepare_content" type="object" string="生成渠道版本" invisible="content_count"/><button name="action_open_content" type="object" string="打开内容" invisible="not content_count"/></list>
+                    </field>
+                    <separator string="渠道内容制作" colspan="2"/>
+                    <field name="content_ids" nolabel="1" colspan="2" class="w-100" readonly="1">
+                        <list><field name="scope_id"/><field name="content_format" widget="badge"/><field name="market_id"/><field name="channel_id"/><field name="title"/><field name="tag_ids" widget="many2many_tags" optional="hide"/><field name="ai_state" widget="badge"/><field name="state" widget="badge"/><field name="video_attachment_id" optional="hide"/><button name="action_generate_ai_content" type="object" string="生成文案" icon="fa-magic"/><button name="action_open_generated_video" type="object" string="播放视频" icon="fa-play" invisible="not video_attachment_id"/></list>
+                    </field>
+                    <separator string="发布任务与实际占比依据" colspan="2"/>
+                    <field name="publication_task_ids" nolabel="1" colspan="2" class="w-100" readonly="1">
+                        <list decoration-success="state == 'published'" decoration-danger="state == 'failed'"><field name="scheduled_at"/><field name="content_scope_id"/><field name="content_format" widget="badge"/><field name="cluster_id"/><field name="destination_id"/><field name="state" widget="badge"/><field name="published_url" widget="url" optional="show"/><field name="status_message" optional="hide"/></list>
+                    </field>
                 </page>
                 <page string="客户与需求">
                     <field name="lead_ids" context="{'default_psc_project_id': id}"><list><field name="name"/><field name="partner_name"/><field name="country_id"/><field name="user_id"/><field name="psc_first_touchpoint_id"/><field name="psc_last_touchpoint_id"/><field name="stage_id"/><field name="expected_revenue"/></list></field>
@@ -269,8 +320,11 @@
     <record id="action_psc_industry_tracks" model="ir.actions.act_window"><field name="name">经营赛道模板</field><field name="res_model">psc.industry.track</field><field name="view_mode">list,form</field></record>
     <record id="action_psc_business_roles" model="ir.actions.act_window"><field name="name">经营角色</field><field name="res_model">psc.business.role</field><field name="view_mode">list,form</field></record>
     <record id="action_psc_business_capabilities" model="ir.actions.act_window"><field name="name">经营能力</field><field name="res_model">psc.business.capability</field><field name="view_mode">list</field></record>
+    <record id="action_psc_content_scopes" model="ir.actions.act_window"><field name="name">社媒内容类型</field><field name="res_model">psc.content.scope</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_media_tags" model="ir.actions.act_window"><field name="name">社媒素材标签</field><field name="res_model">psc.media.tag</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_content_mix_rules" model="ir.actions.act_window"><field name="name">内容与视频比例</field><field name="res_model">psc.content.mix.rule</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_psc_content_mix_rule_search"/></record>
     <record id="action_psc_project_products" model="ir.actions.act_window"><field name="name">项目产品池</field><field name="res_model">psc.project.product</field><field name="view_mode">list,form</field></record>
-    <record id="action_psc_content_plans" model="ir.actions.act_window"><field name="name">内容计划</field><field name="res_model">psc.content.plan</field><field name="view_mode">list,form</field></record>
+    <record id="action_psc_content_plans" model="ir.actions.act_window"><field name="name">统一社媒内容工作台</field><field name="res_model">psc.content.plan</field><field name="view_mode">list,form</field></record>
     <record id="action_psc_social_account_clusters" model="ir.actions.act_window"><field name="name">账号集群</field><field name="res_model">psc.social.account.cluster</field><field name="view_mode">list,form</field></record>
     <record id="action_psc_customer_touchpoints" model="ir.actions.act_window"><field name="name">客户来源触点</field><field name="res_model">psc.customer.touchpoint</field><field name="view_mode">list,form</field></record>
     <record id="action_psc_customer_requirements" model="ir.actions.act_window"><field name="name">客户行业需求</field><field name="res_model">psc.customer.requirement</field><field name="view_mode">list,form</field></record>

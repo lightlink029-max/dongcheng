@@ -21,6 +21,9 @@ access_psc_industry_track_user,psc.industry.track user,model_psc_industry_track,
 access_psc_track_product_attribute_user,psc.track.product.attribute user,model_psc_track_product_attribute,base.group_user,1,1,1,1
 access_psc_track_scoring_rule_user,psc.track.scoring.rule user,model_psc_track_scoring_rule,base.group_user,1,1,1,1
 access_psc_content_pillar_user,psc.content.pillar user,model_psc_content_pillar,base.group_user,1,1,1,1
+access_psc_content_scope_user,psc.content.scope user,model_psc_content_scope,base.group_user,1,1,1,1
+access_psc_media_tag_user,psc.media.tag user,model_psc_media_tag,base.group_user,1,1,1,1
+access_psc_content_mix_rule_user,psc.content.mix.rule user,model_psc_content_mix_rule,base.group_user,1,1,1,1
 access_psc_project_product_user,psc.project.product user,model_psc_project_product,base.group_user,1,1,1,1
 access_psc_project_product_score_user,psc.project.product.score user,model_psc_project_product_score,base.group_user,1,1,1,1
 access_psc_project_product_attribute_value_user,psc.project.product.attribute.value user,model_psc_project_product_attribute_value,base.group_user,1,1,1,1

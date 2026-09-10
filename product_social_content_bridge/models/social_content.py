@@ -46,6 +46,14 @@ class MediaAsset(models.Model):
     is_image = fields.Boolean(string="图片素材", compute="_compute_file_info", store=True)
     product_line_id = fields.Many2one("psc.product.line", string="品牌/产品线")
     channel_id = fields.Many2one("psc.publishing.channel", string="适用渠道")
+    content_scope_ids = fields.Many2many(
+        "psc.content.scope", "psc_media_asset_scope_rel", "asset_id", "scope_id",
+        string="内容类型",
+    )
+    tag_ids = fields.Many2many(
+        "psc.media.tag", "psc_media_asset_tag_rel", "asset_id", "tag_id",
+        string="素材标签",
+    )
     usage_instructions = fields.Text(string="使用说明", translate=True)
 
     def _uploaded_file_size(self):
@@ -201,7 +209,7 @@ class PublishingProject(models.Model):
 
     name = fields.Char(string="发布项目", required=True, tracking=True)
     product_line_id = fields.Many2one("psc.product.line", string="品牌/产品线", required=True, tracking=True)
-    product_ids = fields.Many2many("product.template", string="发布产品", required=True)
+    product_ids = fields.Many2many("product.template", string="关联产品")
     market_ids = fields.Many2many("psc.target.market", string="目标市场", required=True)
     channel_ids = fields.Many2many("psc.publishing.channel", string="发布渠道", required=True)
     destination_ids = fields.Many2many("psc.publishing.destination", string="发布目标")
@@ -303,6 +311,11 @@ class PublishingProject(models.Model):
                     lambda destination: destination.market_id == content.market_id
                     and destination.channel_id == content.channel_id
                 )
+                if content.plan_id.cluster_ids:
+                    destinations = destinations.filtered(
+                        lambda destination: destination.publishing_account_id.cluster_id
+                        in content.plan_id.cluster_ids
+                    )
                 for destination in destinations:
                     task = task_model.search([
                         ("content_id", "=", content.id),
@@ -310,7 +323,7 @@ class PublishingProject(models.Model):
                     ], limit=1)
                     if not task:
                         task = task_model.create({
-                            "name": "%s · %s" % (content.title or content.product_id.name, destination.name),
+                            "name": "%s · %s" % (content._content_reference_name(), destination.name),
                             "project_id": project.id,
                             "content_id": content.id,
                             "destination_id": destination.id,
@@ -343,11 +356,11 @@ class PublishingProject(models.Model):
 
 class ContentVariant(models.Model):
     _name = "psc.content.variant"
-    _description = "产品渠道内容版本"
+    _description = "社媒渠道内容版本"
     _order = "project_id desc, product_id, market_id, channel_id"
 
     project_id = fields.Many2one("psc.publishing.project", required=True, ondelete="cascade", index=True)
-    product_id = fields.Many2one("product.template", string="产品", required=True, ondelete="cascade")
+    product_id = fields.Many2one("product.template", string="主关联产品", ondelete="set null")
     market_id = fields.Many2one("psc.target.market", string="市场", required=True)
     channel_id = fields.Many2one("psc.publishing.channel", string="渠道", required=True)
     language_id = fields.Many2one("res.lang", string="内容语言", required=True)
@@ -404,8 +417,8 @@ class ContentVariant(models.Model):
     video_generated_at = fields.Datetime(string="视频生成时间", readonly=True)
 
     _variant_unique = models.Constraint(
-        "UNIQUE(project_id, product_id, market_id, channel_id, plan_id)",
-        "同一内容计划中产品、市场和渠道组合不能重复。",
+        "UNIQUE(plan_id, market_id, channel_id)",
+        "同一内容计划中市场和渠道组合不能重复。",
     )
 
     @api.onchange("channel_id")
@@ -716,11 +729,11 @@ class ContentVariant(models.Model):
 
     def _product_context(self):
         self.ensure_one()
-        product = self.product_id.with_context(lang=self.language_id.code)
-        source_candidate = product.pi_candidate_id
+        product = self.product_id.with_context(lang=self.language_id.code) if self.product_id else self.product_id
+        source_candidate = product.pi_candidate_id if product else False
         source_description = (
             getattr(product, "description_ecommerce", False)
-            or product.description_sale
+            or (product.description_sale if product else False)
             or ""
         )
         project = self.project_id
@@ -728,10 +741,15 @@ class ContentVariant(models.Model):
         role = project.business_role_id
         pillar = self.pillar_id
         return {
-            "product_name": product.name or "",
+            "content_scope": self.scope_id.name if self.scope_id else "",
+            "content_format": self.content_format or "",
+            "content_tags": self.tag_ids.mapped("name"),
+            "content_plan_brief": self.plan_id.brief if self.plan_id else "",
+            "product_name": product.name if product else "",
+            "related_products": self.product_ids.mapped("name"),
             "sales_description": html2plaintext(source_description)[:8000],
             "source_keywords": source_candidate.keyword_text if source_candidate else "",
-            "list_price": product.list_price,
+            "list_price": product.list_price if product else 0,
             "currency": self.project_id.company_id.currency_id.name,
             "brand": self.project_id.product_line_id.brand_name or "",
             "product_line": self.project_id.product_line_id.name,
@@ -779,13 +797,14 @@ class ContentVariant(models.Model):
             "additionalProperties": False,
         }
         instructions = (
-            "You create accurate export-commerce product and social content. "
-            "Use only facts in the supplied product context; never invent certifications, performance, materials, "
+            "You create accurate export-commerce project, service, industry, and product social content. "
+            "Use only facts in the supplied context; never invent certifications, performance, materials, "
             "prices, shipping promises, customer testimonials, or medical claims. "
             "Write all customer-facing output in the requested language. "
             "Return concise, platform-appropriate content and respect the caption limit. "
             "The video_script must be a practical 15-30 second shot list with voiceover and on-screen text. "
-            "The image_prompt must preserve the real product and describe a clean commercial composition."
+            "For product content, preserve the real product. For service or project content, use only supplied "
+            "project facts and materials and describe a clean B2B commercial composition."
         )
         return {
             "model": self.project_id.ai_model or DEFAULT_OPENAI_MODEL,
@@ -827,7 +846,7 @@ class ContentVariant(models.Model):
                     caption_parts.append(_("SEO关键词：%s") % ", ".join(seo_keywords))
                 usage = response_data.get("usage") or {}
                 variant.write({
-                    "title": generated.get("title") or variant.product_id.name,
+                    "title": generated.get("title") or variant._content_reference_name(),
                     "caption": "\n\n".join(filter(None, caption_parts)),
                     "hashtags": " ".join(hashtags),
                     "seo_keywords": "\n".join(str(keyword).strip() for keyword in seo_keywords if str(keyword).strip()),
@@ -857,9 +876,14 @@ class ContentVariant(models.Model):
 
     def _source_product_image(self):
         self.ensure_one()
-        encoded = self.product_id.image_1920
+        encoded = self.product_id.image_1920 if self.product_id else False
         if not encoded:
-            raise UserError(_("产品没有主图，请先在产品中上传主图。"))
+            selected = self._selected_image_inputs()
+            if selected:
+                _asset, raw, filename, mimetype = selected[0]
+                return raw, filename, mimetype
+        if not encoded:
+            raise UserError(_("请先关联产品主图，或为这条非产品内容选择一张参考图片素材。"))
         try:
             raw = base64.b64decode(encoded)
         except (ValueError, TypeError) as error:
@@ -926,13 +950,13 @@ class ContentVariant(models.Model):
             )
             prompt = "\n".join(filter(None, [
                 variant.image_prompt,
-                "Create a polished commercial social-media product image using the supplied real product photo as the reference.",
-                "Keep the product identity, shape, colors, materials, construction details, and proportions faithful to the reference.",
+                "Create a polished commercial social-media image using the supplied verified reference material.",
+                "For product content, keep product identity, shape, colors, materials, construction details, and proportions faithful.",
                 "Do not add logos, certifications, prices, discounts, watermarks, labels, packaging claims, or readable text.",
                 "Use a clean export-commerce composition suitable for %s in the %s market." % (
                     variant.channel_id.name, variant.market_id.name,
                 ),
-                "Reference image 1 is the real product and must remain the visual source of truth.",
+                "Reference image 1 is the primary visual source of truth.",
                 ("Additional ordered references/templates: %s" % asset_roles) if asset_roles else "",
                 "Use templates as layout guidance and logos only when explicitly supplied as a logo asset.",
             ]))
@@ -985,7 +1009,7 @@ class ContentVariant(models.Model):
                     raise UserError(_("所选图片服务商尚未接入自动生成。"))
                 final_image = variant._finalize_social_image(generated)
                 attachment = self.env["ir.attachment"].create({
-                    "name": "social-%s-%s-%s.jpg" % (variant.product_id.id, variant.market_id.id, variant.channel_id.id),
+                    "name": "social-%s-%s-%s.jpg" % (variant.product_id.id or variant.id, variant.market_id.id, variant.channel_id.id),
                     "type": "binary",
                     "datas": base64.b64encode(final_image),
                     "mimetype": "image/jpeg",
@@ -1053,7 +1077,7 @@ class ContentVariant(models.Model):
             try:
                 prompt = "\n".join(filter(None, [
                     variant.video_script, variant.caption,
-                    "Preserve the real product identity, shape, colors, materials and proportions.",
+                    "Preserve all identities, objects, facts and visual details shown in the verified source material.",
                 ]))
                 if media_model.provider == "fal":
                     fal_payload = {
@@ -1096,7 +1120,7 @@ class ContentVariant(models.Model):
                 download.raise_for_status()
                 attachment = self.env["ir.attachment"].create({
                     "name": "social-%s-%s-%s.mp4" % (
-                        variant.product_id.id, variant.market_id.id, variant.channel_id.id,
+                        variant.product_id.id or variant.id, variant.market_id.id, variant.channel_id.id,
                     ),
                     "type": "binary",
                     "datas": base64.b64encode(download.content),
@@ -1118,6 +1142,15 @@ class ContentVariant(models.Model):
                 _logger.exception("Video generation failed for variant %s", variant.id)
                 variant.write({"video_ai_state": "failed", "error_message": str(error)[:2000]})
         return True
+
+    def _content_reference_name(self):
+        self.ensure_one()
+        return (
+            self.title
+            or (self.plan_id.name if self.plan_id else False)
+            or (self.product_id.name if self.product_id else False)
+            or self.project_id.name
+        )
 
     def action_open_social_post(self):
         self.ensure_one()

@@ -98,6 +98,12 @@ class PublicationTask(models.Model):
         ondelete="cascade", readonly=True, index=True,
     )
     product_id = fields.Many2one(related="content_id.product_id", string="产品", store=True, readonly=True)
+    content_scope_id = fields.Many2one(
+        related="content_id.scope_id", string="内容类型", store=True, readonly=True, index=True,
+    )
+    content_format = fields.Selection(
+        related="content_id.content_format", string="内容形式", store=True, readonly=True, index=True,
+    )
     market_id = fields.Many2one(related="content_id.market_id", string="目标市场", store=True, readonly=True)
     channel_id = fields.Many2one(related="content_id.channel_id", string="内容渠道", store=True, readonly=True)
     destination_id = fields.Many2one(
@@ -108,6 +114,9 @@ class PublicationTask(models.Model):
     )
     publishing_account_id = fields.Many2one(
         related="destination_id.publishing_account_id", string="发布账号", store=True, readonly=True,
+    )
+    cluster_id = fields.Many2one(
+        related="publishing_account_id.cluster_id", string="账号集群", store=True, readonly=True, index=True,
     )
     worker_node_id = fields.Many2one(
         related="publishing_account_id.worker_node_id", string="Windows 工作节点", store=True, readonly=True,
@@ -195,6 +204,8 @@ class PublicationTask(models.Model):
             content = task.content_id
             if content.ai_state != "done":
                 raise UserError(_("请先生成并审核渠道内容。"))
+            if not content.product_id:
+                raise UserError(_("当前网站发布方式是产品详情页；非产品内容请发布到社媒账号，或关联真实产品后再发布网站。"))
             product = content.product_id.with_context(lang=content.language_id.code)
             product.write({
                 "description_ecommerce": content.caption or product.description_ecommerce,

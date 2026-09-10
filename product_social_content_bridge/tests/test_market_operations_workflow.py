@@ -129,6 +129,43 @@ class MarketOperationsWorkflowCase(TransactionCase):
             ("plan_id", "=", plan.id),
         ]), 1)
 
+    def test_project_level_plan_creates_channel_versions_without_product(self):
+        second_channel = self.env["psc.publishing.channel"].create({
+            "name": "[AUTO TEST] LinkedIn project positioning",
+            "platform": "linkedin",
+        })
+        scope = self.env.ref("product_social_content_bridge.content_scope_brand_positioning")
+        plan = self.env["psc.content.plan"].create({
+            "name": "[AUTO TEST] China sourcing partner positioning",
+            "project_id": self.project.id,
+            "scope_id": scope.id,
+            "content_format": "short_video",
+            "market_ids": [(6, 0, self.market.ids)],
+            "channel_ids": [(6, 0, (self.channel | second_channel).ids)],
+            "brief": "Explain the project role and evidence boundaries without product claims.",
+        })
+
+        action = plan.action_prepare_content()
+
+        self.assertEqual(plan.content_count, 2)
+        self.assertEqual(set(plan.content_ids.mapped("channel_id").ids), set((self.channel | second_channel).ids))
+        self.assertFalse(plan.content_ids.mapped("product_id"))
+        self.assertEqual(set(plan.content_ids.mapped("scope_id").ids), {scope.id})
+        self.assertEqual(set(plan.content_ids.mapped("content_format")), {"short_video"})
+        self.assertEqual(action["view_mode"], "list,form")
+
+    def test_default_content_mix_has_ten_editable_types_and_totals_one_hundred(self):
+        self.env["psc.content.mix.rule"].ensure_default_profiles()
+        rules = self.env["psc.content.mix.rule"].search([
+            ("track_id", "=", self.project.track_id.id),
+            ("role_id", "=", self.project.business_role_id.id),
+            ("active", "=", True),
+        ])
+
+        self.assertEqual(len(rules), 10)
+        self.assertEqual(sum(rules.mapped("content_ratio")), 100)
+        self.assertTrue(all(0 <= value <= 100 for value in rules.mapped("video_ratio")))
+
     def test_ai_content_and_website_publication_workflow(self):
         post = self._generate_channel_content()
         contents = self.project.content_ids

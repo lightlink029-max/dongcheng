@@ -104,8 +104,8 @@ export async function createServer(): Promise<McpServer> {
   )));
 
   server.registerTool("get_content_backlog", {
-    title: "读取内容计划",
-    description: "读取项目中尚未发布的结构化内容计划及其产品、市场、渠道和要求。",
+    title: "读取统一社媒内容工作台",
+    description: "读取项目中尚未发布的内容计划、十类内容、建议内容/视频比例、素材标签、目标市场、渠道和账号集群。",
     inputSchema: { project_id: projectId, limit: z.number().int().min(1).max(100).default(30) },
     outputSchema: outputObject,
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },

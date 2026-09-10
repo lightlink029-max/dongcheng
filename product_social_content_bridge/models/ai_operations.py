@@ -312,7 +312,8 @@ class AiAction(models.Model):
         preconditions = _json_loads(self.precondition_json).get("records", [])
         allowed_models = {
             "psc.publishing.project", "psc.project.product", "psc.content.plan",
-            "psc.content.pillar", "psc.target.market", "psc.publishing.channel",
+            "psc.content.scope", "psc.content.pillar", "psc.target.market", "psc.publishing.channel",
+            "psc.social.account.cluster",
             "crm.lead", "psc.optimization.action", "psc.publication.task", "psc.ai.action",
             "product.template", "psc.product.line", "psc.project.blueprint",
             "psc.local.worker.node", "psc.bitbrowser.environment",
@@ -339,45 +340,77 @@ class AiAction(models.Model):
         elif self.action_type == "create_content_plan":
             project = self.env["psc.publishing.project"].browse(values.get("project_id")).exists()
             pillar = self.env["psc.content.pillar"].browse(values.get("pillar_id")).exists()
-            market = self.env["psc.target.market"].browse(values.get("market_id")).exists()
-            channel = self.env["psc.publishing.channel"].browse(values.get("channel_id")).exists()
-            if not all((project, pillar, market, channel)):
-                raise ValidationError(_("内容计划关联的项目、栏目、市场或渠道不存在。"))
-            if pillar.track_id != project.track_id or market not in project.market_ids or channel not in project.channel_ids:
-                raise ValidationError(_("内容计划不符合项目的赛道、市场或渠道范围。"))
+            scope = self.env["psc.content.scope"].browse(values.get("scope_id")).exists()
+            market_ids = values.get("market_ids") or [values.get("market_id")]
+            channel_ids = values.get("channel_ids") or [values.get("channel_id")]
+            markets = self.env["psc.target.market"].browse([item for item in market_ids if item]).exists()
+            channels = self.env["psc.publishing.channel"].browse([item for item in channel_ids if item]).exists()
+            clusters = self.env["psc.social.account.cluster"].browse(values.get("cluster_ids") or []).exists()
+            products = self.env["product.template"].browse(
+                values.get("product_ids") or ([values.get("product_id")] if values.get("product_id") else [])
+            ).exists()
+            if not project or not (scope or pillar) or not markets or not channels:
+                raise ValidationError(_("内容计划关联的项目、内容类型、市场或渠道不存在。"))
+            if pillar and pillar.track_id != project.track_id:
+                raise ValidationError(_("原内容栏目不属于项目经营赛道。"))
+            if markets - project.market_ids or channels - project.channel_ids:
+                raise ValidationError(_("内容计划不符合项目的市场或渠道范围。"))
+            if clusters - project.account_cluster_ids:
+                raise ValidationError(_("目标账号集群不属于当前项目。"))
+            if scope.code == "product_category" and not products:
+                raise ValidationError(_("“产品或品类介绍”内容必须关联真实产品。"))
             record = self.env["psc.content.plan"].create({
-                "name": values.get("name") or pillar.name,
+                "name": values.get("name") or scope.name or pillar.name,
                 "project_id": project.id,
-                "pillar_id": pillar.id,
-                "product_id": values.get("product_id") or False,
-                "market_id": market.id,
-                "channel_id": channel.id,
+                "scope_id": scope.id or False,
+                "pillar_id": pillar.id or False,
+                "content_format": values.get("content_format") or "short_video",
+                "objective": values.get("objective") or "trust",
+                "product_id": products[:1].id or False,
+                "product_ids": [(6, 0, products.ids)],
+                "market_id": markets[:1].id,
+                "market_ids": [(6, 0, markets.ids)],
+                "channel_id": channels[:1].id,
+                "channel_ids": [(6, 0, channels.ids)],
+                "cluster_ids": [(6, 0, clusters.ids)],
                 "scheduled_at": values.get("scheduled_at") or False,
                 "brief": values.get("brief") or "",
             })
         elif self.action_type == "create_content_draft":
             plan = self.env["psc.content.plan"].browse(values.get("plan_id")).exists()
-            if not plan or plan.state in ("published", "cancelled") or plan.content_id:
-                raise ValidationError(_("内容计划不存在、已关闭或已经生成草稿。"))
-            product = self.env["product.template"].browse(values.get("product_id") or plan.product_id.id).exists()
-            project_product = self.env["psc.project.product"].search([
-                ("project_id", "=", plan.project_id.id), ("product_id", "=", product.id),
-            ], limit=1)
-            if (
-                not product or not project_product or project_product.status != "active"
-                or project_product.compliance_state != "passed"
-                or project_product.material_state != "complete"
-                or not project_product.hard_gate_passed
-            ):
-                raise UserError(_("产品尚未通过可运营、资料、合规和硬性门槛，不能创建对外内容。"))
+            if not plan or plan.state in ("published", "cancelled"):
+                raise ValidationError(_("内容计划不存在或已经关闭。"))
+            markets = plan.market_ids or plan.market_id or plan.project_id.market_ids
+            channels = plan.channel_ids or plan.channel_id or plan.project_id.channel_ids
+            market = self.env["psc.target.market"].browse(values.get("market_id")).exists() or markets[:1]
+            channel = self.env["psc.publishing.channel"].browse(values.get("channel_id")).exists() or channels[:1]
+            if not market or not channel or market not in markets or channel not in channels:
+                raise ValidationError(_("草稿市场或渠道不在内容计划范围内。"))
+            if plan.content_ids.filtered(lambda item: item.market_id == market and item.channel_id == channel):
+                raise ValidationError(_("该内容计划已经存在相同市场和渠道的内容版本。"))
+            products = plan.product_ids | plan.product_id
+            product = self.env["product.template"].browse(values.get("product_id")).exists() or products[:1]
+            if plan.scope_id.code == "product_category":
+                project_product = self.env["psc.project.product"].search([
+                    ("project_id", "=", plan.project_id.id), ("product_id", "=", product.id),
+                ], limit=1)
+                if (
+                    not product or not project_product or project_product.status != "active"
+                    or project_product.compliance_state != "passed"
+                    or project_product.material_state != "complete"
+                    or not project_product.hard_gate_passed
+                ):
+                    raise UserError(_("产品尚未通过可运营、资料、合规和硬性门槛，不能创建产品类对外内容。"))
             record = self.env["psc.content.variant"].create({
                 "project_id": plan.project_id.id,
                 "plan_id": plan.id,
-                "pillar_id": plan.pillar_id.id,
-                "product_id": product.id,
-                "market_id": plan.market_id.id,
-                "channel_id": plan.channel_id.id,
-                "language_id": plan.market_id.lang_id.id,
+                "pillar_id": plan.pillar_id.id or False,
+                "product_id": product.id or False,
+                "product_ids": [(6, 0, products.ids)],
+                "market_id": market.id,
+                "channel_id": channel.id,
+                "language_id": market.lang_id.id,
+                "tag_ids": [(6, 0, plan.tag_ids.ids)],
                 "title": values.get("title") or plan.name,
                 "caption": values.get("caption") or "",
                 "hashtags": values.get("hashtags") or "",
@@ -389,7 +422,7 @@ class AiAction(models.Model):
                 "ai_model": "ChatGPT MCP",
                 "ai_generated_at": fields.Datetime.now(),
             })
-            plan.write({"content_id": record.id, "state": "prepared"})
+            plan.write({"content_id": plan.content_id.id or record.id, "state": "prepared"})
         elif self.action_type == "create_lead_followup":
             lead = self.env["crm.lead"].browse(values.get("lead_id")).exists()
             activity_type = self.env["mail.activity.type"].browse(values.get("activity_type_id")).exists()
@@ -794,14 +827,21 @@ class AiOperationsService(models.AbstractModel):
             ],
             "create_content_plan": [
                 ("psc.publishing.project", "project_id", "运营项目", True),
-                ("psc.content.pillar", "pillar_id", "内容栏目", True),
-                ("psc.target.market", "market_id", "市场", True),
-                ("psc.publishing.channel", "channel_id", "渠道", True),
+                ("psc.content.scope", "scope_id", "内容类型", False),
+                ("psc.content.pillar", "pillar_id", "原内容栏目", False),
+                ("psc.target.market", "market_ids", "市场", False),
+                ("psc.target.market", "market_id", "市场", False),
+                ("psc.publishing.channel", "channel_ids", "渠道", False),
+                ("psc.publishing.channel", "channel_id", "渠道", False),
+                ("psc.social.account.cluster", "cluster_ids", "账号集群", False),
+                ("product.template", "product_ids", "产品", False),
                 ("product.template", "product_id", "产品", False),
             ],
             "create_content_draft": [
                 ("psc.content.plan", "plan_id", "内容计划", True),
                 ("product.template", "product_id", "产品", False),
+                ("psc.target.market", "market_id", "市场", False),
+                ("psc.publishing.channel", "channel_id", "渠道", False),
             ],
             "create_lead_followup": [("crm.lead", "lead_id", "客户", True)],
             "create_project_task": [("psc.publishing.project", "project_id", "运营项目", True)],
@@ -838,12 +878,10 @@ class AiOperationsService(models.AbstractModel):
             plan = next((record for record in records if record._name == "psc.content.plan"), False)
             product = next((record for record in records if record._name == "product.template"), False)
             if plan:
-                product = product or plan.product_id
-                project_product = self.env["psc.project.product"].search([
-                    ("project_id", "=", plan.project_id.id), ("product_id", "=", product.id),
-                ], limit=1)
-                if project_product:
-                    records.append(project_product)
+                products = product or plan.product_ids or plan.product_id
+                records.extend(self.env["psc.project.product"].search([
+                    ("project_id", "=", plan.project_id.id), ("product_id", "in", products.ids),
+                ]))
         if action_type == "initialize_medical_test_data":
             if payload.get("dataset") != "medical_procurement_smoke_v1":
                 raise ValidationError(_("只能初始化内置的医疗测试数据集。"))
@@ -1325,21 +1363,37 @@ class AiOperationsService(models.AbstractModel):
         return {
             "project": self._record_ref(project),
             "available": {
+                "content_types": [self._record_ref(scope) for scope in self.env["psc.content.scope"].search([
+                    ("active", "=", True),
+                ], order="sequence, id")],
                 "pillars": [self._record_ref(pillar) for pillar in pillars],
                 "products": [self._record_ref(product) for product in project.product_ids],
                 "markets": [self._record_ref(market) for market in project.market_ids],
                 "channels": [self._record_ref(channel) for channel in project.channel_ids],
+                "account_clusters": [self._record_ref(cluster) for cluster in project.account_cluster_ids],
             },
+            "recommended_mix": [{
+                "content_type": self._record_ref(rule.scope_id),
+                "content_ratio": rule.content_ratio,
+                "video_ratio": rule.video_ratio,
+                "notes": rule.notes,
+            } for rule in project.content_mix_rule_ids],
             "plans": [{
-            **self._record_ref(plan),
-            "state": plan.state,
-            "pillar": plan.pillar_id.name,
-            "product": plan.product_id.display_name,
-            "market": plan.market_id.name,
-            "channel": plan.channel_id.name,
-            "scheduled_at": fields.Datetime.to_string(plan.scheduled_at) if plan.scheduled_at else None,
-            "brief": plan.brief,
-        } for plan in plans],
+                **self._record_ref(plan),
+                "state": plan.state,
+                "content_type": self._record_ref(plan.scope_id) if plan.scope_id else None,
+                "content_format": plan.content_format,
+                "objective": plan.objective,
+                "legacy_pillar": plan.pillar_id.name,
+                "products": [self._record_ref(product) for product in (plan.product_ids | plan.product_id)],
+                "markets": [self._record_ref(market) for market in (plan.market_ids | plan.market_id)],
+                "channels": [self._record_ref(channel) for channel in (plan.channel_ids | plan.channel_id)],
+                "account_clusters": [self._record_ref(cluster) for cluster in plan.cluster_ids],
+                "tags": plan.tag_ids.mapped("name"),
+                "content_count": plan.content_count,
+                "scheduled_at": fields.Datetime.to_string(plan.scheduled_at) if plan.scheduled_at else None,
+                "brief": plan.brief,
+            } for plan in plans],
         }
 
     @api.model

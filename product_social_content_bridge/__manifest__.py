@@ -1,6 +1,6 @@
 {
     "name": "产品线社媒发布中心",
-    "version": "19.0.5.5.3",
+    "version": "19.0.6.0.0",
     "summary": "从赛道、产品池到ChatGPT协同、销售归因和持续优化的市场运营中心",
     "category": "Marketing/Social Marketing",
     "author": "LightLink",
@@ -11,6 +11,7 @@
         "security/ir.model.access.csv",
         "data/media_models.xml",
         "data/market_operation_templates.xml",
+        "data/content_strategy_templates.xml",
         "data/ai_blueprints.xml",
         "data/ai_cron.xml",
         "views/social_content_views.xml",

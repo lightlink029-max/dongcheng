@@ -14,6 +14,8 @@ class LocalProductionTask(models.Model):
     content_id = fields.Many2one("psc.content.variant", required=True, ondelete="cascade", index=True)
     project_id = fields.Many2one(related="content_id.project_id", store=True, index=True)
     product_id = fields.Many2one(related="content_id.product_id", store=True, index=True)
+    content_scope_id = fields.Many2one(related="content_id.scope_id", store=True, index=True)
+    content_format = fields.Selection(related="content_id.content_format", store=True, index=True)
     task_type = fields.Selection([
         ("image", "生成图片"), ("video", "生成视频"),
         ("translate_mix", "翻译并混剪视频"),
@@ -112,7 +114,7 @@ class ContentVariant(models.Model):
                 ))
             language = variant.language_id.name or variant.language_id.code or "English"
             source_image = variant.image_attachment_id
-            if not source_image and variant.product_id.image_1920:
+            if not source_image and variant.product_id and variant.product_id.image_1920:
                 source_image = self.env["ir.attachment"].create({
                     "name": "product-%s-reference.jpg" % variant.product_id.id,
                     "type": "binary", "datas": variant.product_id.image_1920,
@@ -147,7 +149,11 @@ class ContentVariant(models.Model):
 
     def _douyin_search_action(self, search_mode):
         self.ensure_one()
-        keyword = (self.douyin_search_keyword or self.title or self.product_id.name or "").strip()
+        keyword = (
+            self.douyin_search_keyword
+            or self.title
+            or (self.product_id.name if self.product_id else "")
+        ).strip()
         if not keyword:
             raise UserError(_("请先填写抖音素材关键词。"))
         url = "https://www.douyin.com/search/%s?type=video&pih_content_id=%s&pih_search_mode=%s" % (
