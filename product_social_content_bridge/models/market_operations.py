@@ -695,14 +695,23 @@ class ContentPlan(models.Model):
         for plan in self:
             markets = plan.market_ids or plan.market_id or plan.project_id.market_ids
             channels = plan.channel_ids or plan.channel_id or plan.project_id.channel_ids
+            market_channel_pairs = {(market, channel) for market in markets for channel in channels}
             if plan.cluster_ids:
-                cluster_markets = plan.cluster_ids.mapped("target_market_id")
                 cluster_channels = plan.cluster_ids.mapped("account_ids.channel_id")
                 if not cluster_channels:
                     raise UserError(_("所选账号集群还没有可用的平台账号，请先配置集群账号。"))
-                markets = markets & cluster_markets if markets else cluster_markets
-                channels = channels & cluster_channels if channels else cluster_channels
-            if not markets or not channels:
+                market_channel_pairs = {
+                    (cluster.target_market_id, account.channel_id)
+                    for cluster in plan.cluster_ids
+                    for account in cluster.account_ids
+                    if cluster.target_market_id in markets and account.channel_id in channels
+                }
+                market_channel_pairs |= {
+                    (market, channel)
+                    for market in markets
+                    for channel in channels.filtered(lambda item: item.platform == "website")
+                }
+            if not market_channel_pairs:
                 raise UserError(_("请先选择目标市场和发布渠道，或选择已经配置账号的目标集群。"))
             products = plan.product_ids | plan.product_id
             if plan.scope_id.code == "product_category" and not products:
@@ -719,24 +728,23 @@ class ContentPlan(models.Model):
                     raise UserError(_("产品类内容只能使用已完成资料、合规和硬门槛审核的项目产品。"))
             existing = {(content.market_id.id, content.channel_id.id) for content in plan.content_ids}
             created = self.env["psc.content.variant"]
-            for market in markets:
-                for channel in channels:
-                    if (market.id, channel.id) in existing:
-                        continue
-                    created |= self.env["psc.content.variant"].create({
-                        "project_id": plan.project_id.id,
-                        "plan_id": plan.id,
-                        "pillar_id": plan.pillar_id.id,
-                        "product_id": plan.product_id.id or products[:1].id or False,
-                        "product_ids": [(6, 0, products.ids)],
-                        "market_id": market.id,
-                        "channel_id": channel.id,
-                        "language_id": market.lang_id.id,
-                        "title": plan.name,
-                        "caption": plan.brief or plan.pillar_id.instructions or plan.scope_id.description or "",
-                        "tag_ids": [(6, 0, plan.tag_ids.ids)],
-                        "state": "draft",
-                    })
+            for market, channel in market_channel_pairs:
+                if (market.id, channel.id) in existing:
+                    continue
+                created |= self.env["psc.content.variant"].create({
+                    "project_id": plan.project_id.id,
+                    "plan_id": plan.id,
+                    "pillar_id": plan.pillar_id.id,
+                    "product_id": plan.product_id.id or products[:1].id or False,
+                    "product_ids": [(6, 0, products.ids)],
+                    "market_id": market.id,
+                    "channel_id": channel.id,
+                    "language_id": market.lang_id.id,
+                    "title": plan.name,
+                    "caption": plan.brief or plan.pillar_id.instructions or plan.scope_id.description or "",
+                    "tag_ids": [(6, 0, plan.tag_ids.ids)],
+                    "state": "draft",
+                })
             contents = plan.content_ids | created
             if contents:
                 plan.write({
