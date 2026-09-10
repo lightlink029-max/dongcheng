@@ -231,10 +231,11 @@
                 </page>
                 <page string="统一社媒内容工作台" name="social_content_workspace">
                     <div class="alert alert-info" role="alert">先按项目定位、经营角色和内容类型制定任务，再复用到目标市场、渠道和账号集群。只有“产品或品类介绍”必须关联真实产品。</div>
-                    <group string="内容策略与素材" col="2" colspan="2">
-                        <field name="content_brief" nolabel="1" colspan="2" placeholder="项目级英文定位、受众、价值主张、事实边界和统一行动号召。"/>
-                        <field name="material_asset_ids" nolabel="1" colspan="2" widget="many2many_tags"/>
-                    </group>
+                    <separator string="内容策略与素材库" colspan="2"/>
+                    <field name="content_brief" nolabel="1" colspan="2" placeholder="项目级英文定位、受众、价值主张、事实边界和统一行动号召。"/>
+                    <field name="material_asset_ids" nolabel="1" colspan="2" class="w-100">
+                        <list><field name="sequence" widget="handle"/><field name="name"/><field name="asset_type" widget="badge"/><field name="content_scope_ids" widget="many2many_tags"/><field name="tag_ids" widget="many2many_tags"/><field name="file_name"/><field name="channel_id" optional="hide"/><field name="active"/></list>
+                    </field>
                     <div class="d-flex flex-wrap gap-2 align-items-center mt-2 mb-2" colspan="2">
                         <button name="action_open_content_mix_rules" type="object" string="维护建议内容与视频比例" icon="fa-sliders" class="btn-secondary"/>
                         <button name="action_open_video_content_share" type="object" string="查看实际发布占比" icon="fa-pie-chart" class="btn-secondary"/>
@@ -253,7 +254,7 @@
                     </field>
                     <separator string="渠道内容制作" colspan="2"/>
                     <field name="content_ids" nolabel="1" colspan="2" class="w-100" readonly="1">
-                        <list><field name="scope_id"/><field name="content_format" widget="badge"/><field name="market_id"/><field name="channel_id"/><field name="title"/><field name="tag_ids" widget="many2many_tags" optional="hide"/><field name="ai_state" widget="badge"/><field name="state" widget="badge"/><field name="video_attachment_id" optional="hide"/><button name="action_generate_ai_content" type="object" string="生成文案" icon="fa-magic"/><button name="action_open_generated_video" type="object" string="播放视频" icon="fa-play" invisible="not video_attachment_id"/></list>
+                        <list><field name="scope_id"/><field name="content_format" widget="badge"/><field name="market_id"/><field name="channel_id"/><field name="title"/><field name="material_asset_ids" widget="many2many_tags" optional="show"/><field name="tag_ids" widget="many2many_tags" optional="hide"/><field name="ai_state" widget="badge"/><field name="state" widget="badge"/><field name="video_attachment_id" optional="hide"/><button name="action_generate_ai_content" type="object" string="生成文案" icon="fa-magic"/><button name="action_open_generated_video" type="object" string="播放视频" icon="fa-play" invisible="not video_attachment_id"/></list>
                     </field>
                     <separator string="发布任务与实际占比依据" colspan="2"/>
                     <field name="publication_task_ids" nolabel="1" colspan="2" class="w-100" readonly="1">
