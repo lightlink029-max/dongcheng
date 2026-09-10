@@ -26,6 +26,10 @@
                         </div>
                     </div>
 
+                    <div class="mb-5">
+                        <field name="navigation_widget" widget="psc_business_navigation" nolabel="1" readonly="1"/>
+                    </div>
+
                     <div class="border rounded-3 bg-light p-3 mb-4">
                         <div class="fw-bold mb-2">完整业务流程</div>
                         <div class="d-flex flex-wrap align-items-center gap-2 text-center">
@@ -122,9 +126,6 @@
                         </div>
                     </div>
 
-                    <div class="mt-5">
-                        <field name="navigation_widget" widget="psc_business_navigation" nolabel="1" readonly="1"/>
-                    </div>
                 </sheet>
             </form>
         </field>

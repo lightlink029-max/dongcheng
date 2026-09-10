@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem id="menu_psc_category_web_marketing" name="网站与营销" sequence="20" web_icon="website,static/description/icon.png"/>
-    <menuitem id="menu_psc_category_customer" name="客户管理" sequence="30" web_icon="crm,static/description/icon.png"/>
-    <menuitem id="menu_psc_category_supply_chain" name="供应链管理" sequence="40" web_icon="stock,static/description/icon.png"/>
-    <menuitem id="menu_psc_category_finance" name="财务与数据" sequence="50" web_icon="account,static/description/icon.png"/>
-    <menuitem id="menu_psc_category_collaboration" name="协同办公" sequence="60" web_icon="mail,static/description/icon.png"/>
-    <menuitem id="menu_psc_category_system" name="系统设置" sequence="90" web_icon="base,static/description/settings.png"/>
-    <menuitem id="menu_psc_category_other" name="其他" sequence="100" web_icon="base,static/description/modules.png"/>
+    <menuitem id="menu_psc_category_web_marketing" name="网站与营销" parent="menu_psc_root" sequence="20"/>
+    <menuitem id="menu_psc_category_customer" name="客户管理" parent="menu_psc_root" sequence="30"/>
+    <menuitem id="menu_psc_category_supply_chain" name="供应链管理" parent="menu_psc_root" sequence="40"/>
+    <menuitem id="menu_psc_category_finance" name="财务与数据" parent="menu_psc_root" sequence="50"/>
+    <menuitem id="menu_psc_category_collaboration" name="协同办公" parent="menu_psc_root" sequence="60"/>
+    <menuitem id="menu_psc_category_system" name="系统设置" parent="menu_psc_root" sequence="90"/>
+    <menuitem id="menu_psc_category_other" name="其他" parent="menu_psc_root" sequence="100"/>
 
     <menuitem id="menu_psc_finance_performance" name="经营数据" parent="menu_psc_category_finance"
               action="action_psc_performance_snapshots" sequence="30"/>
