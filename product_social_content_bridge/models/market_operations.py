@@ -916,6 +916,18 @@ class PublishingProjectOperations(models.Model):
                 ))
         return True
 
+    def action_open_readiness_items(self):
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id(
+            "product_social_content_bridge.action_psc_project_readiness_items"
+        )
+        action["domain"] = [("project_id", "=", self.id)]
+        action["context"] = {
+            "default_project_id": self.id,
+            "search_default_my_work": 1,
+        }
+        return action
+
     def ensure_footwear_sourcing_readiness(self):
         item_model = self.env["psc.project.readiness.item"]
         today = fields.Date.context_today(self)

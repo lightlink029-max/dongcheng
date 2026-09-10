@@ -92,6 +92,10 @@ class AiOperationsCase(TransactionCase):
         self.assertEqual(replay["id"], project.id)
         self.assertEqual(len(project.readiness_item_ids), 28)
 
+        action = project.action_open_readiness_items()
+        self.assertEqual(action["domain"], [("project_id", "=", project.id)])
+        self.assertEqual(action["context"]["default_project_id"], project.id)
+
     def test_readiness_progress_can_be_updated_in_one_approved_batch(self):
         initialized = self.service._initialize_footwear_sourcing_project(
             project_name="[AUTO TEST] Batch readiness update",

@@ -171,24 +171,22 @@
             <xpath expr="//sheet/notebook/page[1]" position="before">
                 <page string="上线准备" name="launch_readiness">
                     <div class="alert alert-info" role="alert">只有进度达到 100%、全部硬门槛有真实依据且首发产品通过审核后，项目才能启动运营或创建发布任务。</div>
-                    <group>
-                        <group>
-                            <field name="readiness_progress" widget="progressbar" options="{'max_value': 100}"/>
-                            <field name="launch_ready" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="readiness_total_count" readonly="1"/>
-                            <field name="readiness_done_count" readonly="1"/>
-                            <field name="readiness_blocked_count" readonly="1"/>
-                            <field name="readiness_overdue_count" readonly="1"/>
-                        </group>
+                    <group string="上线状态" col="6">
+                        <field name="readiness_progress" widget="progressbar" options="{'max_value': 100}" readonly="1"/>
+                        <field name="readiness_done_count" readonly="1"/>
+                        <field name="readiness_total_count" readonly="1"/>
+                        <field name="readiness_blocked_count" readonly="1"/>
+                        <field name="readiness_overdue_count" readonly="1"/>
+                        <field name="launch_ready" readonly="1"/>
                     </group>
-                    <field name="readiness_blocker_summary" readonly="1" invisible="not readiness_blocker_summary"/>
+                    <field name="readiness_blocker_summary" nolabel="1" readonly="1" invisible="not readiness_blocker_summary"/>
+                    <button name="action_open_readiness_items" type="object" string="查看完整准备清单" icon="fa-list" class="btn-secondary mb-2"/>
                     <field name="readiness_item_ids" context="{'default_project_id': id}" mode="list,form">
-                        <list decoration-success="state == 'done'" decoration-danger="state == 'blocked'" decoration-warning="state == 'doing'">
-                            <field name="sequence" widget="handle"/><field name="due_date"/><field name="category"/>
-                            <field name="name"/><field name="weight"/><field name="hard_gate"/>
-                            <field name="responsibility" widget="badge"/><field name="owner_id"/><field name="state" widget="badge"/>
+                        <list limit="8" decoration-success="state == 'done'" decoration-danger="state == 'blocked'" decoration-warning="state == 'doing'">
+                            <field name="name"/>
+                            <field name="responsibility" widget="badge"/>
+                            <field name="due_date"/>
+                            <field name="state" widget="badge"/>
                             <button name="action_start" type="object" string="开始" invisible="state not in ('todo', 'blocked')"/>
                             <button name="action_done" type="object" string="完成" invisible="state == 'done'"/>
                         </list>
