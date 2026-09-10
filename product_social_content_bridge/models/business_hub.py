@@ -38,7 +38,6 @@ APP_MENU_GROUPS = {
     "product_social_content_bridge.menu_psc_category_finance": (
         "account.menu_finance",
         "spreadsheet_dashboard.spreadsheet_dashboard_menu_root",
-        "product_social_content_bridge.menu_psc_finance_performance",
     ),
     "product_social_content_bridge.menu_psc_category_collaboration": (
         "mail.menu_root_discuss",
@@ -186,14 +185,24 @@ class BusinessHub(models.Model):
     def get_application_navigation(self):
         categories = self._category_records()
         business_menu = self.env.ref("product_social_content_bridge.menu_psc_root")
+        workflow_menu = self.env.ref("product_social_content_bridge.menu_psc_workflow")
+        performance_menu = self.env.ref("product_social_content_bridge.menu_psc_finance_performance")
         visible_ids = self.env["ir.ui.menu"]._visible_menu_ids()
         movable = self._movable_application_menus().filtered(
             lambda menu: menu.id in visible_ids
         )
         result = []
         for code, name, _xmlid, icon in NAVIGATION_CATEGORIES:
+            item_icons = {}
             if code == "business":
-                items = business_menu if business_menu.id in visible_ids else self.env["ir.ui.menu"]
+                items = (business_menu | workflow_menu | performance_menu).filtered(
+                    lambda menu: menu.id in visible_ids
+                )
+                item_icons = {
+                    business_menu.id: "fa-home",
+                    workflow_menu.id: "fa-briefcase",
+                    performance_menu.id: "fa-line-chart",
+                }
             elif code == "other":
                 items = movable.filtered(
                     lambda menu: not menu.parent_id or menu.parent_id == categories[code]
@@ -210,6 +219,7 @@ class BusinessHub(models.Model):
                     "id": menu.id,
                     "name": menu.name,
                     "web_icon": menu.web_icon or "",
+                    "fallback_icon": item_icons.get(menu.id, "fa-cube"),
                     "locked": code == "business",
                 } for menu in items],
             })

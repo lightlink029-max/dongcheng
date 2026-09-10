@@ -8,7 +8,7 @@
     <menuitem id="menu_psc_category_system" name="系统设置" parent="menu_psc_root" sequence="90"/>
     <menuitem id="menu_psc_category_other" name="其他" parent="menu_psc_root" sequence="100"/>
 
-    <menuitem id="menu_psc_finance_performance" name="经营数据" parent="menu_psc_category_finance"
+    <menuitem id="menu_psc_finance_performance" name="经营数据" parent="menu_psc_root"
               action="action_psc_performance_snapshots" sequence="30"/>
 
     <function model="psc.business.hub" name="organize_application_menus"/>

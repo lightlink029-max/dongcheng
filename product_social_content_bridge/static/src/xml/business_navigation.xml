@@ -56,7 +56,7 @@
                         >
                             <span class="o_psc_nav_item_icon">
                                 <img t-if="getMenuIcon(item)" t-att-src="getMenuIcon(item)" t-att-alt="item.name"/>
-                                <i t-else="" class="fa fa-cube"/>
+                                <i t-else="" t-att-class="'fa ' + item.fallback_icon"/>
                             </span>
                             <span class="o_psc_nav_item_name"><t t-esc="item.name"/></span>
                             <i t-if="state.editMode &amp;&amp; !item.locked" class="fa fa-arrows o_psc_nav_drag_hint" aria-label="可拖动"/>

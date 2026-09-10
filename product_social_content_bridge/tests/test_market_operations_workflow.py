@@ -70,6 +70,22 @@ class MarketOperationsWorkflowCase(TransactionCase):
         })
         return channel, node, environment, cluster
 
+    def test_navigation_keeps_core_entries_in_business_center(self):
+        root = self.env.ref("product_social_content_bridge.menu_psc_root")
+        workflow = self.env.ref("product_social_content_bridge.menu_psc_workflow")
+        performance = self.env.ref("product_social_content_bridge.menu_psc_finance_performance")
+        finance = self.env.ref("product_social_content_bridge.menu_psc_category_finance")
+
+        payload = self.env["psc.business.hub"].get_application_navigation()
+        business = next(category for category in payload["categories"] if category["code"] == "business")
+        finance_section = next(category for category in payload["categories"] if category["code"] == "finance")
+
+        self.assertEqual([item["id"] for item in business["items"]], [root.id, workflow.id, performance.id])
+        self.assertTrue(all(item["locked"] for item in business["items"]))
+        self.assertNotIn(performance.id, [item["id"] for item in finance_section["items"]])
+        self.assertEqual(workflow.parent_id, root)
+        self.assertEqual(performance.parent_id, root)
+
     def test_product_pool_requires_complete_verified_data(self):
         item = self.project.project_product_ids.filtered(
             lambda row: row.product_id == self.product
