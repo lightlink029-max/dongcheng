@@ -145,7 +145,6 @@ class BusinessHub(models.Model):
                             "parent_id": category.id,
                             "sequence": sequence * 10,
                         })
-        self._move_unclassified_roots_to_other()
         if force:
             other = categories["other"]
             custom_menus = self.env["ir.ui.menu"].search([
@@ -163,18 +162,6 @@ class BusinessHub(models.Model):
             for code, _name, xmlid, _icon in NAVIGATION_CATEGORIES
             if xmlid
         }
-
-    @api.model
-    def _move_unclassified_roots_to_other(self):
-        categories = self._category_records()
-        business_menu = self.env.ref("product_social_content_bridge.menu_psc_root")
-        excluded_ids = {business_menu.id, *(menu.id for menu in categories.values())}
-        unclassified = self.env["ir.ui.menu"].search([
-            ("parent_id", "=", False),
-            ("id", "not in", list(excluded_ids)),
-        ])
-        if unclassified:
-            unclassified.write({"parent_id": categories["other"].id})
 
     @api.model
     def _movable_application_menus(self):
