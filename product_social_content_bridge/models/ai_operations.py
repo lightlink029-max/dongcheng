@@ -392,7 +392,7 @@ class AiAction(models.Model):
                 raise ValidationError(_("该内容计划已经存在相同市场和渠道的内容版本。"))
             products = plan.product_ids | plan.product_id
             product = self.env["product.template"].browse(values.get("product_id")).exists() or products[:1]
-            if plan.scope_id.code == "product_category":
+            if plan.scope_id.code == "product_category" or (not plan.scope_id and product):
                 project_product = self.env["psc.project.product"].search([
                     ("project_id", "=", plan.project_id.id), ("product_id", "=", product.id),
                 ], limit=1)
