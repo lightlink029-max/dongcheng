@@ -281,10 +281,22 @@
                     <group col="4" colspan="4" class="w-100">
                         <separator string="项目级内容总规则（所有内容共用）" colspan="4"/>
                         <div class="text-muted mb-2" colspan="4">用途：统一规定目标客户、经营身份、发布语言、核心卖点、事实边界和行动引导。这里填写一次，后续文案与视频脚本都会继承。</div>
-                        <group col="2" colspan="4" class="w-100">
-                            <group string="中文规则（审核与维护）"><field name="content_brief_zh" nolabel="1" placeholder="填写中文定位、受众、价值主张、事实边界和统一行动号召。"/></group>
-                            <group string="English Rules（英文内容生成）"><field name="content_brief" nolabel="1" placeholder="Define the English positioning, audience, value proposition, fact boundaries and CTA."/></group>
-                        </group>
+                        <div class="row g-3 w-100 m-0" colspan="4">
+                            <div class="col-12 col-lg-6 px-2">
+                                <div class="border rounded-3 bg-light p-3 h-100">
+                                    <h4 class="mb-1">中文规则</h4>
+                                    <p class="text-muted mb-3">审核与维护参考：用于理解项目定位、内容重点和事实边界。</p>
+                                    <field name="content_brief_zh" nolabel="1" class="w-100" placeholder="填写中文定位、受众、价值主张、事实边界和统一行动号召。"/>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-6 px-2">
+                                <div class="border rounded-3 bg-light p-3 h-100">
+                                    <h4 class="mb-1">English Rules</h4>
+                                    <p class="text-muted mb-3">Content-generation rules shared by the website, social posts and video scripts.</p>
+                                    <field name="content_brief" nolabel="1" class="w-100" placeholder="Define the English positioning, audience, value proposition, fact boundaries and CTA."/>
+                                </div>
+                            </div>
+                        </div>
                         <separator string="可复用素材库（图片、视频与文件）" colspan="4"/>
                         <div class="text-muted mb-2" colspan="4">用途：保存经过授权和核实的实拍、产品、工厂、验厂、质检、打样、包装及交付素材。上传后按内容类型和素材标签分类，可被多个内容任务与账号集群重复使用。</div>
                         <field name="material_asset_ids" nolabel="1" colspan="4" class="w-100">
