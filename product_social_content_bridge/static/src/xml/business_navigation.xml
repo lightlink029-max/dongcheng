@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="product_social_content_bridge.BusinessNavigation">
+        <section class="o_psc_business_navigation" aria-label="全部功能导航">
+            <div class="o_psc_nav_header">
+                <div>
+                    <h2>全部功能导航</h2>
+                    <p>所有模块按业务功能集中展示，点击直接进入；整理模式下可拖动重新分类和排序。</p>
+                </div>
+                <div class="o_psc_nav_actions" t-if="state.canEdit">
+                    <span class="o_psc_nav_status" t-if="state.status"><t t-esc="state.status"/></span>
+                    <button type="button" class="btn btn-secondary" t-on-click="resetLayout" t-att-disabled="state.saving">
+                        <i class="fa fa-undo me-1"/>恢复默认
+                    </button>
+                    <button type="button" t-att-class="state.editMode ? 'btn btn-primary' : 'btn btn-secondary'" t-on-click="toggleEditMode" t-att-disabled="state.saving">
+                        <i t-att-class="state.editMode ? 'fa fa-check me-1' : 'fa fa-arrows me-1'"/>
+                        <t t-esc="state.editMode ? '完成整理' : '整理模式'"/>
+                    </button>
+                </div>
+            </div>
+
+            <div class="o_psc_nav_loading" t-if="state.loading">
+                <i class="fa fa-spinner fa-spin me-2"/>正在加载功能导航…
+            </div>
+
+            <div class="o_psc_nav_sections" t-else="">
+                <section
+                    t-foreach="state.categories"
+                    t-as="category"
+                    t-key="category.code"
+                    t-att-class="state.editMode ? 'o_psc_nav_section is-editing' : 'o_psc_nav_section'"
+                    t-att-data-category="category.code"
+                    t-on-dragover="allowDrop"
+                    t-on-drop="dropAtEnd"
+                >
+                    <header>
+                        <h3><i t-att-class="'fa ' + category.icon + ' me-2'"/><t t-esc="category.name"/></h3>
+                        <span><t t-esc="category.items.length"/> 项</span>
+                    </header>
+                    <div class="o_psc_nav_items">
+                        <button
+                            t-foreach="category.items"
+                            t-as="item"
+                            t-key="item.id"
+                            type="button"
+                            t-att-class="state.draggedMenuId === item.id ? 'o_psc_nav_item is-dragging' : 'o_psc_nav_item'"
+                            t-att-draggable="isDraggable(item)"
+                            t-att-data-menu-id="item.id"
+                            t-att-data-category="category.code"
+                            t-att-data-before-id="item.id"
+                            t-on-click="() => this.openMenu(item)"
+                            t-on-dragstart="onDragStart"
+                            t-on-dragend="onDragEnd"
+                            t-on-dragover="allowDrop"
+                            t-on-drop="dropBefore"
+                        >
+                            <span class="o_psc_nav_item_icon">
+                                <img t-if="getMenuIcon(item)" t-att-src="getMenuIcon(item)" t-att-alt="item.name"/>
+                                <i t-else="" class="fa fa-cube"/>
+                            </span>
+                            <span class="o_psc_nav_item_name"><t t-esc="item.name"/></span>
+                            <i t-if="state.editMode &amp;&amp; !item.locked" class="fa fa-arrows o_psc_nav_drag_hint" aria-label="可拖动"/>
+                            <i t-if="item.locked" class="fa fa-lock o_psc_nav_drag_hint" aria-label="固定入口"/>
+                        </button>
+                        <div class="o_psc_nav_empty" t-if="!category.items.length">
+                            <i class="fa fa-inbox me-2"/>暂无功能，可把图标拖到这里。
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </t>
+</templates>

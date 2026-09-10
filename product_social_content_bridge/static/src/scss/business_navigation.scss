@@ -1,0 +1,188 @@
+.o_psc_business_navigation {
+    margin-top: 1rem;
+
+    .o_psc_nav_header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+
+        h2 {
+            margin: 0 0 .25rem;
+            font-size: 1.5rem;
+        }
+
+        p {
+            margin: 0;
+            color: var(--o-main-text-color, #495057);
+        }
+    }
+
+    .o_psc_nav_actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        align-items: center;
+    }
+
+    .o_psc_nav_status {
+        color: #198754;
+        font-size: .875rem;
+    }
+
+    .o_psc_nav_loading,
+    .o_psc_nav_empty {
+        padding: 1rem;
+        color: #6c757d;
+        text-align: center;
+    }
+
+    .o_psc_nav_sections {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .o_psc_nav_section {
+        min-width: 0;
+        border: 1px solid #dee2e6;
+        border-radius: .75rem;
+        padding: 1rem;
+        background: #fff;
+        box-shadow: 0 .125rem .35rem rgba(0, 0, 0, .06);
+
+        &.is-editing {
+            border-style: dashed;
+            border-color: #71639e;
+            background: rgba(113, 99, 158, .035);
+        }
+
+        > header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: .75rem;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: .65rem;
+
+            h3 {
+                margin: 0;
+                font-size: 1.1rem;
+                font-weight: 600;
+            }
+
+            span {
+                color: #6c757d;
+                font-size: .8rem;
+            }
+        }
+    }
+
+    .o_psc_nav_items {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: .75rem;
+        min-height: 5.75rem;
+    }
+
+    .o_psc_nav_item {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: .45rem;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        min-height: 5.5rem;
+        border: 1px solid transparent;
+        border-radius: .6rem;
+        padding: .65rem .4rem;
+        background: #f8f9fa;
+        color: inherit;
+        text-align: center;
+        transition: border-color .15s ease, background-color .15s ease, transform .15s ease;
+
+        &:hover,
+        &:focus-visible {
+            border-color: #71639e;
+            background: #fff;
+            outline: none;
+            transform: translateY(-1px);
+        }
+
+        &[draggable="true"] {
+            cursor: grab;
+        }
+
+        &.is-dragging {
+            opacity: .45;
+        }
+    }
+
+    .o_psc_nav_item_icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: .5rem;
+        background: #fff;
+
+        img {
+            width: 2.25rem;
+            height: 2.25rem;
+            object-fit: contain;
+        }
+
+        .fa {
+            color: #71639e;
+            font-size: 1.5rem;
+        }
+    }
+
+    .o_psc_nav_item_name {
+        width: 100%;
+        overflow: hidden;
+        font-size: .875rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .o_psc_nav_drag_hint {
+        position: absolute;
+        top: .3rem;
+        right: .35rem;
+        color: #71639e;
+        font-size: .75rem;
+    }
+
+    .o_psc_nav_empty {
+        grid-column: 1 / -1;
+        border: 1px dashed #ced4da;
+        border-radius: .5rem;
+    }
+
+    @media (max-width: 1200px) {
+        .o_psc_nav_items {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .o_psc_nav_sections {
+            grid-template-columns: 1fr;
+        }
+
+        .o_psc_nav_items {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 480px) {
+        .o_psc_nav_items {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+}

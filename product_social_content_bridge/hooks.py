@@ -1,11 +1,12 @@
-from .models.business_hub import APP_MENU_GROUPS
+from .models.business_hub import NAVIGATION_CATEGORIES
 
 
 def uninstall_hook(env):
     """Return grouped standard applications to the Odoo launcher before uninstall."""
     category_ids = [
         category.id
-        for category_xmlid in APP_MENU_GROUPS
+        for _code, _name, category_xmlid, _icon in NAVIGATION_CATEGORIES
+        if category_xmlid
         if (category := env.ref(category_xmlid, raise_if_not_found=False))
     ]
     if category_ids:

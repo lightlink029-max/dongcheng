@@ -2,6 +2,7 @@
 <odoo>
     <record id="business_hub_main" model="psc.business.hub">
         <field name="name">LightLink 业务中心</field>
+        <field name="navigation_widget">ready</field>
     </record>
 
     <record id="view_psc_business_hub_form" model="ir.ui.view">
@@ -119,6 +120,10 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="mt-5">
+                        <field name="navigation_widget" widget="psc_business_navigation" nolabel="1" readonly="1"/>
                     </div>
                 </sheet>
             </form>

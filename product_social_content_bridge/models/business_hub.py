@@ -1,4 +1,17 @@
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import AccessError, ValidationError
+
+
+NAVIGATION_CATEGORIES = (
+    ("business", "业务中心", False, "fa-home"),
+    ("web_marketing", "网站与营销", "product_social_content_bridge.menu_psc_category_web_marketing", "fa-globe"),
+    ("customer", "客户管理", "product_social_content_bridge.menu_psc_category_customer", "fa-handshake-o"),
+    ("supply_chain", "供应链管理", "product_social_content_bridge.menu_psc_category_supply_chain", "fa-cubes"),
+    ("finance", "财务与数据", "product_social_content_bridge.menu_psc_category_finance", "fa-line-chart"),
+    ("collaboration", "协同办公", "product_social_content_bridge.menu_psc_category_collaboration", "fa-comments-o"),
+    ("system", "系统设置", "product_social_content_bridge.menu_psc_category_system", "fa-cogs"),
+    ("other", "其他", "product_social_content_bridge.menu_psc_category_other", "fa-ellipsis-h"),
+)
 
 
 APP_MENU_GROUPS = {
@@ -25,6 +38,7 @@ APP_MENU_GROUPS = {
     "product_social_content_bridge.menu_psc_category_finance": (
         "account.menu_finance",
         "spreadsheet_dashboard.spreadsheet_dashboard_menu_root",
+        "product_social_content_bridge.menu_psc_finance_performance",
     ),
     "product_social_content_bridge.menu_psc_category_collaboration": (
         "mail.menu_root_discuss",
@@ -45,6 +59,7 @@ class BusinessHub(models.Model):
     _description = "LightLink 业务中心"
 
     name = fields.Char(required=True, default="LightLink 业务中心")
+    navigation_widget = fields.Char(default="ready")
     today_task_count = fields.Integer(compute="_compute_metrics")
     overdue_task_count = fields.Integer(compute="_compute_metrics")
     waiting_approval_count = fields.Integer(compute="_compute_metrics")
@@ -114,18 +129,158 @@ class BusinessHub(models.Model):
         return {"type": "ir.actions.client", "tag": "reload"}
 
     @api.model
-    def organize_application_menus(self):
+    def organize_application_menus(self, force=False):
         """Group installed root apps without requiring optional apps as dependencies."""
+        categories = self._category_records()
+        category_ids = set(menu.id for menu in categories.values())
+        default_menu_ids = set()
         for category_xmlid, app_xmlids in APP_MENU_GROUPS.items():
             category = self.env.ref(category_xmlid)
             for sequence, app_xmlid in enumerate(app_xmlids, start=1):
                 app_menu = self.env.ref(app_xmlid, raise_if_not_found=False)
                 if app_menu and app_menu != category:
-                    app_menu.write({
-                        "parent_id": category.id,
-                        "sequence": sequence * 10,
-                    })
+                    default_menu_ids.add(app_menu.id)
+                    if force or not app_menu.parent_id or app_menu.parent_id.id not in category_ids:
+                        app_menu.write({
+                            "parent_id": category.id,
+                            "sequence": sequence * 10,
+                        })
+        self._move_unclassified_roots_to_other()
+        if force:
+            other = categories["other"]
+            custom_menus = self.env["ir.ui.menu"].search([
+                ("parent_id", "in", list(category_ids)),
+                ("id", "not in", list(default_menu_ids)),
+            ])
+            for sequence, menu in enumerate(custom_menus, start=1):
+                menu.write({"parent_id": other.id, "sequence": sequence * 10})
         return True
+
+    @api.model
+    def _category_records(self):
+        return {
+            code: self.env.ref(xmlid)
+            for code, _name, xmlid, _icon in NAVIGATION_CATEGORIES
+            if xmlid
+        }
+
+    @api.model
+    def _move_unclassified_roots_to_other(self):
+        categories = self._category_records()
+        business_menu = self.env.ref("product_social_content_bridge.menu_psc_root")
+        excluded_ids = {business_menu.id, *(menu.id for menu in categories.values())}
+        unclassified = self.env["ir.ui.menu"].search([
+            ("parent_id", "=", False),
+            ("id", "not in", list(excluded_ids)),
+        ])
+        if unclassified:
+            unclassified.write({"parent_id": categories["other"].id})
+
+    @api.model
+    def _movable_application_menus(self):
+        categories = self._category_records()
+        business_menu = self.env.ref("product_social_content_bridge.menu_psc_root")
+        menus = self.env["ir.ui.menu"]
+        for category in categories.values():
+            menus |= category.child_id
+        for app_xmlids in APP_MENU_GROUPS.values():
+            for app_xmlid in app_xmlids:
+                menu = self.env.ref(app_xmlid, raise_if_not_found=False)
+                if menu:
+                    menus |= menu
+        excluded_ids = {business_menu.id, *(menu.id for menu in categories.values())}
+        menus |= self.env["ir.ui.menu"].search([
+            ("parent_id", "=", False),
+            ("id", "not in", list(excluded_ids)),
+        ])
+        return menus.exists()
+
+    @api.model
+    def get_application_navigation(self):
+        categories = self._category_records()
+        business_menu = self.env.ref("product_social_content_bridge.menu_psc_root")
+        visible_ids = self.env["ir.ui.menu"]._visible_menu_ids()
+        movable = self._movable_application_menus().filtered(
+            lambda menu: menu.id in visible_ids
+        )
+        result = []
+        for code, name, _xmlid, icon in NAVIGATION_CATEGORIES:
+            if code == "business":
+                items = business_menu if business_menu.id in visible_ids else self.env["ir.ui.menu"]
+            elif code == "other":
+                items = movable.filtered(
+                    lambda menu: not menu.parent_id or menu.parent_id == categories[code]
+                )
+            else:
+                items = movable.filtered(lambda menu: menu.parent_id == categories[code])
+            items = items.sorted(key=lambda menu: (menu.sequence, menu.id))
+            result.append({
+                "code": code,
+                "name": _(name),
+                "icon": icon,
+                "locked": code == "business",
+                "items": [{
+                    "id": menu.id,
+                    "name": menu.name,
+                    "web_icon": menu.web_icon or "",
+                    "locked": code == "business",
+                } for menu in items],
+            })
+        return {
+            "can_edit": self.env.user.has_group("base.group_system"),
+            "categories": result,
+        }
+
+    @api.model
+    def save_application_navigation(self, layout):
+        if not self.env.user.has_group("base.group_system"):
+            raise AccessError(_("只有系统管理员可以调整功能分类。"))
+        if not isinstance(layout, list) or len(layout) > len(NAVIGATION_CATEGORIES):
+            raise ValidationError(_("功能导航布局格式无效。"))
+
+        categories = self._category_records()
+        valid_codes = set(categories)
+        visible_ids = self.env["ir.ui.menu"]._visible_menu_ids()
+        allowed_ids = set(self._movable_application_menus().ids) & visible_ids
+        seen_ids = set()
+        normalized = []
+        for section in layout:
+            if not isinstance(section, dict):
+                raise ValidationError(_("功能导航分类格式无效。"))
+            code = section.get("code")
+            if code == "business":
+                continue
+            if code not in valid_codes:
+                raise ValidationError(_("未知的功能分类：%s") % code)
+            menu_ids = section.get("menu_ids", [])
+            if not isinstance(menu_ids, list):
+                raise ValidationError(_("功能导航项目格式无效。"))
+            normalized_ids = []
+            for menu_id in menu_ids:
+                if not isinstance(menu_id, int) or menu_id not in allowed_ids or menu_id in seen_ids:
+                    raise ValidationError(_("功能导航包含无效或重复的菜单。"))
+                seen_ids.add(menu_id)
+                normalized_ids.append(menu_id)
+            normalized.append((code, normalized_ids))
+
+        if seen_ids != allowed_ids:
+            raise ValidationError(_("必须保留所有有权访问的功能模块。"))
+
+        for code, menu_ids in normalized:
+            category = categories[code]
+            for sequence, menu_id in enumerate(menu_ids, start=1):
+                self.env["ir.ui.menu"].browse(menu_id).write({
+                    "parent_id": category.id,
+                    "sequence": sequence * 10,
+                })
+        return self.get_application_navigation()
+
+    @api.model
+    def reset_application_navigation(self):
+        if not self.env.user.has_group("base.group_system"):
+            raise AccessError(_("只有系统管理员可以恢复默认功能分类。"))
+        self.organize_application_menus(force=True)
+        return self.get_application_navigation()
 
     def action_open_today(self):
         return self._open_action(
