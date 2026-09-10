@@ -199,18 +199,22 @@ class BusinessHub(models.Model):
             "threshold": 0,
             "name": "经营数据明细",
         }
-        cells = {
+        dashboard_cells = {
             "A1": "LightLink 经营数据",
             "A2": f"[打开完整经营数据明细](odoo://view/{json.dumps(action, ensure_ascii=False)})",
+            "A40": "经营数据明细",
         }
+        data_cells = {}
         for letter, field_name, label in metrics:
-            cells[f"{letter}3"] = label
-            cells[f"{letter}4"] = f'=PIVOT.VALUE(1, "{field_name}")'
+            data_cells[f"{letter}1"] = label
+            data_cells[f"{letter}2"] = f'=PIVOT.VALUE(1, "{field_name}")'
         for letter, field_name, label, _width in columns:
-            cells[f"{letter}7"] = f'=ODOO.LIST.HEADER(1, "{field_name}", _t("{label}"))'
-            for row_number in range(8, 23):
-                cells[f"{letter}{row_number}"] = (
-                    f'=ODOO.LIST(1,{row_number - 7},"{field_name}")'
+            dashboard_cells[f"{letter}41"] = (
+                f'=ODOO.LIST.HEADER(1, "{field_name}", _t("{label}"))'
+            )
+            for row_number in range(42, 57):
+                dashboard_cells[f"{letter}{row_number}"] = (
+                    f'=ODOO.LIST(1,{row_number - 41},"{field_name}")'
                 )
 
         measures = [
@@ -219,27 +223,202 @@ class BusinessHub(models.Model):
         ]
         list_columns = [field_name for _letter, field_name, _label, _width in columns]
         sheet_id = "lightlink-performance-dashboard"
+        data_sheet_id = "lightlink-performance-data"
+
+        def scorecard(figure_id, title, cell, background, col):
+            return {
+                "id": figure_id,
+                "width": 250,
+                "height": 110,
+                "tag": "chart",
+                "data": {
+                    "baselineColorDown": "#DC6965",
+                    "baselineColorUp": "#00A04A",
+                    "baselineMode": "difference",
+                    "title": {"text": title, "bold": True, "color": "#434343"},
+                    "type": "scorecard",
+                    "background": background,
+                    "keyValue": f"数据!{cell}",
+                    "humanize": True,
+                    "chartId": figure_id,
+                },
+                "offset": {"x": 0, "y": 8},
+                "col": col,
+                "row": 3,
+            }
+
+        def model_chart(figure_id, title, chart_type, group_by, measure, col, row, width):
+            mode = chart_type.removeprefix("odoo_")
+            return {
+                "id": figure_id,
+                "width": width,
+                "height": 310,
+                "tag": "chart",
+                "data": {
+                    "title": {
+                        "text": title,
+                        "bold": True,
+                        "fontSize": 16,
+                        "color": "#01666B",
+                    },
+                    "background": "#FFFFFF",
+                    "legendPosition": "top",
+                    "metaData": {
+                        "groupBy": group_by,
+                        "measure": measure,
+                        "order": None,
+                        "resModel": "psc.performance.snapshot",
+                        "mode": mode,
+                        "cumulatedStart": False,
+                    },
+                    "searchParams": {
+                        "comparison": None,
+                        "context": {},
+                        "domain": [],
+                        "groupBy": group_by,
+                        "orderBy": [],
+                    },
+                    "type": chart_type,
+                    "dataSets": [],
+                    "humanize": True,
+                    "verticalAxisPosition": "left",
+                    "stacked": False,
+                    "cumulatedStart": False,
+                    "fillArea": chart_type == "odoo_line",
+                    "chartId": figure_id,
+                    "fieldMatching": {},
+                },
+                "offset": {"x": 0, "y": 0},
+                "col": col,
+                "row": row,
+            }
+
+        figures = [
+            scorecard("ll-score-views", "播放/浏览", "B2", "#EFF6FF", 0),
+            scorecard("ll-score-inquiries", "询盘", "D2", "#EFF6FF", 3),
+            scorecard("ll-score-orders", "订单", "G2", "#ECFDF5", 6),
+            scorecard("ll-score-revenue", "销售额", "H2", "#FFF7ED", 9),
+            {
+                "id": "ll-chart-funnel",
+                "width": 720,
+                "height": 310,
+                "tag": "chart",
+                "data": {
+                    "type": "combo",
+                    "dataSetsHaveTitle": False,
+                    "dataSets": [{
+                        "dataRange": "数据!A2:G2",
+                        "label": "数量",
+                        "type": "bar",
+                    }],
+                    "legendPosition": "none",
+                    "labelRange": "数据!A1:G1",
+                    "title": {
+                        "text": "经营转化漏斗",
+                        "bold": True,
+                        "fontSize": 16,
+                        "color": "#01666B",
+                    },
+                    "aggregated": False,
+                    "showValues": True,
+                    "humanize": True,
+                    "chartId": "ll-chart-funnel",
+                },
+                "offset": {"x": 0, "y": 0},
+                "col": 0,
+                "row": 10,
+            },
+            {
+                "id": "ll-chart-finance",
+                "width": 570,
+                "height": 310,
+                "tag": "chart",
+                "data": {
+                    "type": "combo",
+                    "dataSetsHaveTitle": False,
+                    "dataSets": [{
+                        "dataRange": "数据!H2:J2",
+                        "label": "金额",
+                        "type": "bar",
+                    }],
+                    "legendPosition": "none",
+                    "labelRange": "数据!H1:J1",
+                    "title": {
+                        "text": "销售额与成本",
+                        "bold": True,
+                        "fontSize": 16,
+                        "color": "#01666B",
+                    },
+                    "aggregated": False,
+                    "showValues": True,
+                    "humanize": True,
+                    "chartId": "ll-chart-finance",
+                },
+                "offset": {"x": 0, "y": 0},
+                "col": 8,
+                "row": 10,
+            },
+            model_chart(
+                "ll-chart-traffic-trend",
+                "播放/浏览趋势",
+                "odoo_line",
+                ["snapshot_date:day"],
+                "views",
+                0,
+                24,
+                720,
+            ),
+            model_chart(
+                "ll-chart-channel-share",
+                "渠道浏览占比",
+                "odoo_pie",
+                ["destination_id"],
+                "views",
+                8,
+                24,
+                570,
+            ),
+        ]
         data = {
             "version": "18.5.10",
             "sheets": [{
                 "id": sheet_id,
-                "name": "经营数据",
+                "name": "经营看板",
                 "colNumber": len(columns),
-                "rowNumber": 30,
-                "rows": {"0": {"size": 36}, "2": {"size": 28}, "3": {"size": 36}},
+                "rowNumber": 65,
+                "rows": {"0": {"size": 36}, "39": {"size": 30}, "40": {"size": 28}},
                 "cols": {
                     str(index): {"size": column[3]}
                     for index, column in enumerate(columns)
                 },
                 "merges": [],
-                "cells": cells,
+                "cells": dashboard_cells,
                 "styles": {
                     "A1": 1,
-                    "A3:J3": 2,
-                    "A4:J4": 3,
-                    "A7:O7": 2,
-                    "A8:O22": 4,
+                    "A40": 1,
+                    "A41:O41": 2,
+                    "A42:O56": 4,
                 },
+                "formats": {},
+                "borders": {},
+                "conditionalFormats": [],
+                "dataValidationRules": [],
+                "figures": figures,
+                "tables": [],
+                "areGridLinesVisible": True,
+                "isVisible": True,
+                "headerGroups": [],
+                "comments": {},
+            }, {
+                "id": data_sheet_id,
+                "name": "数据",
+                "colNumber": len(metrics),
+                "rowNumber": 10,
+                "rows": {},
+                "cols": {},
+                "merges": [],
+                "cells": data_cells,
+                "styles": {"A1:J1": 2, "A2:J2": 3},
                 "formats": {},
                 "borders": {},
                 "conditionalFormats": [],
@@ -247,7 +426,7 @@ class BusinessHub(models.Model):
                 "figures": [],
                 "tables": [],
                 "areGridLinesVisible": True,
-                "isVisible": True,
+                "isVisible": False,
                 "headerGroups": [],
                 "comments": {},
             }],
@@ -359,7 +538,24 @@ class BusinessHub(models.Model):
             "main_data_model_ids": [(6, 0, model.ids)],
         }
         if dashboard:
-            if not dashboard.spreadsheet_data:
+            should_refresh = not dashboard.spreadsheet_data
+            if dashboard.spreadsheet_data:
+                try:
+                    current_data = json.loads(dashboard.spreadsheet_data)
+                    managed_sheet = next(
+                        (
+                            sheet
+                            for sheet in current_data.get("sheets", [])
+                            if sheet.get("id") == "lightlink-performance-dashboard"
+                        ),
+                        None,
+                    )
+                    should_refresh = bool(
+                        managed_sheet is not None and not managed_sheet.get("figures")
+                    )
+                except (TypeError, ValueError):
+                    should_refresh = False
+            if should_refresh:
                 values["spreadsheet_data"] = self._performance_dashboard_data()
             dashboard.write(values)
         else:

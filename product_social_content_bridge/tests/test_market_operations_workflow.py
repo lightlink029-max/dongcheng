@@ -96,6 +96,9 @@ class MarketOperationsWorkflowCase(TransactionCase):
         self.assertTrue(dashboard.is_published)
         self.assertEqual(data["pivots"]["1"]["model"], "psc.performance.snapshot")
         self.assertEqual(data["lists"]["1"]["model"], "psc.performance.snapshot")
+        self.assertEqual(len(data["sheets"]), 2)
+        self.assertEqual(len(data["sheets"][0]["figures"]), 8)
+        self.assertFalse(data["sheets"][1]["isVisible"])
         self.assertFalse(
             self.env.ref(
                 "product_social_content_bridge.menu_psc_dashboard_performance",
