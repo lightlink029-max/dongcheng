@@ -1,6 +1,45 @@
 from odoo import api, fields, models
 
 
+APP_MENU_GROUPS = {
+    "product_social_content_bridge.menu_psc_category_web_marketing": (
+        "website.menu_website_configuration",
+        "social.menu_social_global",
+        "mass_mailing.mass_mailing_menu_root",
+        "utm.menu_link_tracker_root",
+    ),
+    "product_social_content_bridge.menu_psc_category_customer": (
+        "contacts.menu_contacts",
+        "crm.crm_menu_root",
+        "helpdesk.menu_helpdesk_root",
+        "im_livechat.menu_livechat_root",
+        "whatsapp.whatsapp_menu_main",
+        "appointment.main_menu_appointments",
+    ),
+    "product_social_content_bridge.menu_psc_category_supply_chain": (
+        "product_intelligence_hub.menu_product_intelligence_root",
+        "purchase.menu_purchase_root",
+        "stock.menu_stock_root",
+        "stock_barcode.stock_barcode_menu",
+    ),
+    "product_social_content_bridge.menu_psc_category_finance": (
+        "account.menu_finance",
+        "spreadsheet_dashboard.spreadsheet_dashboard_menu_root",
+    ),
+    "product_social_content_bridge.menu_psc_category_collaboration": (
+        "mail.menu_root_discuss",
+        "calendar.mail_menu_calendar",
+        "hr.menu_hr_root",
+        "hr_recruitment.menu_hr_recruitment_root",
+    ),
+    "product_social_content_bridge.menu_psc_category_system": (
+        "base.menu_management",
+        "base.menu_administration",
+        "base.menu_tests",
+    ),
+}
+
+
 class BusinessHub(models.Model):
     _name = "psc.business.hub"
     _description = "LightLink 业务中心"
@@ -73,6 +112,20 @@ class BusinessHub(models.Model):
 
     def action_refresh(self):
         return {"type": "ir.actions.client", "tag": "reload"}
+
+    @api.model
+    def organize_application_menus(self):
+        """Group installed root apps without requiring optional apps as dependencies."""
+        for category_xmlid, app_xmlids in APP_MENU_GROUPS.items():
+            category = self.env.ref(category_xmlid)
+            for sequence, app_xmlid in enumerate(app_xmlids, start=1):
+                app_menu = self.env.ref(app_xmlid, raise_if_not_found=False)
+                if app_menu and app_menu != category:
+                    app_menu.write({
+                        "parent_id": category.id,
+                        "sequence": sequence * 10,
+                    })
+        return True
 
     def action_open_today(self):
         return self._open_action(
