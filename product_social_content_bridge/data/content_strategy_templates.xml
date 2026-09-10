@@ -57,4 +57,5 @@
     </data>
 
     <function model="psc.content.mix.rule" name="ensure_default_profiles"/>
+    <function model="psc.publishing.project" name="ensure_bilingual_content_briefs"/>
 </odoo>

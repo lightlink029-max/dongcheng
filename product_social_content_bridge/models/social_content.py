@@ -216,7 +216,7 @@ class PublishingProject(models.Model):
     user_id = fields.Many2one("res.users", string="负责人", default=lambda self: self.env.user)
     company_id = fields.Many2one("res.company", required=True, default=lambda self: self.env.company)
     scheduled_date = fields.Datetime(string="计划发布时间")
-    content_brief = fields.Text(string="本期内容要求", translate=True)
+    content_brief = fields.Text(string="项目内容总规则（英文）")
     state = fields.Selection([
         ("draft", "草稿"), ("generated", "待确认"),
         ("ready", "待发布"), ("publishing", "发布中"),
@@ -773,6 +773,7 @@ class ContentVariant(models.Model):
             "platform": self.channel_id.platform,
             "caption_limit": self.channel_id.max_caption_length,
             "channel_rules": self.channel_id.default_instructions or "",
+            "content_brief_zh": self.project_id.content_brief_zh or "",
             "content_brief": self.project_id.content_brief or "",
             "industry_track": track.name if track else "",
             "track_description": track.description if track else "",

@@ -156,6 +156,7 @@ class MarketOperationsWorkflowCase(TransactionCase):
 
     def test_default_content_mix_has_ten_editable_types_and_totals_one_hundred(self):
         self.env["psc.content.mix.rule"].ensure_default_profiles()
+        self.env["psc.publishing.project"].ensure_bilingual_content_briefs()
         rules = self.env["psc.content.mix.rule"].search([
             ("track_id", "=", self.project.track_id.id),
             ("role_id", "=", self.project.business_role_id.id),
@@ -166,6 +167,7 @@ class MarketOperationsWorkflowCase(TransactionCase):
         self.assertEqual(sum(rules.mapped("content_ratio")), 100)
         self.assertTrue(all(0 <= value <= 100 for value in rules.mapped("video_ratio")))
         self.assertTrue(all(rules.mapped("execution_goal")))
+        self.assertTrue(all(rules.mapped("copy_template_zh")))
         self.assertTrue(all(rules.mapped("copy_template")))
         self.assertTrue(all(rules.mapped("required_evidence")))
 
@@ -176,7 +178,11 @@ class MarketOperationsWorkflowCase(TransactionCase):
         ], limit=1)
         self.assertIn("footwear", footwear_rule.copy_template.lower())
         self.assertIn("china sourcing", footwear_rule.copy_template.lower())
+        self.assertIn("鞋服帽", footwear_rule.copy_template_zh)
+        self.assertIn("采购/寻源代理", footwear_rule.copy_template_zh)
         self.assertEqual(footwear_rule.action_open_guide()["res_id"], footwear_rule.id)
+        self.assertIn(self.project.track_id.name, self.project.content_brief_zh)
+        self.assertIn(self.project.business_role_id.name, self.project.content_brief_zh)
 
     def test_ai_content_and_website_publication_workflow(self):
         post = self._generate_channel_content()

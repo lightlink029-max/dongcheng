@@ -170,6 +170,18 @@ ROLE_COPY_CONTEXT = {
     ),
 }
 
+ROLE_CTA_ZH = {
+    "direct_factory": "请发送产品规格和目标数量，我们先评估生产可行性",
+    "oem_factory": "请发送参考样、规格和上市时间，我们先评估打样方案",
+    "integrator": "请发送应用场景和限制条件，我们先进行方案初审",
+    "trading_company": "请发送产品清单、数量和目的地，我们组织统一报价",
+    "sourcing_agent": "请发送产品需求、目标价格、数量和交期，我们先做寻源评估",
+    "brand_owner": "请联系我们获取产品资料、批发条件或渠道合作方案",
+    "distributor": "请发送销售区域、渠道和预计数量，我们提供批发合作条件",
+    "epc": "请发送现场条件、项目范围和计划时间，我们先做项目评估",
+    "dtc": "请先查看已核实的产品资料，订购前如有问题请联系客户支持",
+}
+
 CONTENT_EXECUTION_GOALS = {
     "brand_positioning": "讲清服务谁、解决什么采购问题、承担什么角色，以及不承担什么；让客户在 10 秒内理解项目定位。",
     "sourcing_service": "把寻源、筛选、比价、验厂、跟单和验货拆成透明步骤，说明客户每一步能得到的结果。",
@@ -266,6 +278,78 @@ Buyer impact: [effect on assortment, specification, MOQ, price, inventory or lea
 Recommended action: [one action now], [one item to validate], [one trigger to monitor].
 Limit: State the geography, period and sample limitations.
 CTA: {cta}.""",
+}
+
+CONTENT_COPY_TEMPLATES_ZH = {
+    "brand_positioning": """标题：我们帮助[买家类型]从中国采购{industry_zh}，实现[已核实的结果]。
+客户问题：[用买家的语言描述一个代价较高的采购或交付问题]。
+我们的角色：我们以“{role_identity_zh}”身份开展工作，重点体现：{role_value_zh}。
+工作方式：1）[需求确认] 2）[执行步骤] 3）[质量/交付控制]。
+事实依据：[填写 Odoo 中 2—3 项已核实事实；没有依据时删除此项]。
+身份边界：明确哪些工作由我们直接完成，哪些由已核实的合作工厂完成。
+行动引导：{cta_zh}。""",
+    "sourcing_service": """开头：需要为[具体{industry_zh}需求]找到可靠供应商，同时保持过程透明吗？
+买家需求：[规格] / [数量] / [目标价格] / [交付日期]。
+我们的流程：以“{role_identity_zh}”身份，依次完成需求确认 → 供应商初选 → 可比报价 → 供应商核实 → 样品/订单跟进 → 验货与交付协调。
+阶段交付：[说明客户在每一步能获得的文件、结论或选择]。
+事实依据：[填写已核实的供应商比较、时间节点、验货记录或交付里程碑]。
+行动引导：{cta_zh}。""",
+    "china_supply_chain": """标题：中国{industry_zh}供应链能够为[买家类型]实际提供什么？
+买家需求：[产品/规格/数量/时间]。
+供应链路径：[相关产业带] → [供应商类型] → [关键工序] → [质量门槛] → [出口交接]。
+取舍说明：[基于真实数据解释 MOQ、成本、速度或定制范围之间的取舍]。
+我们的角色：以“{role_identity_zh}”身份，重点体现：{role_value_zh}。
+行动引导：{cta_zh}。""",
+    "industry_knowledge": """标题：为[目标市场/使用场景]采购[具体产品/品类]前必须检查的[数字]项内容。
+1．[选型标准]——为什么重要：[对买家的影响]。
+2．[规格/合规标准]——需要核实：[文件或测试]。
+3．[商务标准]——需要比较：[MOQ、价格基础、交期或质保]。
+常见错误：[一个有事实依据的风险，以及避免方法]。
+买家清单：[询问供应商的 3 个具体问题]。
+行动引导：收藏这份清单，然后{cta_zh}。""",
+    "supplier_quality": """开头：收到供应商报价，不等于已经获得可靠的供应方案。
+本次范围：[验厂 / 产前检查 / 生产中检查 / 出货前验货]，对象为[产品]。
+检查项目：[标准 1]、[标准 2]、[标准 3]。
+检查发现：[只填写已核实的通过/不通过/观察结果，不得虚构]。
+后续处理：[整改、复检或买家决策]。
+身份说明：我们以“{role_identity_zh}”身份工作，必须准确说明合作工厂关系。
+行动引导：{cta_zh}。""",
+    "oem_sampling": """标题：从[买家想法/参考样]到获得批准的{industry_zh}样品。
+第 1 步—需求：确认[用途、目标客户、规格、数量和上市时间]。
+第 2 步—开发：确认[材料/部件/颜色/品牌标识]。
+第 3 步—样品评审：检查[尺寸或适配、功能、外观和测试标准]。
+第 4 步—修改与批准：记录[版本变化和确认依据]。
+第 5 步—量产交接：固定[封样、规格和质量检查点]。
+行动引导：{cta_zh}。""",
+    "packaging_delivery": """开头：产品本身合格，如果包装和交付细节处理太晚，订单仍可能失败。
+订单信息：[产品] / [数量] / [目的地] / [要求到货时间]。
+包装方案：[单品包装]、[内盒/外箱]、[尺寸/重量]、[标签和条码]。
+出货前检查：[数量、外观、功能和外箱检查]。
+交付控制：[贸易条款]、[单据]、[交接节点]和[异常预案]。
+已核实结果：[真实验货或交付状态]。
+行动引导：{cta_zh}。""",
+    "product_category": """标题：[已核实产品/品类]，适合[买家类型和使用场景]。
+采购价值：[有事实支持的具体商业或使用价值]。
+已核实规格：[材料/型号/尺码/容量]｜MOQ：[数值]｜交期：[数值]｜包装：[数值]。
+定制范围：[已经核实可提供的选项]。
+适合：[买家/场景]；不适合：[已知限制]。
+事实依据：[已批准产品图片、测试文件或样品状态]。
+行动引导：索取已核实的规格表、样品条件或报价。""",
+    "customer_case": """标题：[已授权的客户类型；必要时匿名]如何解决[具体问题]。
+初始情况：[已核实的需求、限制条件和目标]。
+我们的角色：以“{role_identity_zh}”身份，实际完成了[具体行动]。
+解决过程：[选型、供应商、定制、质量和交付步骤]。
+结果：[已授权的量化结果，并说明周期和计算口径]。
+经验总结：[一个其他买家可以复用的结论]。
+授权说明：[记录客户允许公开的范围；未授权不得发布]。
+行动引导：{cta_zh}。""",
+    "market_trends": """标题：[注明日期的市场/渠道趋势]对[目标市场]的{industry_zh}买家意味着什么？
+趋势信号：[已核实的数据]，来源：[来源和日期]。
+趋势解释：[哪些发生了变化，哪些没有变化]。
+买家影响：[对选品、规格、MOQ、价格、库存或交期的影响]。
+建议行动：[现在做一项行动]、[核实一个问题]、[持续观察一个触发指标]。
+适用边界：注明地区、时间范围和样本限制。
+行动引导：{cta_zh}。""",
 }
 
 
@@ -468,7 +552,8 @@ class ContentMixRule(models.Model):
     content_ratio = fields.Float(string="建议内容占比 %", required=True)
     video_ratio = fields.Float(string="其中视频占比 %", required=True)
     execution_goal = fields.Char(string="具体要做什么", translate=True)
-    copy_template = fields.Text(string="英文文案模板", translate=True)
+    copy_template_zh = fields.Text(string="中文文案模板")
+    copy_template = fields.Text(string="英文文案模板")
     required_evidence = fields.Text(string="发布前准备", translate=True)
     notes = fields.Text(string="运营说明", translate=True)
     active = fields.Boolean(default=True)
@@ -501,10 +586,20 @@ class ContentMixRule(models.Model):
             evidence = _("%(evidence)s；赛道合规边界：%(compliance)s", evidence=evidence,
                          compliance=track.compliance_notes)
         template = CONTENT_COPY_TEMPLATES.get(scope.code, CONTENT_COPY_TEMPLATES["industry_knowledge"])
+        template_zh = CONTENT_COPY_TEMPLATES_ZH.get(
+            scope.code, CONTENT_COPY_TEMPLATES_ZH["industry_knowledge"],
+        )
         return {
             "execution_goal": _(
                 "面向“%(track)s”的目标客户，以“%(role)s”身份：%(execution)s",
                 track=track.name, role=role.name, execution=execution,
+            ),
+            "copy_template_zh": template_zh.format(
+                industry_zh=track.name,
+                buyers_zh=track.default_customer_profile or _("目标买家"),
+                role_identity_zh=role.name,
+                role_value_zh=role.content_focus or role.description or _("说明可核实的客户价值"),
+                cta_zh=ROLE_CTA_ZH.get(role.code, _("请发送具体需求，我们先进行初步评估")),
             ),
             "copy_template": template.format(
                 industry=track_context["industry"],
@@ -1288,6 +1383,7 @@ class PublishingProjectOperations(models.Model):
 
     track_id = fields.Many2one("psc.industry.track", string="经营赛道", tracking=True)
     business_role_id = fields.Many2one("psc.business.role", string="主要经营角色", tracking=True)
+    content_brief_zh = fields.Text(string="项目内容总规则（中文）")
     capability_ids = fields.Many2many(
         "psc.business.capability", "psc_project_capability_rel", "project_id", "capability_id",
         string="经营能力",
@@ -1336,6 +1432,14 @@ class PublishingProjectOperations(models.Model):
     readiness_blocker_summary = fields.Text(
         string="上线阻塞摘要", compute="_compute_readiness",
     )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        projects = super().create(vals_list)
+        for project in projects:
+            if project.track_id and project.business_role_id and not project.content_brief_zh:
+                project.content_brief_zh = project._default_content_brief_zh()
+        return projects
 
     @api.depends("track_id", "business_role_id")
     def _compute_content_mix_rules(self):
@@ -1479,12 +1583,40 @@ class PublishingProjectOperations(models.Model):
         for project in self:
             if project.track_id and not project.content_brief:
                 project.content_brief = project.track_id.compliance_notes
+            if project.track_id and project.business_role_id and not project.content_brief_zh:
+                project.content_brief_zh = project._default_content_brief_zh()
 
     @api.onchange("business_role_id")
     def _onchange_business_role_id(self):
         for project in self:
             if project.business_role_id:
                 project.capability_ids = project.business_role_id.capability_ids
+            if project.track_id and project.business_role_id and not project.content_brief_zh:
+                project.content_brief_zh = project._default_content_brief_zh()
+
+    def _default_content_brief_zh(self):
+        self.ensure_one()
+        if not (self.track_id and self.business_role_id):
+            return ""
+        return _(
+            "面向“%(track)s”赛道的目标客户，以“%(role)s”身份进行内容创作。重点展示：%(focus)s。"
+            "所有产品、供应商、认证、价格、交期、案例和结果只能使用 Odoo 中已核实的事实；合规边界：%(compliance)s",
+            track=self.track_id.name,
+            role=self.business_role_id.name,
+            focus=self.business_role_id.content_focus or self.business_role_id.description or _("可核实的客户价值"),
+            compliance=self.track_id.compliance_notes or _("不得虚构或夸大任何业务事实。"),
+        )
+
+    @api.model
+    def ensure_bilingual_content_briefs(self):
+        projects = self.search([
+            ("track_id", "!=", False),
+            ("business_role_id", "!=", False),
+            ("content_brief_zh", "=", False),
+        ])
+        for project in projects:
+            project.content_brief_zh = project._default_content_brief_zh()
+        return True
 
     def action_activate_operation(self):
         for project in self:
