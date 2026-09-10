@@ -182,9 +182,6 @@
             <xpath expr="//button[@name='action_generate_drafts']" position="attributes">
                 <attribute name="invisible">1</attribute>
             </xpath>
-            <xpath expr="//page[@string='③ 内容要求'] | //page[@string='④ 模板与素材'] | //page[@string='⑤ 内容制作、审核与发布'] | //page[@string='⑥ 发布任务与结果']" position="attributes">
-                <attribute name="invisible">1</attribute>
-            </xpath>
             <xpath expr="//field[@name='product_line_id']" position="before">
                 <field name="track_id" required="1" options="{'no_create': True}"/>
                 <field name="business_role_id" required="1" options="{'no_create': True}"/>

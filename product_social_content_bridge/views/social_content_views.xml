@@ -88,16 +88,16 @@
                         <field name="channel_ids" widget="many2many_tags" readonly="destination_ids"/>
                     </group>
                     <notebook>
-                        <page string="③ 内容要求">
+                        <page string="③ 内容要求" name="legacy_content_requirements" invisible="1">
                             <group>
                                 <field name="content_brief" placeholder="填写主题、卖点、语气、禁用词和合规要求。"/>
                                 <field name="ai_model"/>
                             </group>
                         </page>
-                        <page string="④ 模板与素材">
+                        <page string="④ 模板与素材" name="legacy_templates_assets" invisible="1">
                             <field name="material_asset_ids" widget="many2many_tags" options="{'no_create': True}"/>
                         </page>
-                        <page string="⑤ 内容制作、审核与发布">
+                        <page string="⑤ 内容制作、审核与发布" name="legacy_content_production" invisible="1">
                             <div class="alert alert-info" role="alert">
                                 先检查每个市场和渠道的文案与素材；确认无误后，再创建或打开对应的社媒帖子。
                             </div>
@@ -118,7 +118,7 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="⑥ 发布任务与结果">
+                        <page string="⑥ 发布任务与结果" name="legacy_publication_results" invisible="1">
                             <field name="publication_task_ids" readonly="1">
                                 <list decoration-info="state in ('validating', 'publishing')" decoration-success="state == 'published'" decoration-danger="state == 'failed'">
                                     <field name="scheduled_at"/><field name="product_id"/><field name="market_id"/>
