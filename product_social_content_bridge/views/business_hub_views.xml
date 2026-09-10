@@ -14,20 +14,21 @@
                     <button name="action_refresh" type="object" string="刷新数据" icon="fa-refresh" class="btn-secondary"/>
                 </header>
                 <sheet>
+                    <div class="o_psc_business_layout">
+                        <section class="o_psc_business_nav_column" aria-label="全部功能导航">
+                            <field name="navigation_widget" widget="psc_business_navigation" nolabel="1" readonly="1"/>
+                        </section>
+                        <aside class="o_psc_business_hub_column" aria-label="LightLink 业务中心">
                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
                         <div>
                             <h1 class="mb-1">LightLink 业务中心</h1>
-                            <p class="text-muted mb-0">按业务场景进入系统，从市场运营到回款复盘，一页找到下一步。</p>
+                            <p class="text-muted mb-0">聚合今日工作、业务指标和完整经营流程。</p>
                         </div>
                         <div class="d-flex flex-wrap gap-2">
                             <span class="badge rounded-pill text-bg-danger p-2">逾期 <field name="overdue_task_count" nolabel="1"/></span>
                             <span class="badge rounded-pill text-bg-warning p-2">待批准 <field name="waiting_approval_count" nolabel="1"/></span>
                             <span class="badge rounded-pill text-bg-danger p-2">发布失败 <field name="failed_publication_count" nolabel="1"/></span>
                         </div>
-                    </div>
-
-                    <div class="mb-5">
-                        <field name="navigation_widget" widget="psc_business_navigation" nolabel="1" readonly="1"/>
                     </div>
 
                     <div class="border rounded-3 bg-light p-3 mb-4">
@@ -43,8 +44,8 @@
                         </div>
                     </div>
 
-                    <div class="row g-3 w-100 m-0">
-                        <div class="col-12 col-md-6 col-xl-4 px-2">
+                    <div class="o_psc_hub_cards">
+                        <div class="o_psc_hub_card">
                             <div class="border rounded-3 p-4 h-100 shadow-sm">
                                 <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                                     <div><h2 class="h4 mb-1"><i class="fa fa-check-square-o text-primary me-2"/>今日工作台</h2><p class="text-muted mb-0">先处理今天必须完成、异常和待批准事项。</p></div>
@@ -58,7 +59,7 @@
                             </div>
                         </div>
 
-                        <div class="col-12 col-md-6 col-xl-4 px-2">
+                        <div class="o_psc_hub_card">
                             <div class="border rounded-3 p-4 h-100 shadow-sm">
                                 <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                                     <div><h2 class="h4 mb-1"><i class="fa fa-bullhorn text-primary me-2"/>市场增长</h2><p class="text-muted mb-0">管理运营项目、社媒内容、素材和发布节奏。</p></div>
@@ -72,7 +73,7 @@
                             </div>
                         </div>
 
-                        <div class="col-12 col-md-6 col-xl-4 px-2">
+                        <div class="o_psc_hub_card">
                             <div class="border rounded-3 p-4 h-100 shadow-sm">
                                 <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                                     <div><h2 class="h4 mb-1"><i class="fa fa-handshake-o text-primary me-2"/>客户成交</h2><p class="text-muted mb-0">从客户线索、需求和跟进推进到报价与订单。</p></div>
@@ -87,7 +88,7 @@
                             </div>
                         </div>
 
-                        <div class="col-12 col-md-6 col-xl-4 px-2">
+                        <div class="o_psc_hub_card">
                             <div class="border rounded-3 p-4 h-100 shadow-sm">
                                 <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                                     <div><h2 class="h4 mb-1"><i class="fa fa-truck text-primary me-2"/>供应链交付</h2><p class="text-muted mb-0">集中处理采购、收货、库存、出库和交付。</p></div>
@@ -101,7 +102,7 @@
                             </div>
                         </div>
 
-                        <div class="col-12 col-md-6 col-xl-4 px-2">
+                        <div class="o_psc_hub_card">
                             <div class="border rounded-3 p-4 h-100 shadow-sm">
                                 <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                                     <div><h2 class="h4 mb-1"><i class="fa fa-line-chart text-primary me-2"/>财务与复盘</h2><p class="text-muted mb-0">查看开票回款、退款、净收入和渠道经营效果。</p></div>
@@ -114,7 +115,7 @@
                             </div>
                         </div>
 
-                        <div class="col-12 col-md-6 col-xl-4 px-2">
+                        <div class="o_psc_hub_card">
                             <div class="border rounded-3 p-4 h-100 shadow-sm">
                                 <div class="mb-3"><h2 class="h4 mb-1"><i class="fa fa-cogs text-primary me-2"/>协同与设置</h2><p class="text-muted mb-0">安排日程，维护账号集群、工作节点和系统参数。</p></div>
                                 <div class="d-flex flex-wrap gap-2">
@@ -125,7 +126,8 @@
                             </div>
                         </div>
                     </div>
-
+                        </aside>
+                    </div>
                 </sheet>
             </form>
         </field>

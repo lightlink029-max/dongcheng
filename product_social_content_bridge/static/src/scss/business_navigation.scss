@@ -1,5 +1,5 @@
 .o_psc_business_navigation {
-    margin-top: 1rem;
+    margin-top: 0;
 
     .o_psc_nav_header {
         display: flex;
@@ -183,6 +183,51 @@
     @media (max-width: 480px) {
         .o_psc_nav_items {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+}
+
+.o_psc_business_layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(24rem, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+
+    .o_psc_business_nav_column,
+    .o_psc_business_hub_column {
+        min-width: 0;
+    }
+
+    .o_psc_business_nav_column .o_psc_nav_items {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .o_psc_business_hub_column {
+        border-left: 1px solid #dee2e6;
+        padding-left: 1.5rem;
+    }
+
+    .o_psc_hub_cards {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+    }
+
+    .o_psc_hub_card {
+        min-width: 0;
+        background: #fff;
+    }
+}
+
+@media (max-width: 1199.98px) {
+    .o_psc_business_layout {
+        grid-template-columns: minmax(0, 1fr);
+
+        .o_psc_business_hub_column {
+            border-top: 1px solid #dee2e6;
+            border-left: 0;
+            padding-top: 1.5rem;
+            padding-left: 0;
         }
     }
 }

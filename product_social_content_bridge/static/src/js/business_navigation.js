@@ -59,7 +59,25 @@ export class BusinessNavigation extends Component {
     }
 
     getMenuIcon(item) {
-        return this.menu.getMenu(item.id)?.webIconData || false;
+        if (item.web_icon) {
+            const separator = item.web_icon.indexOf(",");
+            if (separator > 0) {
+                const moduleName = item.web_icon.slice(0, separator);
+                const iconPath = item.web_icon.slice(separator + 1);
+                return `/${moduleName}/${iconPath}`;
+            }
+        }
+
+        const iconData = this.menu.getMenu(item.id)?.webIconData;
+        if (!iconData || typeof iconData !== "string") {
+            return false;
+        }
+        if (iconData.startsWith("data:image") || iconData.startsWith("/")) {
+            return iconData;
+        }
+        const compactIconData = iconData.replace(/\s/g, "");
+        const mimeType = compactIconData.startsWith("P") ? "image/svg+xml" : "image/png";
+        return `data:${mimeType};base64,${compactIconData}`;
     }
 
     findActionableMenu(menu) {
