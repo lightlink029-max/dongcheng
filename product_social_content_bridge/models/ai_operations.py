@@ -211,6 +211,7 @@ class AiAction(models.Model):
         ("retry_publication", "重试发布任务"),
         ("record_feedback", "记录AI建议反馈"),
         ("initialize_footwear_sourcing_project", "初始化欧美鞋类采购代理项目"),
+        ("update_project_readiness", "批量更新上线准备进度"),
         ("initialize_medical_test_data", "初始化医疗测试数据"),
         ("complete_medical_test_scenario", "补齐医疗全业务测试场景"),
         ("sync_project_business_state", "同步项目业务阶段"),
@@ -315,6 +316,7 @@ class AiAction(models.Model):
             "crm.lead", "psc.optimization.action", "psc.publication.task", "psc.ai.action",
             "product.template", "psc.product.line", "psc.project.blueprint",
             "psc.local.worker.node", "psc.bitbrowser.environment",
+            "psc.project.readiness.item",
         }
         for item in preconditions:
             model_name = item.get("model")
@@ -477,6 +479,38 @@ class AiAction(models.Model):
             )
             self.project_id = result["id"]
             return result
+        elif self.action_type == "update_project_readiness":
+            project = self.env["psc.publishing.project"].browse(values.get("project_id")).exists()
+            if not project:
+                raise ValidationError(_("运营项目不存在。"))
+            results = []
+            for update in values.get("updates") or []:
+                item = self.env["psc.project.readiness.item"].browse(update.get("item_id")).exists()
+                if not item or item.project_id != project:
+                    raise ValidationError(_("上线准备事项不存在或不属于当前项目。"))
+                if "evidence" in update:
+                    item.evidence = update.get("evidence") or ""
+                state = update.get("state")
+                if state == "doing":
+                    item.action_start()
+                elif state == "blocked":
+                    item.block_reason = update.get("block_reason") or ""
+                    item.action_block()
+                elif state == "done":
+                    item.action_done()
+                elif state == "todo":
+                    item.action_reopen()
+                else:
+                    raise ValidationError(_("上线准备事项状态无效。"))
+                results.append({"id": item.id, "state": item.state})
+            return {
+                "model": project._name,
+                "id": project.id,
+                "display_name": project.display_name,
+                "updated_items": results,
+                "readiness_progress": project.readiness_progress,
+                "launch_ready": project.launch_ready,
+            }
         elif self.action_type == "initialize_medical_test_data":
             if values.get("dataset") != "medical_procurement_smoke_v1":
                 raise ValidationError(_("不支持的测试数据集。"))
@@ -775,6 +809,9 @@ class AiOperationsService(models.AbstractModel):
             "close_optimization": [("psc.optimization.action", "optimization_id", "优化实验", True)],
             "retry_publication": [("psc.publication.task", "task_id", "发布任务", True)],
             "record_feedback": [("psc.ai.action", "action_id", "AI行动", True)],
+            "update_project_readiness": [
+                ("psc.publishing.project", "project_id", "运营项目", True),
+            ],
             "sync_project_business_state": [
                 ("psc.publishing.project", "project_id", "运营项目", True),
             ],
@@ -813,6 +850,36 @@ class AiOperationsService(models.AbstractModel):
         if action_type == "initialize_footwear_sourcing_project":
             if payload.get("dataset") != "eu_us_footwear_sourcing_v1":
                 raise ValidationError(_("只能初始化内置的欧美鞋类采购代理项目。"))
+        if action_type == "update_project_readiness":
+            project = next((
+                record for record in records if record._name == "psc.publishing.project"
+            ), False)
+            updates = payload.get("updates")
+            if not isinstance(updates, list) or not updates or len(updates) > 50:
+                raise ValidationError(_("每次必须更新1到50个上线准备事项。"))
+            seen_item_ids = set()
+            for update in updates:
+                if not isinstance(update, dict) or update.get("state") not in (
+                    "todo", "doing", "blocked", "done",
+                ):
+                    raise ValidationError(_("上线准备事项更新参数无效。"))
+                item_id = update.get("item_id")
+                if not isinstance(item_id, int) or item_id <= 0 or item_id in seen_item_ids:
+                    raise ValidationError(_("上线准备事项ID无效或重复。"))
+                item = self._required_record(
+                    "psc.project.readiness.item", item_id, _("上线准备事项"),
+                )
+                if item.project_id != project:
+                    raise ValidationError(_("上线准备事项不属于当前项目。"))
+                if update.get("state") == "blocked" and not update.get("block_reason"):
+                    raise ValidationError(_("标记阻塞时必须填写阻塞原因。"))
+                effective_evidence = (
+                    update.get("evidence") if "evidence" in update else item.evidence
+                )
+                if update.get("state") == "done" and item.hard_gate and not effective_evidence:
+                    raise ValidationError(_("完成上线硬门槛时必须提供真实依据。"))
+                seen_item_ids.add(item_id)
+                records.append(item)
         if action_type == "complete_medical_test_scenario":
             project = next((record for record in records if record._name == "psc.publishing.project"), False)
             worker = self._required_record(
@@ -1565,6 +1632,8 @@ class AiOperationsService(models.AbstractModel):
                     if action_type == "sync_project_business_state"
                     else _("将创建或复用欧美鞋类采购代理蓝图、美国和英国英文B2B市场、网站/LinkedIn/Instagram渠道、筹备项目及28项总权重100%的上线准备清单；不会创建产品事实、账号授权或外部发布任务。")
                     if action_type == "initialize_footwear_sourcing_project"
+                    else _("将按预览批量更新指定上线准备事项的状态、完成依据或阻塞原因，并重新计算项目完成率；不会创建发布任务或执行外部发布。")
+                    if action_type == "update_project_readiness"
                     else _("将创建或修复带[TEST]标识的内置医疗业务测试数据，不修改真实业务记录。")
                     if action_type == "initialize_medical_test_data"
                     else (

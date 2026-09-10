@@ -92,6 +92,42 @@ class AiOperationsCase(TransactionCase):
         self.assertEqual(replay["id"], project.id)
         self.assertEqual(len(project.readiness_item_ids), 28)
 
+    def test_readiness_progress_can_be_updated_in_one_approved_batch(self):
+        initialized = self.service._initialize_footwear_sourcing_project(
+            project_name="[AUTO TEST] Batch readiness update",
+        )
+        project = self.env["psc.publishing.project"].browse(initialized["id"])
+        hard_gate = project.readiness_item_ids.filtered(
+            lambda item: item.template_key == "strategy_positioning"
+        ).ensure_one()
+        ai_task = project.readiness_item_ids.filtered(
+            lambda item: item.template_key == "strategy_icp"
+        ).ensure_one()
+        prepared = self.service.prepare_action(
+            action_type="update_project_readiness",
+            title="[AUTO TEST] Update launch readiness",
+            reason="Apply one reviewed batch of launch-plan progress.",
+            payload={
+                "project_id": project.id,
+                "updates": [
+                    {
+                        "item_id": hard_gate.id,
+                        "state": "done",
+                        "evidence": "Approved positioning boundary and English value proposition.",
+                    },
+                    {"item_id": ai_task.id, "state": "doing"},
+                ],
+            },
+        )
+        result = self.service.commit_action(prepared["action_token"], str(uuid.uuid4()))
+        self.assertEqual(hard_gate.state, "done")
+        self.assertEqual(ai_task.state, "doing")
+        self.assertEqual(result["readiness_progress"], 4.0)
+        self.assertFalse(result["launch_ready"])
+        self.assertEqual({item["id"] for item in result["updated_items"]}, {
+            hard_gate.id, ai_task.id,
+        })
+
     def test_prepare_commit_is_approved_audited_and_idempotent(self):
         prepared = self.service.prepare_action(
             action_type="create_optimization",
