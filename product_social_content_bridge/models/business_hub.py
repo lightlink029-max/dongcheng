@@ -1,3 +1,5 @@
+import json
+
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, ValidationError
 
@@ -152,45 +154,225 @@ class BusinessHub(models.Model):
             ])
             for sequence, menu in enumerate(custom_menus, start=1):
                 menu.write({"parent_id": other.id, "sequence": sequence * 10})
-        self._ensure_dashboard_performance_menu()
+        self._ensure_native_performance_dashboard()
         return True
 
     @api.model
-    def _ensure_dashboard_performance_menu(self):
-        """Expose the same operating data action inside the optional Dashboards app."""
-        dashboard = self.env.ref(
-            "spreadsheet_dashboard.spreadsheet_dashboard_menu_root",
-            raise_if_not_found=False,
+    def _performance_dashboard_data(self):
+        columns = (
+            ("A", "snapshot_date", "数据日期", 105),
+            ("B", "project_id", "市场运营项目", 190),
+            ("C", "destination_id", "发布目标", 150),
+            ("D", "account_id", "平台账号", 150),
+            ("E", "content_id", "内容", 170),
+            ("F", "impressions", "曝光", 85),
+            ("G", "views", "播放/浏览", 95),
+            ("H", "clicks", "点击", 85),
+            ("I", "inquiries", "询盘", 85),
+            ("J", "qualified_leads", "有效客户", 95),
+            ("K", "quotations", "报价", 85),
+            ("L", "orders", "订单", 85),
+            ("M", "revenue", "销售额", 110),
+            ("N", "purchase_cost", "采购成本", 110),
+            ("O", "traffic_cost", "流量成本", 110),
         )
-        action = self.env.ref(
-            "product_social_content_bridge.action_psc_performance_snapshots",
-            raise_if_not_found=False,
+        metrics = (
+            ("A", "impressions", "曝光"),
+            ("B", "views", "播放/浏览"),
+            ("C", "clicks", "点击"),
+            ("D", "inquiries", "询盘"),
+            ("E", "qualified_leads", "有效客户"),
+            ("F", "quotations", "报价"),
+            ("G", "orders", "订单"),
+            ("H", "revenue", "销售额"),
+            ("I", "purchase_cost", "采购成本"),
+            ("J", "traffic_cost", "流量成本"),
         )
-        if not dashboard or not action:
+        action = {
+            "viewType": "list",
+            "action": {
+                "domain": [],
+                "context": {},
+                "modelName": "psc.performance.snapshot",
+                "views": [[False, "list"], [False, "form"], [False, "search"]],
+            },
+            "threshold": 0,
+            "name": "经营数据明细",
+        }
+        cells = {
+            "A1": "LightLink 经营数据",
+            "A2": f"[打开完整经营数据明细](odoo://view/{json.dumps(action, ensure_ascii=False)})",
+        }
+        for letter, field_name, label in metrics:
+            cells[f"{letter}3"] = label
+            cells[f"{letter}4"] = f'=PIVOT.VALUE(1, "{field_name}")'
+        for letter, field_name, label, _width in columns:
+            cells[f"{letter}7"] = f'=ODOO.LIST.HEADER(1, "{field_name}", _t("{label}"))'
+            for row_number in range(8, 23):
+                cells[f"{letter}{row_number}"] = (
+                    f'=ODOO.LIST(1,{row_number - 7},"{field_name}")'
+                )
+
+        measures = [
+            {"id": field_name, "fieldName": field_name}
+            for _letter, field_name, _label in metrics
+        ]
+        list_columns = [field_name for _letter, field_name, _label, _width in columns]
+        sheet_id = "lightlink-performance-dashboard"
+        data = {
+            "version": "18.5.10",
+            "sheets": [{
+                "id": sheet_id,
+                "name": "经营数据",
+                "colNumber": len(columns),
+                "rowNumber": 30,
+                "rows": {"0": {"size": 36}, "2": {"size": 28}, "3": {"size": 36}},
+                "cols": {
+                    str(index): {"size": column[3]}
+                    for index, column in enumerate(columns)
+                },
+                "merges": [],
+                "cells": cells,
+                "styles": {
+                    "A1": 1,
+                    "A3:J3": 2,
+                    "A4:J4": 3,
+                    "A7:O7": 2,
+                    "A8:O22": 4,
+                },
+                "formats": {},
+                "borders": {},
+                "conditionalFormats": [],
+                "dataValidationRules": [],
+                "figures": [],
+                "tables": [],
+                "areGridLinesVisible": True,
+                "isVisible": True,
+                "headerGroups": [],
+                "comments": {},
+            }],
+            "styles": {
+                "1": {"textColor": "#01666b", "bold": True, "fontSize": 20},
+                "2": {"textColor": "#434343", "bold": True, "fontSize": 11},
+                "3": {"textColor": "#71639e", "bold": True, "fontSize": 16},
+                "4": {"textColor": "#434343", "verticalAlign": "middle"},
+            },
+            "formats": {},
+            "borders": {},
+            "revisionId": "START_REVISION",
+            "uniqueFigureIds": True,
+            "settings": {
+                "locale": {
+                    "name": "Chinese (Simplified)",
+                    "code": "zh_CN",
+                    "thousandsSeparator": ",",
+                    "decimalSeparator": ".",
+                    "dateFormat": "yyyy/mm/dd",
+                    "timeFormat": "hh:mm:ss",
+                    "formulaArgSeparator": ",",
+                    "weekStart": 1,
+                },
+            },
+            "pivots": {
+                "1": {
+                    "type": "ODOO",
+                    "fieldMatching": {},
+                    "context": {},
+                    "domain": [],
+                    "id": "1",
+                    "measures": measures,
+                    "model": "psc.performance.snapshot",
+                    "name": "经营数据汇总",
+                    "sortedColumn": None,
+                    "formulaId": "1",
+                    "columns": [],
+                    "rows": [],
+                },
+            },
+            "pivotNextId": 2,
+            "customTableStyles": {},
+            "globalFilters": [],
+            "lists": {
+                "1": {
+                    "columns": list_columns,
+                    "domain": [],
+                    "model": "psc.performance.snapshot",
+                    "context": {},
+                    "orderBy": [{"name": "snapshot_date", "asc": False}],
+                    "id": "1",
+                    "name": "经营数据明细",
+                    "fieldMatching": {},
+                },
+            },
+            "listNextId": 2,
+            "chartOdooMenusReferences": {},
+        }
+        return json.dumps(data, ensure_ascii=False)
+
+    @api.model
+    def _ensure_native_performance_dashboard(self):
+        """Create a native dashboard entry because its sidebar is not an ir.ui.menu tree."""
+        if not self.env.registry.get("spreadsheet.dashboard"):
             return False
 
-        menu = self.env.ref(
+        legacy_data = self.env["ir.model.data"].search([
+            ("module", "=", "product_social_content_bridge"),
+            ("name", "=", "menu_psc_dashboard_performance"),
+        ])
+        legacy_menu = self.env.ref(
             "product_social_content_bridge.menu_psc_dashboard_performance",
             raise_if_not_found=False,
         )
-        values = {
-            "name": _("经营数据"),
-            "parent_id": dashboard.id,
-            "action": f"{action._name},{action.id}",
-            "sequence": 90,
-        }
-        if menu:
-            menu.write(values)
-        else:
-            menu = self.env["ir.ui.menu"].create(values)
+        if legacy_menu:
+            legacy_menu.unlink()
+        legacy_data.exists().unlink()
+
+        group = self.env.ref(
+            "product_social_content_bridge.spreadsheet_dashboard_group_lightlink",
+            raise_if_not_found=False,
+        )
+        if not group:
+            group = self.env["spreadsheet.dashboard.group"].create({
+                "name": "LightLink",
+                "sequence": 50,
+            })
             self.env["ir.model.data"].create({
                 "module": "product_social_content_bridge",
-                "name": "menu_psc_dashboard_performance",
-                "model": "ir.ui.menu",
-                "res_id": menu.id,
+                "name": "spreadsheet_dashboard_group_lightlink",
+                "model": "spreadsheet.dashboard.group",
+                "res_id": group.id,
                 "noupdate": False,
             })
-        return menu
+        else:
+            group.write({"name": "LightLink", "sequence": 50})
+
+        dashboard = self.env.ref(
+            "product_social_content_bridge.spreadsheet_dashboard_performance",
+            raise_if_not_found=False,
+        )
+        model = self.env["ir.model"]._get("psc.performance.snapshot")
+        values = {
+            "name": _("经营数据"),
+            "dashboard_group_id": group.id,
+            "sequence": 10,
+            "is_published": True,
+            "main_data_model_ids": [(6, 0, model.ids)],
+        }
+        if dashboard:
+            if not dashboard.spreadsheet_data:
+                values["spreadsheet_data"] = self._performance_dashboard_data()
+            dashboard.write(values)
+        else:
+            values["spreadsheet_data"] = self._performance_dashboard_data()
+            dashboard = self.env["spreadsheet.dashboard"].create(values)
+            self.env["ir.model.data"].create({
+                "module": "product_social_content_bridge",
+                "name": "spreadsheet_dashboard_performance",
+                "model": "spreadsheet.dashboard",
+                "res_id": dashboard.id,
+                "noupdate": False,
+            })
+        return dashboard
 
     @api.model
     def _category_records(self):

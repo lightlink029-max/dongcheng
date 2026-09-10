@@ -86,23 +86,21 @@ class MarketOperationsWorkflowCase(TransactionCase):
         self.assertEqual(workflow.parent_id, root)
         self.assertEqual(performance.parent_id, root)
 
-    def test_dashboard_contains_operating_data_menu(self):
-        dashboard = self.env.ref(
-            "spreadsheet_dashboard.spreadsheet_dashboard_menu_root",
-            raise_if_not_found=False,
-        )
-        if not dashboard:
+    def test_dashboard_contains_native_operating_data_dashboard(self):
+        if not self.env.registry.get("spreadsheet.dashboard"):
             self.skipTest("Dashboards app is not installed")
 
-        menu = self.env["psc.business.hub"]._ensure_dashboard_performance_menu()
-        action = self.env.ref("product_social_content_bridge.action_psc_performance_snapshots")
-        self.assertEqual(menu.parent_id, dashboard)
-        self.assertEqual(menu.action, action)
-        self.assertEqual(
-            self.env["ir.model.data"]._xmlid_to_res_id(
-                "product_social_content_bridge.menu_psc_dashboard_performance"
-            ),
-            menu.id,
+        dashboard = self.env["psc.business.hub"]._ensure_native_performance_dashboard()
+        data = json.loads(dashboard.spreadsheet_data)
+        self.assertEqual(dashboard.dashboard_group_id.name, "LightLink")
+        self.assertTrue(dashboard.is_published)
+        self.assertEqual(data["pivots"]["1"]["model"], "psc.performance.snapshot")
+        self.assertEqual(data["lists"]["1"]["model"], "psc.performance.snapshot")
+        self.assertFalse(
+            self.env.ref(
+                "product_social_content_bridge.menu_psc_dashboard_performance",
+                raise_if_not_found=False,
+            )
         )
 
     def test_product_pool_requires_complete_verified_data(self):
