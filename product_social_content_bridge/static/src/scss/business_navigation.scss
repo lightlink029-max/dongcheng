@@ -189,7 +189,7 @@
 
 .o_psc_business_layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.65fr) minmax(24rem, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
     align-items: start;
 
@@ -198,18 +198,33 @@
         min-width: 0;
     }
 
+    .o_psc_business_nav_column .o_psc_nav_sections {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: .75rem;
+    }
+
+    .o_psc_business_nav_column .o_psc_nav_section {
+        padding: .75rem;
+    }
+
     .o_psc_business_nav_column .o_psc_nav_items {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: .5rem;
+    }
+
+    .o_psc_business_nav_column .o_psc_nav_item {
+        min-height: 4.75rem;
+        padding: .45rem .3rem;
     }
 
     .o_psc_business_hub_column {
-        border-left: 1px solid #dee2e6;
-        padding-left: 1.5rem;
+        border-top: 1px solid #dee2e6;
+        padding-top: 1.5rem;
     }
 
     .o_psc_hub_cards {
         display: grid;
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 1rem;
     }
 
@@ -219,15 +234,32 @@
     }
 }
 
-@media (max-width: 1199.98px) {
+@media (max-width: 1399.98px) {
     .o_psc_business_layout {
-        grid-template-columns: minmax(0, 1fr);
-
-        .o_psc_business_hub_column {
-            border-top: 1px solid #dee2e6;
-            border-left: 0;
-            padding-top: 1.5rem;
-            padding-left: 0;
+        .o_psc_business_nav_column .o_psc_nav_sections {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
         }
+
+        .o_psc_hub_cards {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+}
+
+@media (max-width: 991.98px) {
+    .o_psc_business_layout {
+        .o_psc_business_nav_column .o_psc_nav_sections {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .o_psc_hub_cards {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+}
+
+@media (max-width: 575.98px) {
+    .o_psc_business_layout .o_psc_business_nav_column .o_psc_nav_sections {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
