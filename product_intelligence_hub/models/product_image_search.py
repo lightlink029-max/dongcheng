@@ -152,6 +152,8 @@ class ProductImageSearchService(models.AbstractModel):
         existing = self._qdrant_request(
             "GET", f"/collections/{collection_path}", allow_not_found=True
         )
+        created = existing is None
+        payload_schema = {}
         if existing is None:
             self._qdrant_request(
                 "PUT",
@@ -165,24 +167,33 @@ class ProductImageSearchService(models.AbstractModel):
                     }
                 },
             )
-            return True
-
-        vectors = (
-            (existing.get("result") or {}).get("config", {}).get("params", {}).get("vectors")
-            or {}
-        )
-        image_vector = vectors.get("image") if isinstance(vectors, dict) else None
-        existing_size = image_vector.get("size") if isinstance(image_vector, dict) else None
-        if existing_size and int(existing_size) != config["dimension"]:
-            raise ValidationError(
-                _(
-                    "现有 Qdrant 集合的向量维度是 %(actual)s，当前设置是 %(expected)s。"
-                    "请恢复原维度，或使用新的集合名称。",
-                    actual=existing_size,
-                    expected=config["dimension"],
-                )
+        else:
+            payload_schema = (existing.get("result") or {}).get("payload_schema") or {}
+            vectors = (
+                (existing.get("result") or {})
+                .get("config", {})
+                .get("params", {})
+                .get("vectors")
+                or {}
             )
-        return False
+            image_vector = vectors.get("image") if isinstance(vectors, dict) else None
+            existing_size = image_vector.get("size") if isinstance(image_vector, dict) else None
+            if existing_size and int(existing_size) != config["dimension"]:
+                raise ValidationError(
+                    _(
+                        "现有 Qdrant 集合的向量维度是 %(actual)s，当前设置是 %(expected)s。"
+                        "请恢复原维度，或使用新的集合名称。",
+                        actual=existing_size,
+                        expected=config["dimension"],
+                    )
+                )
+        if "product_tmpl_id" not in payload_schema:
+            self._qdrant_request(
+                "PUT",
+                f"/collections/{collection_path}/index?wait=true",
+                {"field_name": "product_tmpl_id", "field_schema": "integer"},
+            )
+        return created
 
     @api.model
     def test_connection(self):
