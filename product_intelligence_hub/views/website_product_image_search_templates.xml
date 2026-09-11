@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="product_image_search_button" inherit_id="website_sale.search" name="Product image search button">
+        <xpath expr="//t[@t-call='website.website_search_box_input']" position="after">
+            <form t-if="request.env['product.image.search.service'].sudo().is_ready()"
+                  action="/shop/image-search" method="post" enctype="multipart/form-data"
+                  class="pi-image-search-compact ms-2" data-pi-image-search-form="1">
+                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                <label class="btn btn-outline-primary pi-image-search-button"
+                       title="上传图片查找相似产品" aria-label="上传图片查找相似产品">
+                    <input type="file" name="image" accept="image/jpeg,image/png,image/webp"
+                           class="d-none pi-image-search-input"
+                           t-att-data-max-mb="request.env['product.image.search.service'].sudo().public_limits()['upload_mb']"
+                           required="required"/>
+                    <i class="fa fa-camera me-1" aria-hidden="true"/>
+                    <span class="d-none d-lg-inline">以图搜产品</span>
+                </label>
+            </form>
+        </xpath>
+    </template>
+
+    <template id="product_image_search_results" name="Product image search results">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <section class="container py-5 pi-image-search-page">
+                    <div class="pi-image-search-hero mx-auto text-center">
+                        <span class="pi-image-search-kicker">Visual Product Search</span>
+                        <h1 class="display-6 mt-2">上传图片，查找相似产品</h1>
+                        <p class="text-muted mb-4">支持 JPG、PNG 和 WebP。系统只使用图片特征进行匹配，不公开保存客户上传的原图。</p>
+                        <form action="/shop/image-search" method="post" enctype="multipart/form-data"
+                              class="pi-image-search-dropzone" data-pi-image-search-form="1">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <input type="file" name="image" accept="image/jpeg,image/png,image/webp"
+                                   id="pi_image_search_results_input" class="d-none pi-image-search-input"
+                                   t-att-data-max-mb="request.env['product.image.search.service'].sudo().public_limits()['upload_mb']"
+                                   required="required"/>
+                            <label for="pi_image_search_results_input" class="d-block p-4 mb-0">
+                                <i class="fa fa-cloud-upload fa-2x text-primary mb-2" aria-hidden="true"/>
+                                <strong class="d-block">选择一张产品参考图片</strong>
+                                <span class="small text-muted">点击上传，系统将自动开始搜索</span>
+                            </label>
+                        </form>
+                    </div>
+
+                    <div t-if="error" class="alert alert-warning mt-4 mx-auto pi-image-search-message" role="alert">
+                        <i class="fa fa-exclamation-circle me-2" aria-hidden="true"/>
+                        <t t-out="error"/>
+                    </div>
+
+                    <div t-elif="products" class="mt-5">
+                        <div class="d-flex justify-content-between align-items-end mb-3">
+                            <div>
+                                <span class="text-muted small">IMAGE MATCHES</span>
+                                <h2 class="h3 mb-0">为你找到的相似产品</h2>
+                            </div>
+                            <a href="/shop" class="btn btn-link">查看全部产品</a>
+                        </div>
+                        <div class="row g-4">
+                            <div t-foreach="products" t-as="product" class="col-6 col-lg-3">
+                                <a t-att-href="product.website_url" class="card h-100 text-decoration-none pi-image-result-card">
+                                    <div class="ratio ratio-1x1 bg-light overflow-hidden">
+                                        <img t-att-src="'/web/image/product.template/%s/image_512' % product.id"
+                                             t-att-alt="product.name" class="w-100 h-100 object-fit-contain" loading="lazy"/>
+                                    </div>
+                                    <div class="card-body">
+                                        <h3 class="h6 text-body mb-1" t-out="product.name"/>
+                                        <span class="small text-primary">查看产品详情 <i class="fa fa-arrow-right ms-1"/></span>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div t-else="" class="text-center py-5 mt-4">
+                        <i class="fa fa-search fa-3x text-muted mb-3" aria-hidden="true"/>
+                        <h2 class="h4">暂时没有找到相似产品</h2>
+                        <p class="text-muted">可以更换角度更正、主体更清晰的图片后再次搜索。</p>
+                        <a href="/shop" class="btn btn-primary">浏览全部产品</a>
+                    </div>
+                </section>
+            </div>
+        </t>
+    </template>
+</odoo>

@@ -53,6 +53,36 @@
                             <field name="pi_oss_delete_on_unlink"/>
                         </setting>
                     </block>
+                    <block title="网站以图搜产品（Qdrant Cloud）" help="客户上传一张参考图片，系统返回视觉上最相似的已发布商品。原图仍保存在 Odoo，Qdrant 只保存图片向量和商品编号。">
+                        <setting string="启用以图搜产品" help="连接测试成功并建立商品索引后，再向网站访客显示搜索入口。">
+                            <field name="pi_qdrant_enabled"/>
+                        </setting>
+                        <setting string="Qdrant 连接" invisible="not pi_qdrant_enabled">
+                            <div class="content-group">
+                                <div class="row mt16"><label for="pi_qdrant_url" class="col-lg-3 o_light_label"/><field name="pi_qdrant_url" placeholder="https://xxxx.cloud.qdrant.io:6333"/></div>
+                                <div class="row mt16"><label for="pi_qdrant_api_key" class="col-lg-3 o_light_label"/><field name="pi_qdrant_api_key" password="True"/></div>
+                                <div class="row mt16"><label for="pi_qdrant_collection" class="col-lg-3 o_light_label"/><field name="pi_qdrant_collection"/></div>
+                                <button name="action_pi_qdrant_test_connection" type="object" string="测试连接并准备集合" class="btn-secondary mt16"/>
+                            </div>
+                        </setting>
+                        <setting string="多模态模型" help="默认使用 512 维 CLIP 图片模型；如 Qdrant 控制台显示其他免费模型，可在这里替换。" invisible="not pi_qdrant_enabled">
+                            <div class="content-group">
+                                <div class="row mt16"><label for="pi_qdrant_image_model" class="col-lg-3 o_light_label"/><field name="pi_qdrant_image_model"/></div>
+                                <div class="row mt16"><label for="pi_qdrant_vector_dimension" class="col-lg-3 o_light_label"/><field name="pi_qdrant_vector_dimension"/></div>
+                            </div>
+                        </setting>
+                        <setting string="搜索质量和安全限制" invisible="not pi_qdrant_enabled">
+                            <div class="content-group">
+                                <div class="row mt16"><label for="pi_qdrant_result_limit" class="col-lg-3 o_light_label"/><field name="pi_qdrant_result_limit"/></div>
+                                <div class="row mt16"><label for="pi_qdrant_score_threshold" class="col-lg-3 o_light_label"/><field name="pi_qdrant_score_threshold"/></div>
+                                <div class="row mt16"><label for="pi_qdrant_upload_limit_mb" class="col-lg-3 o_light_label"/><field name="pi_qdrant_upload_limit_mb"/></div>
+                                <div class="row mt16"><label for="pi_qdrant_rate_limit" class="col-lg-3 o_light_label"/><field name="pi_qdrant_rate_limit"/></div>
+                            </div>
+                        </setting>
+                        <setting string="商品图片索引" help="首次启用或更换模型后执行一次；之后商品图片变化会自动进入后台增量索引。" invisible="not pi_qdrant_enabled">
+                            <button name="action_pi_qdrant_reindex_all" type="object" string="重建全部商品图片索引" class="btn-secondary"/>
+                        </setting>
+                    </block>
                 </app>
             </xpath>
         </field>

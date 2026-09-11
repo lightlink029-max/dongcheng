@@ -10,6 +10,11 @@
                         class="oe_stat_button" icon="fa-lightbulb-o" invisible="not pi_candidate_id">
                     <span class="o_stat_text">产品机会</span>
                 </button>
+                <button name="action_pi_index_image_search" type="object"
+                        class="oe_stat_button" icon="fa-camera"
+                        groups="product_intelligence_hub.group_product_intelligence_manager">
+                    <field name="pi_image_search_state" widget="badge" string="图片搜索"/>
+                </button>
             </xpath>
             <xpath expr="//notebook" position="inside">
                 <page string="选品来源与详情" name="product_intelligence_details" invisible="not pi_candidate_id">
@@ -36,6 +41,16 @@
                                 <field name="source_url" widget="url" optional="show"/>
                             </list>
                         </field>
+                    </group>
+                </page>
+                <page string="图片搜索" name="product_image_search"
+                      groups="product_intelligence_hub.group_product_intelligence_manager">
+                    <button name="action_pi_index_image_search" type="object"
+                            string="立即更新图片索引" class="btn-secondary mb-3"/>
+                    <group col="2">
+                        <field name="pi_image_search_state" widget="badge"/>
+                        <field name="pi_image_search_indexed_at"/>
+                        <field name="pi_image_search_error" colspan="2"/>
                     </group>
                 </page>
             </xpath>

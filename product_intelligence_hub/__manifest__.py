@@ -1,6 +1,6 @@
 {
     "name": "产品智能中心",
-    "version": "19.0.1.46.17",
+    "version": "19.0.1.47.0",
     "summary": "采集、评分、审核并转化产品机会",
     "category": "Sales",
     "author": "LightLink",
@@ -10,6 +10,7 @@
         "security/product_intelligence_security.xml",
         "security/ir.model.access.csv",
         "data/product_intelligence_cron.xml",
+        "data/product_image_search_cron.xml",
         "data/odoo_translate_fields.xml",
         "wizard/product_intelligence_token_wizard_views.xml",
         "wizard/product_intelligence_sourcing_role_wizard_views.xml",
@@ -19,9 +20,16 @@
         "views/product_template_views.xml",
         "views/res_partner_views.xml",
         "views/website_product_details_templates.xml",
+        "views/website_product_image_search_templates.xml",
         "views/res_config_settings_views.xml",
         "views/product_intelligence_menus.xml",
     ],
+    "assets": {
+        "web.assets_frontend": [
+            "product_intelligence_hub/static/src/js/product_image_search.js",
+            "product_intelligence_hub/static/src/scss/product_image_search.scss",
+        ],
+    },
     "application": True,
     "installable": True,
 }

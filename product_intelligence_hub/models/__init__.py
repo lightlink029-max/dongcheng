@@ -3,6 +3,7 @@ from . import product_intelligence_sourcing
 from . import product_intelligence_media
 from . import product_template
 from . import product_image_compression
+from . import product_image_search
 from . import image_storage_oss
 from . import product_intelligence_source
 from . import res_company
