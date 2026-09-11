@@ -249,13 +249,7 @@ class ProductImageSearchService(models.AbstractModel):
                 output = BytesIO()
                 image.save(output, format="JPEG", quality=88, optimize=True)
         except (Image.DecompressionBombError, UnidentifiedImageError, OSError, ValueError) as exc:
-            diagnostic = "%s bytes, head=%s" % (
-                len(image_bytes),
-                bytes(image_bytes[:12]).hex(),
-            )
-            raise ValidationError(
-                _("文件不是可识别的 JPG、PNG 或 WebP 图片。（%s）", diagnostic)
-            ) from exc
+            raise ValidationError(_("文件不是可识别的 JPG、PNG 或 WebP 图片。")) from exc
         normalized = output.getvalue()
         return (
             "data:image/jpeg;base64," + base64.b64encode(normalized).decode("ascii"),
