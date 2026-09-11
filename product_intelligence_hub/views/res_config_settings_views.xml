@@ -65,7 +65,7 @@
                                 <button name="action_pi_qdrant_test_connection" type="object" string="测试连接并准备集合" class="btn-secondary mt16"/>
                             </div>
                         </setting>
-                        <setting string="多模态模型" help="默认使用 512 维 CLIP 图片模型；如 Qdrant 控制台显示其他免费模型，可在这里替换。" invisible="not pi_qdrant_enabled">
+                        <setting string="图片向量生成" help="默认在 Odoo 内用 Pillow 生成免费的 512 维视觉特征，Qdrant 只负责相似度检索，不消耗付费推理。" invisible="not pi_qdrant_enabled">
                             <div class="content-group">
                                 <div class="row mt16"><label for="pi_qdrant_image_model" class="col-lg-3 o_light_label"/><field name="pi_qdrant_image_model"/></div>
                                 <div class="row mt16"><label for="pi_qdrant_vector_dimension" class="col-lg-3 o_light_label"/><field name="pi_qdrant_vector_dimension"/></div>

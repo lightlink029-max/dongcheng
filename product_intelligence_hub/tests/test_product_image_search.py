@@ -1,4 +1,5 @@
 import base64
+import math
 from io import BytesIO
 
 from PIL import Image
@@ -22,6 +23,17 @@ class TestProductImageSearch(TransactionCase):
         )
         self.assertTrue(data_url.startswith("data:image/jpeg;base64,"))
         self.assertEqual(len(digest), 64)
+
+    def test_local_visual_vector_is_normalized_and_has_configured_dimension(self):
+        service = self.env["product.image.search.service"]
+        data_url, _digest = service._prepare_image(self._image_bytes())
+        vector = service._local_image_vector(
+            base64.b64decode(data_url.split(",", 1)[1])
+        )
+        self.assertEqual(len(vector), 512)
+        self.assertAlmostEqual(
+            math.sqrt(sum(value * value for value in vector)), 1.0, places=6
+        )
 
     def test_non_image_upload_is_rejected(self):
         with self.assertRaises(ValidationError):

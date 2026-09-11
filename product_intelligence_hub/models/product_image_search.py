@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import logging
+import math
 import re
 import uuid
 from io import BytesIO
@@ -9,7 +10,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
 
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageFilter, ImageOps, UnidentifiedImageError
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
@@ -25,7 +26,7 @@ class ProductImageSearchService(models.AbstractModel):
     _PARAM_PREFIX = "product_intelligence_hub."
     _DEFAULTS = {
         "qdrant_collection": "odoo_product_images",
-        "qdrant_image_model": "Qdrant/clip-ViT-B-32-vision",
+        "qdrant_image_model": "local/pillow-visual-v1",
         "qdrant_vector_dimension": 512,
         "qdrant_result_limit": 12,
         "qdrant_score_threshold": 0.18,
@@ -190,7 +191,7 @@ class ProductImageSearchService(models.AbstractModel):
         image = Image.new("RGB", (8, 8), "white")
         output = BytesIO()
         image.save(output, format="JPEG")
-        data_url, _digest = self._prepare_image(output.getvalue())
+        vector_value, _digest = self._image_vector_value(output.getvalue(), config)
         point_id = str(uuid.uuid4())
         collection = quote(config["collection"], safe="")
         self._qdrant_request(
@@ -200,12 +201,7 @@ class ProductImageSearchService(models.AbstractModel):
                 "points": [
                     {
                         "id": point_id,
-                        "vector": {
-                            "image": {
-                                "image": data_url,
-                                "model": config["image_model"],
-                            }
-                        },
+                        "vector": {"image": vector_value},
                         "payload": {"connection_test": True},
                     }
                 ]
@@ -247,6 +243,49 @@ class ProductImageSearchService(models.AbstractModel):
             "data:image/jpeg;base64," + base64.b64encode(normalized).decode("ascii"),
             hashlib.sha256(normalized).hexdigest(),
         )
+
+    @api.model
+    def _local_image_vector(self, image_bytes):
+        """Build a deterministic 512-d visual vector without paid inference."""
+        with Image.open(BytesIO(image_bytes)) as source:
+            image = ImageOps.fit(
+                ImageOps.exif_transpose(source).convert("RGB"),
+                (64, 64),
+                method=Image.Resampling.LANCZOS,
+            )
+            grayscale = ImageOps.grayscale(image)
+            shape = [
+                (value - 127.5) / 127.5
+                for value in grayscale.resize(
+                    (16, 16), Image.Resampling.LANCZOS
+                ).getdata()
+            ]
+            histogram = image.histogram()
+            color = []
+            pixel_count = float(image.width * image.height)
+            for channel in range(3):
+                channel_histogram = histogram[channel * 256 : (channel + 1) * 256]
+                color.extend(
+                    sum(channel_histogram[index : index + 4]) / pixel_count
+                    for index in range(0, 256, 4)
+                )
+            edges = [
+                value / 255.0
+                for value in grayscale.filter(ImageFilter.FIND_EDGES).resize(
+                    (8, 8), Image.Resampling.LANCZOS
+                ).getdata()
+            ]
+        vector = shape + color + edges
+        norm = math.sqrt(sum(value * value for value in vector)) or 1.0
+        return [value / norm for value in vector]
+
+    @api.model
+    def _image_vector_value(self, image_bytes, config, max_bytes=None):
+        data_url, digest = self._prepare_image(image_bytes, max_bytes=max_bytes)
+        if config["image_model"] == "local/pillow-visual-v1":
+            normalized = base64.b64decode(data_url.split(",", 1)[1])
+            return self._local_image_vector(normalized), digest
+        return {"image": data_url, "model": config["image_model"]}, digest
 
     @api.model
     def _decode_odoo_image(self, value):
@@ -317,17 +356,14 @@ class ProductImageSearchService(models.AbstractModel):
         points = []
         hashes = []
         for image_kind, image_id, image_bytes in self._product_image_values(product):
-            image_data_url, digest = self._prepare_image(image_bytes, max_bytes=20 * 1024 * 1024)
+            vector_value, digest = self._image_vector_value(
+                image_bytes, config, max_bytes=20 * 1024 * 1024
+            )
             hashes.append(digest)
             points.append(
                 {
                     "id": self._point_id(product.id, image_kind, image_id),
-                    "vector": {
-                        "image": {
-                            "image": image_data_url,
-                            "model": config["image_model"],
-                        }
-                    },
+                    "vector": {"image": vector_value},
                     "payload": {
                         "product_tmpl_id": product.id,
                         "image_kind": image_kind,
@@ -388,16 +424,13 @@ class ProductImageSearchService(models.AbstractModel):
     @api.model
     def search_similar_product_ids(self, image_bytes):
         config = self._config()
-        image_data_url, _digest = self._prepare_image(image_bytes)
+        vector_value, _digest = self._image_vector_value(image_bytes, config)
         collection = quote(config["collection"], safe="")
         response = self._qdrant_request(
             "POST",
             f"/collections/{collection}/points/query",
             {
-                "query": {
-                    "image": image_data_url,
-                    "model": config["image_model"],
-                },
+                "query": vector_value,
                 "using": "image",
                 "with_payload": ["product_tmpl_id"],
                 "with_vector": False,

@@ -50,8 +50,8 @@ class ResConfigSettings(models.TransientModel):
         config_parameter="product_intelligence_hub.qdrant_collection",
     )
     pi_qdrant_image_model = fields.Char(
-        string="图片向量模型",
-        default="Qdrant/clip-ViT-B-32-vision",
+        string="向量生成方式",
+        default="local/pillow-visual-v1",
         config_parameter="product_intelligence_hub.qdrant_image_model",
     )
     pi_qdrant_vector_dimension = fields.Integer(
