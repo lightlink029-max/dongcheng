@@ -13,6 +13,11 @@ from urllib.request import Request, urlopen
 
 from PIL import Image, ImageFilter, ImageOps, UnidentifiedImageError
 
+try:
+    from PIL import WebPImagePlugin  # noqa: F401
+except ImportError:
+    WebPImagePlugin = None
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
