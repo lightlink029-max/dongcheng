@@ -1,4 +1,5 @@
 import base64
+import binascii
 import hashlib
 import json
 import logging
@@ -302,9 +303,30 @@ class ProductImageSearchService(models.AbstractModel):
     def _decode_odoo_image(self, value):
         if not value:
             return b""
+        if isinstance(value, str):
+            value = value.strip()
+            if value.startswith("data:") and "," in value:
+                value = value.split(",", 1)[1]
+            try:
+                value = value.encode("ascii")
+            except UnicodeEncodeError:
+                return b""
+        elif isinstance(value, bytearray):
+            value = bytes(value)
+        if not isinstance(value, bytes):
+            return b""
+
+        # Odoo binary/image fields may be returned either as raw bytes or as
+        # base64 depending on the storage backend and call path.
+        if (
+            value.startswith(b"\xff\xd8\xff")
+            or value.startswith(b"\x89PNG\r\n\x1a\n")
+            or (value.startswith(b"RIFF") and value[8:12] == b"WEBP")
+        ):
+            return value
         try:
-            return base64.b64decode(value)
-        except (ValueError, TypeError):
+            return base64.b64decode(value, validate=True)
+        except (binascii.Error, ValueError, TypeError):
             return b""
 
     @api.model

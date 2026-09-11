@@ -39,6 +39,20 @@ class TestProductImageSearch(TransactionCase):
         with self.assertRaises(ValidationError):
             self.env["product.image.search.service"]._prepare_image(b"not-an-image")
 
+    def test_odoo_image_decoder_accepts_raw_and_base64_images(self):
+        service = self.env["product.image.search.service"]
+        image_bytes = self._image_bytes()
+        encoded = base64.b64encode(image_bytes)
+
+        self.assertEqual(service._decode_odoo_image(image_bytes), image_bytes)
+        self.assertEqual(service._decode_odoo_image(encoded), image_bytes)
+        self.assertEqual(
+            service._decode_odoo_image(
+                "data:image/png;base64," + encoded.decode("ascii")
+            ),
+            image_bytes,
+        )
+
     def test_product_image_change_marks_index_pending(self):
         product = self.env["product.template"].create(
             {"name": "Image search test product", "sale_ok": True}
