@@ -39,6 +39,10 @@ class ProductImageSearchService(models.AbstractModel):
         "qdrant_upload_limit_mb": 5,
         "qdrant_rate_limit": 20,
     }
+    _MIN_RELEVANT_SCORE = 0.65
+    _NEAR_EXACT_SCORE = 0.90
+    _NEAR_EXACT_GAP = 0.08
+    _SIMILAR_SCORE_GAP = 0.04
 
     @api.model
     def _parameter(self, name, default=None):
@@ -478,10 +482,41 @@ class ProductImageSearchService(models.AbstractModel):
         )
         result = response.get("result") or {}
         points = result.get("points", []) if isinstance(result, dict) else result
-        product_ids = []
-        for point in points or []:
+        return self._relevant_product_ids(points or [], config)
+
+    @api.model
+    def _relevant_product_ids(self, points, config):
+        best_scores = {}
+        ordered_ids = []
+        for point in points:
             product_id = (point.get("payload") or {}).get("product_tmpl_id")
-            if isinstance(product_id, int) and product_id not in product_ids:
+            score = point.get("score")
+            if not isinstance(product_id, int) or not isinstance(score, (int, float)):
+                continue
+            if product_id not in best_scores:
+                ordered_ids.append(product_id)
+                best_scores[product_id] = float(score)
+            else:
+                best_scores[product_id] = max(best_scores[product_id], float(score))
+
+        if not ordered_ids:
+            return []
+        top_score = max(best_scores.values())
+        if top_score < self._MIN_RELEVANT_SCORE:
+            return []
+        score_gap = (
+            self._NEAR_EXACT_GAP
+            if top_score >= self._NEAR_EXACT_SCORE
+            else self._SIMILAR_SCORE_GAP
+        )
+        cutoff = max(
+            float(config["score_threshold"]),
+            self._MIN_RELEVANT_SCORE,
+            top_score - score_gap,
+        )
+        product_ids = []
+        for product_id in ordered_ids:
+            if best_scores[product_id] >= cutoff:
                 product_ids.append(product_id)
             if len(product_ids) >= config["result_limit"]:
                 break

@@ -53,6 +53,36 @@ class TestProductImageSearch(TransactionCase):
             image_bytes,
         )
 
+    def test_relevance_filter_removes_low_score_false_positives(self):
+        service = self.env["product.image.search.service"]
+        points = [
+            {"score": 1.0, "payload": {"product_tmpl_id": 9}},
+            {"score": 0.578, "payload": {"product_tmpl_id": 13}},
+            {"score": 0.549, "payload": {"product_tmpl_id": 14}},
+        ]
+        config = {"score_threshold": 0.18, "result_limit": 12}
+
+        self.assertEqual(service._relevant_product_ids(points, config), [9])
+
+    def test_relevance_filter_keeps_close_similar_products(self):
+        service = self.env["product.image.search.service"]
+        points = [
+            {"score": 0.78, "payload": {"product_tmpl_id": 9}},
+            {"score": 0.76, "payload": {"product_tmpl_id": 10}},
+            {"score": 0.71, "payload": {"product_tmpl_id": 11}},
+            {"score": 0.70, "payload": {"product_tmpl_id": 9}},
+        ]
+        config = {"score_threshold": 0.18, "result_limit": 12}
+
+        self.assertEqual(service._relevant_product_ids(points, config), [9, 10])
+
+    def test_relevance_filter_returns_nothing_for_weak_matches(self):
+        service = self.env["product.image.search.service"]
+        points = [{"score": 0.62, "payload": {"product_tmpl_id": 9}}]
+        config = {"score_threshold": 0.18, "result_limit": 12}
+
+        self.assertEqual(service._relevant_product_ids(points, config), [])
+
     def test_product_image_change_marks_index_pending(self):
         product = self.env["product.template"].create(
             {"name": "Image search test product", "sale_ok": True}
