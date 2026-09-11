@@ -105,6 +105,16 @@ class MarketOperationsWorkflowCase(TransactionCase):
                 raise_if_not_found=False,
             )
         )
+        group_data = self.env["ir.model.data"].search([
+            ("module", "=", "product_social_content_bridge"),
+            ("name", "=", "spreadsheet_dashboard_group_lightlink"),
+        ], limit=1)
+        dashboard_data = self.env["ir.model.data"].search([
+            ("module", "=", "product_social_content_bridge"),
+            ("name", "=", "spreadsheet_dashboard_performance"),
+        ], limit=1)
+        self.assertTrue(group_data.noupdate)
+        self.assertTrue(dashboard_data.noupdate)
 
     def test_product_pool_requires_complete_verified_data(self):
         item = self.project.project_product_ids.filtered(

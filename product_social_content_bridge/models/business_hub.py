@@ -520,10 +520,16 @@ class BusinessHub(models.Model):
                 "name": "spreadsheet_dashboard_group_lightlink",
                 "model": "spreadsheet.dashboard.group",
                 "res_id": group.id,
-                "noupdate": False,
+                "noupdate": True,
             })
         else:
             group.write({"name": "LightLink", "sequence": 50})
+        group_data = self.env["ir.model.data"].search([
+            ("module", "=", "product_social_content_bridge"),
+            ("name", "=", "spreadsheet_dashboard_group_lightlink"),
+        ], limit=1)
+        if group_data and not group_data.noupdate:
+            group_data.noupdate = True
 
         dashboard = self.env.ref(
             "product_social_content_bridge.spreadsheet_dashboard_performance",
@@ -566,8 +572,14 @@ class BusinessHub(models.Model):
                 "name": "spreadsheet_dashboard_performance",
                 "model": "spreadsheet.dashboard",
                 "res_id": dashboard.id,
-                "noupdate": False,
+                "noupdate": True,
             })
+        dashboard_data = self.env["ir.model.data"].search([
+            ("module", "=", "product_social_content_bridge"),
+            ("name", "=", "spreadsheet_dashboard_performance"),
+        ], limit=1)
+        if dashboard_data and not dashboard_data.noupdate:
+            dashboard_data.noupdate = True
         return dashboard
 
     @api.model
