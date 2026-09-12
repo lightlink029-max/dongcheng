@@ -243,6 +243,18 @@ class SelectionStore:
                     UNIQUE(task_id, slot_key)
                 )
             """)
+            connection.execute("""
+                CREATE TABLE IF NOT EXISTS composition_item (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id INTEGER NOT NULL,
+                    slot_key TEXT NOT NULL,
+                    asset_uuid TEXT NOT NULL,
+                    sequence INTEGER NOT NULL DEFAULT 10,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(task_id, slot_key)
+                )
+            """)
 
     def next_local_task_id(self):
         with self._connect() as connection:
@@ -394,6 +406,8 @@ class SelectionStore:
 
     def delete_task(self, task_id):
         with self._connect() as connection:
+            connection.execute("DELETE FROM composition_item WHERE task_id = ?", (int(task_id),))
+            connection.execute("DELETE FROM storyboard_slot WHERE task_id = ?", (int(task_id),))
             connection.execute("DELETE FROM selected_video WHERE task_id = ?", (int(task_id),))
             connection.execute("DELETE FROM render_version WHERE task_id = ?", (int(task_id),))
             connection.execute("DELETE FROM selection_task WHERE task_id = ?", (int(task_id),))
@@ -603,9 +617,12 @@ class SelectionStore:
             selected_asset_uuid = str(
                 shot.get("selected_asset_uuid") or previous.get("selected_asset_uuid") or ""
             )
-            state = str(shot.get("state") or "missing")
-            if selected_asset_uuid and state in ("missing", "producing"):
-                state = "ready"
+            previous_state = str(previous.get("state") or "")
+            state = str(shot.get("state") or previous_state or "missing")
+            if previous_state in ("ready", "selected"):
+                state = previous_state
+            if selected_asset_uuid:
+                state = "selected" if previous.get("state") == "selected" else "ready"
             normalized.append((
                 task_id, slot_key, int(shot.get("sequence") or index * 10),
                 str(shot.get("name") or f"分镜 {index}"), str(shot.get("purpose") or ""),
@@ -624,6 +641,13 @@ class SelectionStore:
                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 normalized,
             )
+            connection.execute(
+                """DELETE FROM composition_item
+                    WHERE task_id = ? AND slot_key NOT IN (
+                        SELECT slot_key FROM storyboard_slot WHERE task_id = ?
+                    )""",
+                (task_id, task_id),
+            )
 
     def list_storyboard(self, task_id):
         with self._connect() as connection:
@@ -633,17 +657,18 @@ class SelectionStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
-    def assign_storyboard_asset(self, task_id, slot_key, asset_uuid):
+    def mark_storyboard_candidate(self, task_id, slot_key):
         now = datetime.now().astimezone().isoformat(timespec="seconds")
         with self._connect() as connection:
             cursor = connection.execute(
                 """UPDATE storyboard_slot
-                      SET selected_asset_uuid = ?, state = 'ready', updated_at = ?
+                      SET state = CASE WHEN state = 'selected' THEN state ELSE 'ready' END,
+                          updated_at = ?
                     WHERE task_id = ? AND slot_key = ?""",
-                (str(asset_uuid), now, int(task_id), str(slot_key)),
+                (now, int(task_id), str(slot_key)),
             )
         if not cursor.rowcount:
-            raise ValueError("分镜不存在，请先从 Odoo 刷新任务")
+            raise ValueError("分镜不存在，请先刷新当前视频项目")
 
     def register_asset(self, values):
         file_path = str(values.get("file_path") or "")
@@ -716,34 +741,99 @@ class SelectionStore:
             ).fetchone()
         return dict(row) if row else None
 
-    def add_asset_to_task(self, task_id, asset_uuid, slot_key=""):
+    def select_asset_for_composition(self, task_id, slot_key, asset_uuid):
+        task_id, slot_key = int(task_id), str(slot_key or "")
+        if not slot_key:
+            raise ValueError("请先选择要填充的故事板分镜")
         asset = self.get_asset(asset_uuid)
         if not asset:
-            raise ValueError("本地素材库中找不到该素材")
+            raise ValueError("本地分镜素材库中找不到该素材")
+        if asset.get("asset_kind") == "music":
+            raise ValueError("背景音乐不能占用视频分镜，请在最终合成设置中选择")
+        slots = {row["slot_key"]: row for row in self.list_storyboard(task_id)}
+        if slot_key not in slots:
+            raise ValueError("故事板分镜不存在，请刷新当前视频项目")
         now = datetime.now().astimezone().isoformat(timespec="seconds")
-        url = "library://%s/%s" % (asset_uuid, uuid.uuid4().hex)
         with self._connect() as connection:
-            order = connection.execute(
-                "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order "
-                "FROM selected_video WHERE task_id = ?", (int(task_id),),
-            ).fetchone()["next_order"]
-            cursor = connection.execute(
-                """INSERT INTO selected_video (
-                       task_id, url, video_id, selected_at, status, local_path, caption,
-                       duration, sort_order, source_kind, record_kind, clip_name, clip_type,
-                       processed_path, processed_kind, processing_status, voice_signature,
-                       copyright_status, storyboard_slot_key, library_asset_uuid
-                   ) VALUES (?, ?, ?, ?, 'downloaded', ?, ?, ?, ?, 'local_library',
-                             'library_asset', ?, ?, ?, ?, 'ready', ?, ?, ?, ?)""",
-                (
-                    int(task_id), url, asset_uuid, now, asset["file_path"], asset["name"],
-                    float(asset.get("duration") or 0), int(order), asset["name"],
-                    asset.get("clip_type") or "unknown", asset["file_path"],
-                    asset.get("asset_kind") or "standard_shot",
-                    asset.get("voice_signature") or "",
-                    asset.get("copyright_status") or "unreviewed", str(slot_key or ""), asset_uuid,
-                ),
+            current = connection.execute(
+                "SELECT sequence FROM composition_item WHERE task_id = ? AND slot_key = ?",
+                (task_id, slot_key),
+            ).fetchone()
+            sequence = current["sequence"] if current else connection.execute(
+                "SELECT COALESCE(MAX(sequence), 0) + 10 AS next_sequence "
+                "FROM composition_item WHERE task_id = ?", (task_id,),
+            ).fetchone()["next_sequence"]
+            connection.execute(
+                """INSERT INTO composition_item (
+                       task_id, slot_key, asset_uuid, sequence, created_at, updated_at
+                   ) VALUES (?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(task_id, slot_key) DO UPDATE SET
+                       asset_uuid = excluded.asset_uuid, updated_at = excluded.updated_at""",
+                (task_id, slot_key, str(asset_uuid), int(sequence), now, now),
             )
-        if slot_key:
-            self.assign_storyboard_asset(task_id, slot_key, asset_uuid)
-        return int(cursor.lastrowid)
+            connection.execute(
+                """UPDATE storyboard_slot
+                      SET selected_asset_uuid = ?, state = 'selected', updated_at = ?
+                    WHERE task_id = ? AND slot_key = ?""",
+                (str(asset_uuid), now, task_id, slot_key),
+            )
+
+    def list_composition(self, task_id):
+        with self._connect() as connection:
+            rows = connection.execute(
+                """SELECT item.id, item.task_id, item.slot_key, item.asset_uuid,
+                          item.sequence, slot.name AS shot_name, slot.purpose AS shot_purpose,
+                          slot.required, asset.name, asset.file_path, asset.asset_kind,
+                          asset.clip_type, asset.duration, asset.voice_signature,
+                          asset.copyright_status, asset.subtitle_state
+                     FROM composition_item item
+                     JOIN storyboard_slot slot
+                       ON slot.task_id = item.task_id AND slot.slot_key = item.slot_key
+                     JOIN local_media_asset asset ON asset.asset_uuid = item.asset_uuid
+                    WHERE item.task_id = ? AND asset.active = 1
+                    ORDER BY item.sequence, item.id""",
+                (int(task_id),),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def move_composition(self, task_id, ids, direction):
+        selected = {int(value) for value in ids}
+        rows = self.list_composition(task_id)
+        if not selected or direction not in (-1, 1):
+            return
+        if direction < 0:
+            for index in range(1, len(rows)):
+                if rows[index]["id"] in selected and rows[index - 1]["id"] not in selected:
+                    rows[index - 1], rows[index] = rows[index], rows[index - 1]
+        else:
+            for index in range(len(rows) - 2, -1, -1):
+                if rows[index]["id"] in selected and rows[index + 1]["id"] not in selected:
+                    rows[index], rows[index + 1] = rows[index + 1], rows[index]
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        with self._connect() as connection:
+            connection.executemany(
+                "UPDATE composition_item SET sequence = ?, updated_at = ? WHERE id = ?",
+                [(index * 10, now, row["id"]) for index, row in enumerate(rows, 1)],
+            )
+
+    def remove_composition(self, task_id, ids):
+        values = [int(value) for value in ids]
+        if not values:
+            return
+        placeholders = ",".join("?" for _ in values)
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        with self._connect() as connection:
+            slots = connection.execute(
+                f"SELECT slot_key FROM composition_item WHERE task_id = ? AND id IN ({placeholders})",
+                (int(task_id), *values),
+            ).fetchall()
+            connection.execute(
+                f"DELETE FROM composition_item WHERE task_id = ? AND id IN ({placeholders})",
+                (int(task_id), *values),
+            )
+            connection.executemany(
+                """UPDATE storyboard_slot
+                      SET selected_asset_uuid = '', state = 'ready', updated_at = ?
+                    WHERE task_id = ? AND slot_key = ?""",
+                [(now, int(task_id), row["slot_key"]) for row in slots],
+            )

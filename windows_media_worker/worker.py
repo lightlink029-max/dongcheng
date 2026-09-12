@@ -1130,12 +1130,41 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
             for path in ready_parts
         ), encoding="utf-8")
         output = job_dir / "output.mp4"
+        music = Path(task.get("background_music") or "").expanduser()
+        joined = job_dir / "joined-without-music.mp4" if music.is_file() else output
         result = subprocess.run([
             self.ffmpeg(), "-y", "-f", "concat", "-safe", "0", "-i", str(concat),
-            "-c", "copy", "-movflags", "+faststart", str(output),
+            "-c", "copy", "-movflags", "+faststart", str(joined),
         ], capture_output=True, text=True, encoding="utf-8", errors="replace")
-        if result.returncode or not output.is_file():
+        if result.returncode or not joined.is_file():
             raise RuntimeError("最终片段拼接失败：%s" % result.stderr[-700:])
+        if music.is_file():
+            probe = subprocess.run(
+                [self.ffmpeg(), "-i", str(joined)], capture_output=True, text=True,
+                encoding="utf-8", errors="replace",
+            )
+            music_volume = max(0.0, min(1.0, float(task.get("music_volume") or 0.2)))
+            command = [
+                self.ffmpeg(), "-y", "-i", str(joined), "-stream_loop", "-1", "-i", str(music),
+            ]
+            if "Audio:" in (probe.stderr or ""):
+                command += [
+                    "-filter_complex",
+                    "[0:a]volume=1[voice];[1:a]volume=%s[music];"
+                    "[voice][music]amix=inputs=2:duration=first[a]" % music_volume,
+                    "-map", "0:v", "-map", "[a]",
+                ]
+            else:
+                command += ["-map", "0:v", "-map", "1:a"]
+            command += [
+                "-t", "%.3f" % cursor, "-c:v", "copy", "-c:a", "aac",
+                "-movflags", "+faststart", str(output),
+            ]
+            result = subprocess.run(
+                command, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            )
+            if result.returncode or not output.is_file():
+                raise RuntimeError("最终成片添加背景音乐失败：%s" % result.stderr[-700:])
         (job_dir / "clip-timeline.json").write_text(
             json.dumps(timeline, ensure_ascii=False, indent=2), encoding="utf-8",
         )

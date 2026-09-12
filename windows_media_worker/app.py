@@ -84,17 +84,16 @@ class MediaWorkerApp(tk.Tk):
         notebook = ttk.Notebook(self)
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
         config_tab, tasks_tab = ttk.Frame(notebook), ttk.Frame(notebook)
-        registration_tab, selection_tab = ttk.Frame(notebook), ttk.Frame(notebook)
-        library_tab, log_tab = ttk.Frame(notebook), ttk.Frame(notebook)
+        registration_tab, selection_tab, log_tab = (
+            ttk.Frame(notebook), ttk.Frame(notebook), ttk.Frame(notebook)
+        )
         notebook.add(config_tab, text="连接与配置")
         notebook.add(tasks_tab, text="任务列表")
         notebook.add(registration_tab, text="社媒账号注册")
-        notebook.add(selection_tab, text="分镜制作与成片")
-        notebook.add(library_tab, text="本地分镜素材库")
+        notebook.add(selection_tab, text="视频生产工作台")
         notebook.add(log_tab, text="运行日志")
         self.notebook = notebook
         self.selection_tab = selection_tab
-        self.library_tab = library_tab
 
         config_groups = [
             ("Odoo工作节点", [
@@ -265,31 +264,61 @@ class MediaWorkerApp(tk.Tk):
 
         selection_workflow = ttk.Notebook(selection_tab)
         selection_workflow.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        plan_page = ttk.Frame(selection_workflow, padding=10)
         source_page = ttk.Frame(selection_workflow, padding=10)
+        library_page = ttk.Frame(selection_workflow, padding=10)
+        assembly_page = ttk.Frame(selection_workflow, padding=10)
         review_page = ttk.Frame(selection_workflow, padding=10)
-        selection_workflow.add(source_page, text="① 视频方案、分镜制作与合成")
-        selection_workflow.add(review_page, text="② 成片审核与回传")
+        selection_workflow.add(plan_page, text="① 视频方案")
+        selection_workflow.add(source_page, text="② 原始素材制作分镜")
+        selection_workflow.add(library_page, text="③ 从分镜库选成片")
+        selection_workflow.add(assembly_page, text="④ 成片排序合成")
+        selection_workflow.add(review_page, text="⑤ 审核回传")
         self.selection_workflow = selection_workflow
+        self.selection_plan_page = plan_page
+        self.selection_source_page = source_page
+        self.selection_library_page = library_page
+        self.selection_assembly_page = assembly_page
         self.selection_review_page = review_page
 
-        plan_frame = ttk.LabelFrame(source_page, text="当前视频方案与分镜清单（来自 Odoo）", padding=8)
-        plan_frame.pack(fill="x", pady=(0, 8))
+        plan_intro = ttk.Frame(plan_page)
+        plan_intro.pack(fill="x", pady=(0, 10))
+        ttk.Label(
+            plan_intro, text="先理解整条视频，再选择一个分镜开始制作",
+            font=("Microsoft YaHei UI", 13, "bold"),
+        ).pack(side="left")
+        ttk.Button(
+            plan_intro, text="进入第②步：从原素材制作分镜 →",
+            command=lambda: selection_workflow.select(source_page),
+        ).pack(side="right")
+        ttk.Button(
+            plan_intro, text="已有分镜素材：直接选成片",
+            command=lambda: selection_workflow.select(library_page),
+        ).pack(side="right", padx=8)
+        plan_frame = ttk.LabelFrame(plan_page, text="整条视频方案（来自 Odoo）", padding=12)
+        plan_frame.pack(fill="x", pady=(0, 12))
         self.video_plan_summary = tk.StringVar(value="请选择项目；先确认整体视频方案，再逐个完成分镜。")
         ttk.Label(
-            plan_frame, textvariable=self.video_plan_summary, wraplength=380,
+            plan_frame, textvariable=self.video_plan_summary, wraplength=900,
             justify="left", foreground="#333",
-        ).pack(side="left", fill="both", padx=(0, 10))
+        ).pack(fill="x")
+        storyboard_frame = ttk.LabelFrame(plan_page, text="分镜清单：选择下一条要完成的分镜", padding=10)
+        storyboard_frame.pack(fill="both", expand=True)
         self.storyboard_tree = ttk.Treeview(
-            plan_frame, columns=("sequence", "name", "purpose", "duration", "state"),
-            show="headings", selectmode="browse", height=3,
+            storyboard_frame,
+            columns=("sequence", "name", "purpose", "visual", "narration", "duration", "state"),
+            show="headings", selectmode="browse", height=10,
         )
         for name, title, width in (
-            ("sequence", "顺序", 55), ("name", "分镜", 155), ("purpose", "叙事作用", 180),
-            ("duration", "目标", 65), ("state", "状态", 85),
+            ("sequence", "顺序", 55), ("name", "分镜名称", 135),
+            ("purpose", "叙事作用", 150), ("visual", "画面要求", 260),
+            ("narration", "对应文案", 260), ("duration", "目标", 65),
+            ("state", "状态", 85),
         ):
             self.storyboard_tree.heading(name, text=title)
             self.storyboard_tree.column(name, width=width, anchor="w")
-        self.storyboard_tree.pack(side="left", fill="x", expand=True)
+        self.storyboard_tree.pack(fill="both", expand=True)
+        self.storyboard_tree.bind("<<TreeviewSelect>>", lambda _event: self._update_target_shot_label())
 
         source_header = ttk.Frame(source_page)
         source_header.pack(fill="x", pady=(0, 8))
@@ -299,8 +328,19 @@ class MediaWorkerApp(tk.Tk):
         ).pack(side="right")
         ttk.Label(
             source_header,
-            text="按 1→5 操作：导入下载 → 初剪分类并决定字幕 → 文案配音/按需口型 → 选择排序 → 拼接审核。",
+            text="从原始素材裁切并加工独立分镜；完成后只存入本地分镜素材库，不会直接加入成片。",
         ).pack(side="left")
+        self.production_shot_label = tk.StringVar(value="尚未选择本次要制作的分镜要求")
+        source_target = ttk.LabelFrame(source_page, text="当前制作目标（来自视频方案）", padding=7)
+        source_target.pack(fill="x", pady=(0, 8))
+        ttk.Label(
+            source_target, textvariable=self.production_shot_label,
+            font=("Microsoft YaHei UI", 10, "bold"), foreground="#6f3f64",
+        ).pack(side="left")
+        ttk.Button(
+            source_target, text="返回第①步选择制作目标",
+            command=lambda: selection_workflow.select(plan_page),
+        ).pack(side="right")
 
         ttk.Style(self).configure("Media.Treeview", rowheight=78)
         selection_columns = (
@@ -369,27 +409,6 @@ class MediaWorkerApp(tk.Tk):
             copy_controls, text="生成所选片段", command=self.process_selected_clip,
         ).pack(side="left", padx=3)
 
-        order_controls = ttk.LabelFrame(control_groups, text="④ 片段选择与排序", padding=(7, 5))
-        order_controls.grid(row=1, column=0, columnspan=2, sticky="ew", padx=(0, 5))
-        ttk.Button(
-            order_controls, text="上移", command=lambda: self.move_selected_videos(-1),
-        ).pack(side="left", padx=3)
-        ttk.Button(
-            order_controls, text="下移", command=lambda: self.move_selected_videos(1),
-        ).pack(side="left", padx=3)
-        ttk.Button(
-            order_controls, text="删除所选", command=self.delete_selected_videos,
-        ).pack(side="left", padx=3)
-
-        output_controls = ttk.LabelFrame(control_groups, text="⑤ 最终拼接与审核", padding=(7, 5))
-        output_controls.grid(row=1, column=2, sticky="ew", padx=(5, 0))
-        ttk.Button(
-            output_controls, text="按当前顺序拼接成片", command=self.mix_selected_videos,
-        ).pack(side="left", padx=3)
-        ttk.Button(
-            output_controls, text="预览所选", command=self.preview_selected_video,
-        ).pack(side="left", padx=3)
-
         self.selection_summary = tk.StringVar(value="0 条")
         summary_row = ttk.Frame(selection_controls)
         summary_row.pack(fill="x", pady=(6, 0))
@@ -399,8 +418,51 @@ class MediaWorkerApp(tk.Tk):
         ttk.Button(
             summary_row, text="打开素材文件夹", command=self.open_selection_folder,
         ).pack(side="right", padx=3)
+        ttk.Button(
+            summary_row, text="进入第③步：从分镜库选择成片素材 →",
+            command=lambda: selection_workflow.select(library_page),
+        ).pack(side="right", padx=8)
         selection_scroll.pack(side="bottom", fill="x", pady=(0, 8))
         self.selection_tree.pack(fill="both", expand=True, pady=(0, 10))
+
+        assembly_header = ttk.Frame(assembly_page)
+        assembly_header.pack(fill="x", pady=(0, 10))
+        ttk.Label(
+            assembly_header, text="只排列已完成的分镜；这里不再翻译、去字幕或调用 HeyGen",
+            font=("Microsoft YaHei UI", 12, "bold"),
+        ).pack(side="left")
+        ttk.Button(
+            assembly_header, text="进入第⑤步：审核回传 →",
+            command=lambda: selection_workflow.select(review_page),
+        ).pack(side="right")
+        assembly_actions = ttk.LabelFrame(assembly_page, text="合成时间线", padding=8)
+        assembly_actions.pack(fill="x", pady=(0, 8))
+        ttk.Button(assembly_actions, text="全选可合成分镜", command=self.select_all_assembly).pack(side="left", padx=3)
+        ttk.Button(assembly_actions, text="上移", command=lambda: self.move_assembly_clips(-1)).pack(side="left", padx=3)
+        ttk.Button(assembly_actions, text="下移", command=lambda: self.move_assembly_clips(1)).pack(side="left", padx=3)
+        ttk.Button(assembly_actions, text="移出本次合成", command=self.remove_assembly_clips).pack(side="left", padx=3)
+        ttk.Button(assembly_actions, text="预览分镜", command=self.preview_assembly_clip).pack(side="left", padx=12)
+        ttk.Button(
+            assembly_actions, text="生成最终审核稿", command=self.mix_assembly_clips,
+        ).pack(side="right", padx=3)
+        ttk.Button(
+            assembly_actions, text="设置背景音乐 / 导出比例", command=self.edit_active_project,
+        ).pack(side="right", padx=3)
+        self.assembly_tree = ttk.Treeview(
+            assembly_page,
+            columns=("sequence", "shot", "name", "kind", "duration", "voice", "path"),
+            show="headings", selectmode="extended", style="Media.Treeview",
+        )
+        for name, title, width in (
+            ("sequence", "顺序", 55), ("shot", "对应分镜", 150),
+            ("name", "成品片段", 180), ("kind", "处理方式", 135),
+            ("duration", "时长", 70), ("voice", "项目音色", 150),
+            ("path", "本地文件", 360),
+        ):
+            self.assembly_tree.heading(name, text=title)
+            self.assembly_tree.column(name, width=width, anchor="w")
+        self.assembly_tree.pack(fill="both", expand=True)
+        self.assembly_tree.bind("<Double-1>", lambda _event: self.preview_assembly_clip())
 
         project_actions = ttk.LabelFrame(review_page, text="项目文件管理", padding=8)
         project_actions.pack(fill="x", pady=(0, 10))
@@ -449,30 +511,45 @@ class MediaWorkerApp(tk.Tk):
         self.render_tree.bind("<Double-1>", lambda _event: self.preview_selected_version())
         self.render_tree.bind("<<TreeviewSelect>>", lambda _event: self._refresh_review_sources())
 
-        library_header = ttk.Frame(library_tab, padding=10)
+        library_header = ttk.Frame(library_page)
         library_header.pack(fill="x")
         ttk.Label(
             library_header,
-            text="本地分镜素材库：保存已处理分镜；Odoo 仅同步索引和最终成片。",
+            text="按当前视频方案，从本地分镜素材库选择成片所需画面",
             font=("Microsoft YaHei UI", 11, "bold"),
         ).pack(side="left")
         ttk.Button(library_header, text="刷新素材库", command=self._refresh_media_library).pack(side="right", padx=4)
         ttk.Button(library_header, text="同步索引到 Odoo", command=self.sync_media_library).pack(side="right", padx=4)
-        library_actions = ttk.Frame(library_tab, padding=(10, 0, 10, 8))
+        self.target_shot_label = tk.StringVar(value="尚未选择要填充的成片分镜")
+        target_shot = ttk.LabelFrame(library_page, text="当前要填充的成片分镜", padding=8)
+        target_shot.pack(fill="x", pady=(0, 8))
+        ttk.Label(
+            target_shot, textvariable=self.target_shot_label,
+            font=("Microsoft YaHei UI", 10, "bold"), foreground="#6f3f64",
+        ).pack(side="left")
+        ttk.Button(
+            target_shot, text="返回第①步选择分镜",
+            command=lambda: selection_workflow.select(plan_page),
+        ).pack(side="right")
+        library_actions = ttk.Frame(library_page, padding=(0, 0, 0, 8))
         library_actions.pack(fill="x")
         ttk.Button(
-            library_actions, text="添加到当前分镜", command=self.add_library_asset_to_current_shot,
+            library_actions, text="选用此素材并加入成片", command=self.add_library_asset_to_current_shot,
         ).pack(side="left", padx=(0, 6))
         ttk.Button(
             library_actions, text="预览所选素材", command=self.preview_library_asset,
         ).pack(side="left")
+        ttk.Button(
+            library_actions, text="进入第④步：查看成片时间线 →",
+            command=lambda: selection_workflow.select(assembly_page),
+        ).pack(side="right")
         ttk.Label(
             library_actions,
-            text="先在“视频方案与分镜清单”选中分镜，再从这里加入；最终合成只拼接已完成的分镜。",
+            text="这里的选择才会进入成片；同一素材仍保留在库中，可供其他视频重复使用。",
             foreground="#666",
         ).pack(side="left", padx=18)
         self.library_tree = ttk.Treeview(
-            library_tab,
+            library_page,
             columns=("name", "kind", "clip_type", "role", "track", "scope", "purpose",
                      "duration", "subtitle", "copyright", "path"),
             show="headings", selectmode="browse",
@@ -487,7 +564,7 @@ class MediaWorkerApp(tk.Tk):
         for name, title, width in library_titles:
             self.library_tree.heading(name, text=title)
             self.library_tree.column(name, width=width, anchor="w")
-        library_scroll = ttk.Scrollbar(library_tab, orient="horizontal", command=self.library_tree.xview)
+        library_scroll = ttk.Scrollbar(library_page, orient="horizontal", command=self.library_tree.xview)
         self.library_tree.configure(xscrollcommand=library_scroll.set)
         self.library_tree.pack(fill="both", expand=True, padx=10)
         library_scroll.pack(fill="x", padx=10, pady=(0, 10))
@@ -1132,38 +1209,14 @@ class MediaWorkerApp(tk.Tk):
                     self._refresh_selection_tree()
                     messagebox.showinfo(
                         APP_TITLE,
-                        "%s已生成，可直接加入最终拼接。" % data.get("kind", "处理片段"),
+                        "%s已生成并保存到本地分镜素材库。\n"
+                        "请到第③步按当前视频方案选择；本次加工不会自动加入成片。" %
+                        data.get("kind", "处理片段"),
                     )
                 elif event == "clip_process_error":
                     self.selection_busy = False
                     self._refresh_selection_tree()
                     messagebox.showerror(APP_TITLE, data.get("error") or "片段生成失败")
-                elif event == "heygen_lipsync_done":
-                    self.selection_busy = False
-                    try:
-                        button = getattr(self, "heygen_button", None)
-                        if button:
-                            button.config(state="normal")
-                    except tk.TclError:
-                        pass
-                    self._refresh_selection_tasks()
-                    self._refresh_selection_tree()
-                    self.selection_workflow.select(self.selection_review_page)
-                    messagebox.showinfo(
-                        APP_TITLE,
-                        "HeyGen 口型同步版本已生成，原审核稿仍保留。\n"
-                        "请先预览新版本，再决定是否回传 Odoo。",
-                    )
-                elif event == "heygen_lipsync_error":
-                    self.selection_busy = False
-                    try:
-                        button = getattr(self, "heygen_button", None)
-                        if button:
-                            button.config(state="normal")
-                    except tk.TclError:
-                        pass
-                    self._refresh_selection_tree()
-                    messagebox.showerror(APP_TITLE, data.get("error") or "HeyGen 口型同步失败")
                 elif event == "selection_upload_done":
                     task = data["task"]
                     self.pending_selections.pop(task["id"], None)
@@ -1273,6 +1326,7 @@ class MediaWorkerApp(tk.Tk):
         try:
             self.selection_task_id = int(value)
             self._refresh_selection_tree()
+            self.selection_workflow.select(self.selection_plan_page)
         except ValueError:
             pass
 
@@ -1823,9 +1877,8 @@ class MediaWorkerApp(tk.Tk):
         load_provider_voices()
         update_voice_hint()
 
-        def save_project(open_search=False, generate_review=False):
+        def save_project(open_search=False):
             try:
-                generation_ids = []
                 duration = max(3, int(values["duration_seconds"].get()))
                 preset_key = next(key for key, label in preset_choices.items() if label == values["export_preset"].get())
                 preset_ratio = {"douyin": "9:16", "reels": "9:16", "feed": "4:5", "square": "1:1"}[preset_key]
@@ -1899,13 +1952,6 @@ class MediaWorkerApp(tk.Tk):
                     "local_files": local_files,
                     **cleanup_task_values(),
                 })
-                if generate_review:
-                    if existing.get("id"):
-                        generation_ids = [row["id"] for row in task_rows]
-                        clip_count = len(generation_ids)
-                    else:
-                        clip_count = len(set(project["source_urls"])) + len(set(local_files))
-                    project = Worker.prepare_edit_workflow(project, clip_count)
                 self.selection_store.update_task(project, status=existing.get("local_status") or "draft")
                 if invalidate_voice_outputs:
                     self.selection_store.invalidate_processed(task_id)
@@ -1913,8 +1959,6 @@ class MediaWorkerApp(tk.Tk):
                     task_id, "\n".join(project["source_urls"]), source_kind="pasted_link",
                 )
                 self.selection_store.add_local_files(task_id, local_files)
-                if generate_review and not generation_ids:
-                    raise ValueError("请先在素材列表中选择要合成的片段")
                 if task_id in self.pending_selections:
                     self.pending_selections[task_id] = project
                 self.selection_task_id = task_id
@@ -1924,8 +1968,6 @@ class MediaWorkerApp(tk.Tk):
                 self.notebook.select(self.selection_tab)
                 if open_search:
                     self._open_project_search(project)
-                elif generate_review:
-                    self.after(100, lambda ids=generation_ids: self.mix_selected_videos(ids))
             except Exception as exc:
                 messagebox.showerror(APP_TITLE, str(exc), parent=dialog)
 
@@ -1949,9 +1991,6 @@ class MediaWorkerApp(tk.Tk):
         task = self._active_selection_task()
         if not task:
             messagebox.showerror(APP_TITLE, "请先选择一个项目")
-            return
-        if not self._selection_ids():
-            messagebox.showerror(APP_TITLE, "请先选择需要翻译和配音的一个或多个片段")
             return
         self._project_dialog(task)
 
@@ -2069,11 +2108,17 @@ class MediaWorkerApp(tk.Tk):
                 self.storyboard_tree.delete(item)
             self.selection_summary.set("0 条")
             self._refresh_media_library()
+            self._refresh_assembly()
+            if hasattr(self, "target_shot_label"):
+                self.target_shot_label.set("尚未选择要填充的成片分镜")
             return
         if isinstance(task.get("storyboard"), list):
             self.selection_store.sync_storyboard(task["id"], task.get("storyboard") or [])
         self._refresh_storyboard(task)
-        rows = self.selection_store.list(task["id"])
+        rows = [
+            row for row in self.selection_store.list(task["id"])
+            if row.get("record_kind") != "library_asset"
+        ]
         labels = {
             "selected": "已选择", "downloading": "下载中", "downloaded": "已下载",
             "mixing": "混剪中", "ready_review": "待审核", "done": "已完成", "failed": "失败",
@@ -2139,9 +2184,11 @@ class MediaWorkerApp(tk.Tk):
         ))
         self._refresh_selection_summary()
         self._refresh_media_library()
+        self._refresh_assembly()
 
     def _refresh_storyboard(self, task=None):
         task = task or self._active_selection_task()
+        selected_before = self._selected_storyboard_slot()
         for item in self.storyboard_tree.get_children():
             self.storyboard_tree.delete(item)
         if not task:
@@ -2156,9 +2203,43 @@ class MediaWorkerApp(tk.Tk):
         for row in self.selection_store.list_storyboard(task["id"]):
             self.storyboard_tree.insert("", "end", iid=row["slot_key"], values=(
                 row["sequence"], row["name"], row["purpose"],
+                row.get("visual_requirement") or "—",
+                row.get("narration") or "—",
                 "%g秒" % float(row["target_duration"] or 0),
                 state_labels.get(row["state"], row["state"]),
             ))
+        if selected_before and self.storyboard_tree.exists(selected_before):
+            self.storyboard_tree.selection_set(selected_before)
+        self._update_target_shot_label()
+
+    def _update_target_shot_label(self):
+        if not hasattr(self, "target_shot_label"):
+            return
+        task = self._active_selection_task()
+        slot_key = self._selected_storyboard_slot()
+        if not task or not slot_key:
+            self.target_shot_label.set("尚未选择要填充的成片分镜；请返回第①步选择")
+            if hasattr(self, "production_shot_label"):
+                self.production_shot_label.set("尚未选择本次要制作的分镜要求；请返回第①步选择")
+            return
+        slot = next(
+            (row for row in self.selection_store.list_storyboard(task["id"])
+             if row["slot_key"] == slot_key),
+            None,
+        )
+        if not slot:
+            self.target_shot_label.set("所选分镜已不存在，请刷新当前项目")
+            if hasattr(self, "production_shot_label"):
+                self.production_shot_label.set("所选分镜已不存在，请刷新当前项目")
+            return
+        description = "%s｜用途：%s｜画面：%s｜目标：%g秒" % (
+            slot["name"], slot.get("purpose") or "未填写",
+            slot.get("visual_requirement") or "未填写",
+            float(slot.get("target_duration") or 0),
+        )
+        self.target_shot_label.set(description)
+        if hasattr(self, "production_shot_label"):
+            self.production_shot_label.set(description + "｜完成后仅进入素材库")
 
     def _refresh_media_library(self):
         if not hasattr(self, "library_tree"):
@@ -2204,11 +2285,89 @@ class MediaWorkerApp(tk.Tk):
             messagebox.showerror(APP_TITLE, "请先在当前视频方案中选择要填充的分镜")
             return
         try:
-            self.selection_store.add_asset_to_task(task["id"], selected[0], slot_key)
-            self.notebook.select(self.selection_tab)
-            self._refresh_selection_tree()
+            self.selection_store.select_asset_for_composition(task["id"], slot_key, selected[0])
+            self._refresh_storyboard(task)
+            self._refresh_assembly()
+            messagebox.showinfo(
+                APP_TITLE,
+                "已把所选分镜素材放入本次成片时间线。\n素材库原件仍保留，可继续供其他视频使用。",
+            )
         except Exception as exc:
             messagebox.showerror(APP_TITLE, str(exc))
+
+    def _refresh_assembly(self):
+        if not hasattr(self, "assembly_tree"):
+            return
+        selected_before = set(self.assembly_tree.selection())
+        for item in self.assembly_tree.get_children():
+            self.assembly_tree.delete(item)
+        task = self._active_selection_task()
+        if not task:
+            return
+        kind_labels = {
+            "standard_shot": "标准分镜", "voice_variant": "配音分镜",
+            "heygen_variant": "HeyGen分镜", "music": "背景音乐",
+        }
+        for index, row in enumerate(self.selection_store.list_composition(task["id"]), 1):
+            voice = row.get("voice_signature") or "无配音"
+            if voice != "无配音":
+                voice = "当前项目音色" if voice == self._voice_signature(task) else "音色不一致"
+            self.assembly_tree.insert("", "end", iid=str(row["id"]), values=(
+                index, row.get("shot_name") or row["slot_key"], row.get("name") or "—",
+                kind_labels.get(row.get("asset_kind"), row.get("asset_kind") or "—"),
+                self._format_duration(row.get("duration") or 0), voice,
+                row.get("file_path") or "",
+            ))
+        available = set(self.assembly_tree.get_children())
+        preserved = [item for item in selected_before if item in available]
+        if preserved:
+            self.assembly_tree.selection_set(preserved)
+
+    def _assembly_ids(self):
+        return [int(value) for value in self.assembly_tree.selection()]
+
+    def select_all_assembly(self):
+        self.assembly_tree.selection_set(self.assembly_tree.get_children())
+
+    def move_assembly_clips(self, direction):
+        task = self._active_selection_task()
+        ids = self._assembly_ids()
+        if not task or not ids:
+            messagebox.showerror(APP_TITLE, "请先选择要调整顺序的成片分镜")
+            return
+        self.selection_store.move_composition(task["id"], ids, direction)
+        self._refresh_assembly()
+
+    def remove_assembly_clips(self):
+        task = self._active_selection_task()
+        ids = self._assembly_ids()
+        if not task or not ids:
+            messagebox.showerror(APP_TITLE, "请先选择要移出本次成片的分镜")
+            return
+        if not messagebox.askyesno(
+            APP_TITLE, "只从本次成片时间线移除所选分镜；本地分镜素材库文件不会删除。是否继续？",
+        ):
+            return
+        self.selection_store.remove_composition(task["id"], ids)
+        self._refresh_storyboard(task)
+        self._refresh_assembly()
+
+    def preview_assembly_clip(self):
+        task = self._active_selection_task()
+        ids = self._assembly_ids()
+        if not task or len(ids) != 1:
+            messagebox.showerror(APP_TITLE, "请选择一条成片分镜进行预览")
+            return
+        row = next(
+            (item for item in self.selection_store.list_composition(task["id"])
+             if item["id"] == ids[0]),
+            None,
+        )
+        path = Path((row or {}).get("file_path") or "")
+        if not path.is_file():
+            messagebox.showerror(APP_TITLE, "分镜素材文件已不存在，请回到素材库重新选择")
+            return
+        os.startfile(str(path))
 
     def preview_library_asset(self):
         selected = self.library_tree.selection()
@@ -2366,7 +2525,7 @@ class MediaWorkerApp(tk.Tk):
         task = self._active_selection_task()
         if not task:
             return
-        rows = self.selection_store.list(task["id"])
+        rows = self.selection_store.list_composition(task["id"])
         selected = self.render_tree.selection()
         versions = self.selection_store.list_versions(task["id"])
         version = next(
@@ -2378,20 +2537,11 @@ class MediaWorkerApp(tk.Tk):
             source_ids = {row["id"] for row in rows}
         for row in rows:
             if row["id"] in source_ids:
-                actual = self._mix_source_path(row)
-                processed = bool(
-                    row.get("processed_path")
-                    and actual == Path(row["processed_path"])
-                )
-                cleaned = bool(
-                    row.get("subtitle_cleaned_path")
-                    and actual == Path(row["subtitle_cleaned_path"])
-                )
+                actual = Path(row.get("file_path") or "")
                 self.review_source_tree.insert("", "end", iid=str(row["id"]), values=(
-                    row["video_id"] or "待下载解析",
-                    (row.get("processed_kind") or "已处理片段") if processed else
-                    "清理后副本" if cleaned else "原始素材",
-                    str(actual) if actual else row["url"],
+                    row.get("shot_name") or row.get("slot_key") or "分镜",
+                    row.get("asset_kind") or "已处理分镜",
+                    str(actual),
                 ))
 
     def _refresh_selection_summary(self):
@@ -3078,11 +3228,16 @@ class MediaWorkerApp(tk.Tk):
         if not selected:
             messagebox.showerror(APP_TITLE, "请先选择要预览的源视频")
             return
-        row = self.selection_store.get_many([int(selected[0])])[0]
+        task = self._active_selection_task()
+        row = next(
+            (item for item in self.selection_store.list_composition(task["id"])
+             if item["id"] == int(selected[0])),
+            None,
+        ) if task else None
         try:
-            self._open_local_path(self._mix_source_path(row))
+            self._open_local_path(Path((row or {}).get("file_path") or ""))
         except Exception as exc:
-            messagebox.showerror(APP_TITLE, "源视频尚未下载或文件不可用：%s" % exc)
+            messagebox.showerror(APP_TITLE, "分镜素材文件不可用：%s" % exc)
 
     @staticmethod
     def _voice_signature(task):
@@ -3125,98 +3280,6 @@ class MediaWorkerApp(tk.Tk):
                 self._open_local_path(version["result_path"])
             except Exception as exc:
                 messagebox.showerror(APP_TITLE, str(exc))
-
-    def heygen_lipsync_selected_version(self):
-        task = self._active_selection_task()
-        if not task:
-            messagebox.showerror(APP_TITLE, "请先选择一个项目")
-            return
-        versions = self.selection_store.list_versions(task["id"])
-        selected = self.render_tree.selection()
-        version = next(
-            (item for item in versions if selected and item["id"] == int(selected[0])),
-            versions[0] if versions else None,
-        )
-        if not version:
-            messagebox.showerror(APP_TITLE, "请先生成一个审核稿")
-            return
-        source = Path(version.get("result_path") or "")
-        if not source.is_file():
-            messagebox.showerror(APP_TITLE, "所选审核稿文件不存在")
-            return
-        if not self.vars["heygen_api_key"].get().strip():
-            messagebox.showerror(
-                APP_TITLE,
-                "尚未配置 HeyGen API Key。请到“连接与配置 → HeyGen口型同步”填写并保存。",
-            )
-            return
-        if self.selection_busy:
-            messagebox.showinfo(APP_TITLE, "已有媒体处理正在运行")
-            return
-        duration = (self.worker or Worker(self.config())).probe_duration(source)
-        timeline_path = source.parent / "clip-timeline.json"
-        if not timeline_path.is_file():
-            messagebox.showerror(
-                APP_TITLE,
-                "该审核稿缺少片段路由信息。请用新版流程重新生成审核稿后再执行口型同步。",
-            )
-            return
-        try:
-            timeline = json.loads(timeline_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            messagebox.showerror(APP_TITLE, "片段路由信息不可用：%s" % exc)
-            return
-        talking_count = sum(
-            1 for item in timeline if item.get("clip_type") == "talking_face"
-        )
-        if not talking_count:
-            messagebox.showinfo(
-                APP_TITLE,
-                "该审核稿没有“口播人脸”片段。无人脸、非口播人脸和未分类片段不会提交 HeyGen。",
-            )
-            return
-        if not messagebox.askyesno(
-            APP_TITLE,
-            "V%s 共 %s 个片段，其中 %s 个“口播人脸”片段将上传 HeyGen。\n"
-            "其余片段保持原样，不消耗 HeyGen 额度。\n\n"
-            "原审核稿不会被覆盖；新版本将保持 %.1f 秒时长。是否继续？" %
-            (version["version_no"], len(timeline), talking_count, duration),
-        ):
-            return
-        self.selection_busy = True
-        button = getattr(self, "heygen_button", None)
-        if button:
-            button.config(state="disabled")
-
-        def run_lipsync():
-            worker = self.worker or Worker(
-                self.config(), lambda event, data: self.events.put((event, data)),
-            )
-            try:
-                version_no, output_dir = create_version_directory(
-                    worker.root / str(task["id"]),
-                    self.selection_store.next_render_version(task["id"]),
-                )
-                width, height = {
-                    "9:16": (1080, 1920), "4:5": (1080, 1350), "1:1": (1080, 1080),
-                }.get(task.get("aspect_ratio") or "9:16", (1080, 1920))
-                output = worker.heygen_lipsync_timeline(
-                    source, timeline, output_dir / "output-heygen.mp4",
-                    title="%s V%s HeyGen" % (task.get("name") or "LightLink", version_no),
-                    width=width, height=height,
-                )
-                self.selection_store.set_task_result(
-                    task["id"], output, version.get("subtitle_path") or "",
-                    status="ready_review", version_no=version_no,
-                    source_video_ids=version.get("source_video_ids") or [],
-                )
-                self.events.put(("heygen_lipsync_done", {
-                    "task": task, "output": str(output), "version_no": version_no,
-                }))
-            except Exception as exc:
-                self.events.put(("heygen_lipsync_error", {"error": str(exc)}))
-
-        threading.Thread(target=run_lipsync, daemon=True).start()
 
     def delete_selected_version(self):
         task = self._active_selection_task()
@@ -3519,16 +3582,18 @@ class MediaWorkerApp(tk.Tk):
             messagebox.showerror(APP_TITLE, str(exc))
             return
         if not prepared_task.get("tts_voice"):
-            messagebox.showerror(APP_TITLE, "请先在第③步选择并保存当前项目统一使用的音色")
+            messagebox.showerror(APP_TITLE, "请先选择并保存当前项目统一使用的音色")
             return
         uses_heygen = row.get("clip_type") == "talking_face"
-        slot_key = row.get("storyboard_slot_key") or self._selected_storyboard_slot()
-        if self.selection_store.list_storyboard(task["id"]) and not slot_key:
-            messagebox.showerror(APP_TITLE, "请先在上方视频方案中选择这条素材要完成的分镜")
+        slot_key = self._selected_storyboard_slot()
+        storyboard = self.selection_store.list_storyboard(task["id"])
+        if storyboard and not slot_key:
+            messagebox.showerror(
+                APP_TITLE,
+                "请先回到第①步选择本次要制作的分镜要求。\n"
+                "加工结果只会成为候选素材，不会自动加入成片。",
+            )
             return
-        if slot_key and row.get("storyboard_slot_key") != slot_key:
-            self.selection_store.update(row["id"], storyboard_slot_key=slot_key)
-            row["storyboard_slot_key"] = slot_key
         if uses_heygen:
             if not self.vars["heygen_api_key"].get().strip():
                 messagebox.showerror(
@@ -3589,14 +3654,13 @@ class MediaWorkerApp(tk.Tk):
                         title=clip_task.get("name") or row.get("clip_name") or "LightLink",
                     )
                     kind = "HeyGen口型片段"
-                slots = {
-                    item["slot_key"]: item
-                    for item in self.selection_store.list_storyboard(task["id"])
-                }
-                slot = slots.get(row.get("storyboard_slot_key") or "") or {}
                 role = task.get("business_role") or {}
                 track = task.get("project_track") or {}
                 scope = task.get("content_scope") or {}
+                slot = next(
+                    (item for item in storyboard if item["slot_key"] == slot_key),
+                    {},
+                )
                 asset_uuid = self.selection_store.register_asset({
                     "name": row.get("clip_name") or row.get("video_id") or final_path.stem,
                     "file_path": str(final_path), "source_path": str(source),
@@ -3606,7 +3670,10 @@ class MediaWorkerApp(tk.Tk):
                     "role_code": role.get("code") or "", "role_name": role.get("name") or "",
                     "track_code": track.get("code") or "", "track_name": track.get("name") or "",
                     "scope_code": scope.get("code") or "", "scope_name": scope.get("name") or "",
-                    "shot_purpose": slot.get("purpose") or slot.get("name") or "",
+                    "shot_purpose": (
+                        slot.get("purpose") or slot.get("name") or row.get("clip_name") or
+                        scope.get("name") or task.get("name") or "通用分镜"
+                    ),
                     "language": clip_task.get("target_language") or "",
                     "aspect_ratio": clip_task.get("aspect_ratio") or "",
                     "duration": worker.probe_duration(final_path),
@@ -3614,7 +3681,8 @@ class MediaWorkerApp(tk.Tk):
                     "voice_signature": self._voice_signature(clip_task),
                     "copyright_status": row.get("copyright_status") or "unreviewed",
                     "metadata": {
-                        "shot_key": row.get("storyboard_slot_key") or "",
+                        "source_record_id": row["id"],
+                        "candidate_for_shot": slot_key,
                         "processed_kind": kind,
                     },
                 })
@@ -3624,10 +3692,8 @@ class MediaWorkerApp(tk.Tk):
                     voice_signature=self._voice_signature(clip_task),
                     library_asset_uuid=asset_uuid,
                 )
-                if row.get("storyboard_slot_key"):
-                    self.selection_store.assign_storyboard_asset(
-                        task["id"], row["storyboard_slot_key"], asset_uuid,
-                    )
+                if slot_key:
+                    self.selection_store.mark_storyboard_candidate(task["id"], slot_key)
                 try:
                     indexed = self.selection_store.get_asset(asset_uuid)
                     worker.sync_local_assets(self._asset_sync_payload(
@@ -3664,71 +3730,59 @@ class MediaWorkerApp(tk.Tk):
         self.selection_busy = True
         threading.Thread(target=self._run_downloads, args=(task, rows, False), daemon=True).start()
 
-    def mix_selected_videos(self, selected_ids=None):
+    def mix_assembly_clips(self):
         task = self._active_selection_task()
-        ids = selected_ids if selected_ids is not None else self._selection_ids()
-        if not task or not ids:
-            messagebox.showerror(APP_TITLE, "请先选择至少一个已处理片段")
+        if not task:
+            messagebox.showerror(APP_TITLE, "请先选择一个视频项目")
             return
         if self.selection_busy:
-            messagebox.showinfo(APP_TITLE, "已有选片处理正在运行")
-            return
-        rows = self.selection_store.list_selected(task["id"], ids)
-        if not rows:
-            messagebox.showerror(APP_TITLE, "选中的视频已不存在，请重新选择")
+            messagebox.showinfo(APP_TITLE, "已有媒体处理正在运行")
             return
         storyboard = self.selection_store.list_storyboard(task["id"])
-        if storyboard:
-            selected_slot_keys = [row.get("storyboard_slot_key") or "" for row in rows]
-            missing_assignment = [row for row in rows if not row.get("storyboard_slot_key")]
-            required_missing = [
-                slot["name"] for slot in storyboard
-                if slot["required"] and slot["slot_key"] not in selected_slot_keys
-            ]
-            duplicates = {
-                key for key in selected_slot_keys if key and selected_slot_keys.count(key) > 1
-            }
-            if missing_assignment or required_missing or duplicates:
-                details = []
-                if missing_assignment:
-                    details.append("有片段未指定分镜")
-                if required_missing:
-                    details.append("缺少必要分镜：" + "、".join(required_missing))
-                if duplicates:
-                    details.append("同一分镜被重复选择")
-                messagebox.showerror(APP_TITLE, "故事板尚未完整：\n" + "\n".join(details))
-                return
-        current_voice = self._voice_signature(task)
-        invalid = [
-            row for row in rows
-            if row.get("processing_status") != "ready"
-            or not Path(row.get("processed_path") or "").is_file()
-            or (
-                row.get("processed_kind") not in ("standard_shot", "标准分镜")
-                and row.get("voice_signature") != current_voice
-            )
+        if not storyboard:
+            messagebox.showerror(APP_TITLE, "当前项目没有视频方案和分镜清单，不能直接拼接成片")
+            return
+        rows = self.selection_store.list_composition(task["id"])
+        selected_slots = {row["slot_key"] for row in rows}
+        required_missing = [
+            slot["name"] for slot in storyboard
+            if slot["required"] and slot["slot_key"] not in selected_slots
         ]
-        if invalid:
-            names = "、".join(
-                row.get("clip_name") or row.get("video_id") or str(row["id"])
-                for row in invalid[:5]
-            )
+        if required_missing:
             messagebox.showerror(
                 APP_TITLE,
-                "最终拼接只使用已完成第③步、且使用当前项目统一音色的片段。\n"
-                "请先重新生成：%s" % names,
+                "视频方案尚未完成，以下必要分镜还没有从素材库选定：\n" +
+                "、".join(required_missing),
             )
             return
+        if not rows:
+            messagebox.showerror(APP_TITLE, "成片时间线为空，请先从分镜素材库选择")
+            return
+        current_voice = self._voice_signature(task)
+        invalid_files = [row for row in rows if not Path(row.get("file_path") or "").is_file()]
+        invalid_voice = [
+            row for row in rows
+            if row.get("asset_kind") not in ("standard_shot", "music")
+            and row.get("voice_signature") != current_voice
+        ]
+        if invalid_files or invalid_voice:
+            details = []
+            if invalid_files:
+                details.append("文件不存在：" + "、".join(row["name"] for row in invalid_files[:5]))
+            if invalid_voice:
+                details.append(
+                    "与当前项目音色不一致：" + "、".join(row["name"] for row in invalid_voice[:5])
+                )
+            messagebox.showerror(APP_TITLE, "成片时间线不能生成：\n" + "\n".join(details))
+            return
         order_text = "\n".join(
-            "%s. %s（%s）" % (
-                index, row.get("clip_name") or row.get("video_id") or row["id"],
-                row.get("processed_kind") or "已处理片段",
-            )
+            "%s. %s ← %s" % (index, row["shot_name"], row["name"])
             for index, row in enumerate(rows, 1)
         )
         if not messagebox.askyesno(
             APP_TITLE,
-            "将严格按以下顺序拼接，不再执行翻译、配音、字幕清理或 HeyGen：\n\n%s\n\n是否生成审核稿？" % order_text,
+            "将严格按成片时间线拼接，不会再次翻译、去字幕或调用 HeyGen：\n\n%s\n\n"
+            "是否生成最终审核稿？" % order_text,
         ):
             return
         self.selection_busy = True
@@ -3745,10 +3799,10 @@ class MediaWorkerApp(tk.Tk):
                 )
                 clips = [{
                     "record_id": row["id"],
-                    "clip_name": row.get("clip_name") or row.get("video_id") or "",
+                    "clip_name": row.get("name") or row.get("shot_name") or "",
                     "clip_type": row.get("clip_type") or "unknown",
-                    "processed_kind": row.get("processed_kind") or "已处理片段",
-                    "path": Path(row["processed_path"]),
+                    "processed_kind": row.get("asset_kind") or "已处理分镜",
+                    "path": Path(row["file_path"]),
                 } for row in rows]
                 output, subtitle = worker.stitch_processed_clips(task, clips, mix_dir)
                 manifest = {
@@ -3756,11 +3810,12 @@ class MediaWorkerApp(tk.Tk):
                     "video_plan_summary": task.get("video_plan_summary") or "",
                     "used_assets": [{
                         "sequence": index,
-                        "record_id": row["id"],
-                        "asset_uuid": row.get("library_asset_uuid") or "",
-                        "shot_key": row.get("storyboard_slot_key") or "",
-                        "name": row.get("clip_name") or row.get("video_id") or "",
-                        "processed_kind": row.get("processed_kind") or "",
+                        "composition_id": row["id"],
+                        "asset_uuid": row["asset_uuid"],
+                        "shot_key": row["slot_key"],
+                        "shot_name": row["shot_name"],
+                        "name": row["name"],
+                        "asset_kind": row["asset_kind"],
                     } for index, row in enumerate(rows, 1)],
                 }
                 updated_task = dict(task)

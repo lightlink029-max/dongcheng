@@ -714,6 +714,34 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertEqual([item["record_id"] for item in timeline], [2, 1])
         self.assertEqual([item["start"] for item in timeline], [0.0, 2.0])
 
+    def test_final_stitch_adds_project_background_music_after_shot_processing(self):
+        config = self.config()
+        config["ffmpeg"] = "C:/test/ffmpeg.exe"
+        worker = Worker(config)
+        folder = Path(self.work_dir.name) / "final-stitch-music"
+        shot = Path(self.work_dir.name) / "processed-shot.mp4"
+        music = Path(self.work_dir.name) / "project-music.mp3"
+        shot.write_bytes(b"video")
+        music.write_bytes(b"music")
+        commands = []
+
+        def create_output(command, **_kwargs):
+            commands.append(command)
+            if len(command) == 3 and command[1] == "-i":
+                return SimpleNamespace(returncode=1, stderr="Stream #0:1: Audio: aac")
+            Path(command[-1]).parent.mkdir(parents=True, exist_ok=True)
+            Path(command[-1]).write_bytes(b"video")
+            return SimpleNamespace(returncode=0, stderr="")
+
+        with mock.patch.object(worker, "probe_duration", return_value=2.0), \
+                mock.patch("worker.subprocess.run", side_effect=create_output):
+            output, _subtitle = worker.stitch_processed_clips({
+                "aspect_ratio": "9:16", "background_music": str(music), "music_volume": 0.18,
+            }, [{"path": shot, "record_id": 1, "clip_name": "厂房开场"}], folder)
+
+        self.assertTrue(output.is_file())
+        self.assertTrue(any("amix=inputs=2:duration=first" in " ".join(command) for command in commands))
+
     def test_mumu_bridge_uses_configured_serial(self):
         calls = []
         def runner(command, **_kwargs):
@@ -970,29 +998,65 @@ class WorkerLeaseTests(unittest.TestCase):
         folder = Path(self.work_dir.name)
         store = SelectionStore(folder / "media-library-v2.db")
         store.save_task({"id": 88, "name": "工厂介绍"})
-        store.sync_storyboard(88, [{
+        storyboard = [{
             "slot_key": "factory-opening", "sequence": 10, "name": "厂房开场",
             "purpose": "建立可信度", "visual_requirement": "厂房外景",
             "target_duration": 3, "required": True,
-        }])
-        video = folder / "factory-opening.mp4"
-        video.write_bytes(b"video")
-        asset_uuid = store.register_asset({
-            "name": "厂房开场", "file_path": str(video), "asset_kind": "standard_shot",
+        }, {
+            "slot_key": "production-line", "sequence": 20, "name": "生产线",
+            "purpose": "展示产能", "visual_requirement": "生产过程",
+            "target_duration": 5, "required": True,
+        }]
+        store.sync_storyboard(88, storyboard)
+        opening = folder / "factory-opening.mp4"
+        opening.write_bytes(b"video")
+        opening_uuid = store.register_asset({
+            "name": "厂房开场", "file_path": str(opening), "asset_kind": "standard_shot",
             "clip_type": "no_face", "role_code": "factory", "track_code": "footwear",
             "scope_code": "factory_intro", "shot_purpose": "建立可信度",
             "copyright_status": "authorized",
         })
+        line = folder / "production-line.mp4"
+        line.write_bytes(b"video")
+        line_uuid = store.register_asset({
+            "name": "生产线", "file_path": str(line), "asset_kind": "standard_shot",
+            "clip_type": "no_face", "role_code": "factory", "track_code": "footwear",
+            "scope_code": "factory_intro", "shot_purpose": "展示产能",
+            "copyright_status": "authorized",
+        })
 
-        record_id = store.add_asset_to_task(88, asset_uuid, "factory-opening")
-
-        row = store.get_many([record_id])[0]
-        self.assertEqual(row["source_kind"], "local_library")
-        self.assertEqual(row["processing_status"], "ready")
-        self.assertEqual(row["storyboard_slot_key"], "factory-opening")
-        self.assertEqual(row["library_asset_uuid"], asset_uuid)
+        store.mark_storyboard_candidate(88, "factory-opening")
+        store.sync_storyboard(88, storyboard)
         self.assertEqual(store.list_storyboard(88)[0]["state"], "ready")
+        store.select_asset_for_composition(88, "factory-opening", opening_uuid)
+        store.select_asset_for_composition(88, "production-line", line_uuid)
+
+        self.assertEqual(store.list(88), [])
+        composition = store.list_composition(88)
+        self.assertEqual([row["slot_key"] for row in composition], [
+            "factory-opening", "production-line",
+        ])
+        self.assertEqual(store.list_storyboard(88)[0]["state"], "selected")
         self.assertEqual(store.list_assets()[0]["scope_code"], "factory_intro")
+
+        store.move_composition(88, [composition[1]["id"]], -1)
+        moved = store.list_composition(88)
+        self.assertEqual([row["slot_key"] for row in moved], [
+            "production-line", "factory-opening",
+        ])
+        store.select_asset_for_composition(88, "factory-opening", line_uuid)
+        self.assertEqual(len(store.list_composition(88)), 2)
+        self.assertEqual(
+            next(row for row in store.list_composition(88) if row["slot_key"] == "factory-opening")["asset_uuid"],
+            line_uuid,
+        )
+        store.remove_composition(88, [moved[0]["id"]])
+        self.assertTrue(line.is_file())
+        self.assertEqual(len(store.list_assets()), 2)
+        self.assertEqual(
+            next(row for row in store.list_storyboard(88) if row["slot_key"] == "production-line")["state"],
+            "ready",
+        )
 
     def test_complete_uploads_final_manifest(self):
         folder = Path(self.work_dir.name)
