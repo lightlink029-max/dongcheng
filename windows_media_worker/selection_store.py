@@ -408,7 +408,6 @@ class SelectionStore:
         with self._connect() as connection:
             connection.execute("DELETE FROM composition_item WHERE task_id = ?", (int(task_id),))
             connection.execute("DELETE FROM storyboard_slot WHERE task_id = ?", (int(task_id),))
-            connection.execute("DELETE FROM selected_video WHERE task_id = ?", (int(task_id),))
             connection.execute("DELETE FROM render_version WHERE task_id = ?", (int(task_id),))
             connection.execute("DELETE FROM selection_task WHERE task_id = ?", (int(task_id),))
 
@@ -417,9 +416,15 @@ class SelectionStore:
         now = datetime.now().astimezone().isoformat(timespec="seconds")
         with self._connect() as connection:
             for url in extract_douyin_urls(text):
+                existing = connection.execute(
+                    "SELECT id FROM selected_video WHERE url = ? AND record_kind = 'source' LIMIT 1",
+                    (url,),
+                ).fetchone()
+                if existing:
+                    continue
                 order = connection.execute(
                     "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order "
-                    "FROM selected_video WHERE task_id = ?", (int(task_id),),
+                    "FROM selected_video",
                 ).fetchone()["next_order"]
                 cursor = connection.execute(
                     """INSERT OR IGNORE INTO selected_video
@@ -439,9 +444,15 @@ class SelectionStore:
                 if not path.is_file():
                     continue
                 url = path.as_uri()
+                existing = connection.execute(
+                    "SELECT id FROM selected_video WHERE url = ? AND record_kind = 'source' LIMIT 1",
+                    (url,),
+                ).fetchone()
+                if existing:
+                    continue
                 order = connection.execute(
                     "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order "
-                    "FROM selected_video WHERE task_id = ?", (int(task_id),),
+                    "FROM selected_video",
                 ).fetchone()["next_order"]
                 cursor = connection.execute(
                     """INSERT OR IGNORE INTO selected_video
@@ -469,7 +480,7 @@ class SelectionStore:
         with self._connect() as connection:
             order = connection.execute(
                 "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order "
-                "FROM selected_video WHERE task_id = ?", (int(source["task_id"]),),
+                "FROM selected_video",
             ).fetchone()["next_order"]
             cursor = connection.execute(
                 """INSERT INTO selected_video (
@@ -506,6 +517,20 @@ class SelectionStore:
             rows = connection.execute(
                 "SELECT * FROM selected_video WHERE task_id = ? ORDER BY sort_order, id",
                 (int(task_id),),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_sources(self):
+        """Return the workstation-wide raw and derived source library.
+
+        ``task_id`` records where an item was first imported or created. It is
+        provenance only; projects reference sources and never own them.
+        """
+        with self._connect() as connection:
+            rows = connection.execute(
+                """SELECT * FROM selected_video
+                    WHERE record_kind != 'library_asset'
+                    ORDER BY selected_at DESC, id DESC""",
             ).fetchall()
         return [dict(row) for row in rows]
 

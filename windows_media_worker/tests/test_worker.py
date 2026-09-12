@@ -857,6 +857,24 @@ class WorkerLeaseTests(unittest.TestCase):
         store.set_task_status(101, "done")
         self.assertEqual(store.list_tasks()[0]["local_status"], "done")
 
+    def test_raw_library_is_global_deduplicated_and_survives_project_deletion(self):
+        store = SelectionStore(Path(self.work_dir.name) / "global-sources.db")
+        store.save_task({"id": -1, "local_only": True, "name": "项目一"}, status="draft")
+        store.save_task({"id": -2, "local_only": True, "name": "项目二"}, status="draft")
+        url = "https://www.douyin.com/video/7531234567890123456"
+
+        self.assertEqual(store.add_text(-1, url), 1)
+        self.assertEqual(store.add_text(-2, url), 0)
+        sources = store.list_sources()
+        self.assertEqual(len(sources), 1)
+        self.assertEqual(sources[0]["task_id"], -1)
+
+        store.delete_task(-1)
+
+        self.assertIsNone(store.get_task(-1))
+        self.assertEqual(store.list(-1), sources)
+        self.assertEqual(store.list_sources(), sources)
+
     def test_local_project_files_and_review_result_are_persisted(self):
         store = SelectionStore(Path(self.work_dir.name) / "local-projects.db")
         task_id = store.next_local_task_id()
