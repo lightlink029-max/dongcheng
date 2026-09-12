@@ -25,6 +25,7 @@ from bitbrowser_adapter import BitBrowserClient
 from registration_assistant import EnvironmentMismatch, capture_current_page, prepare_registration
 from douyin_adapter import _dpapi, capture_login, has_login, open_keyword_search, self_test
 from mumu_adapter import MumuBridge, check_mumu, install_selector_apk
+from planning_templates import build_video_plan, fallback_options
 from selection_store import SelectionStore
 from selector_bridge import SelectorBridge
 from speech import synthesize, transcribe
@@ -291,10 +292,10 @@ class MediaWorkerApp(tk.Tk):
         self.storyboard_choice.bind("<<ComboboxSelected>>", self._on_storyboard_choice)
         self.storyboard_choice_map = {}
         self.current_storyboard_slot_key = ""
-        self.plan_detail_button_text = tk.StringVar(value="展开完整方案")
+        self.plan_detail_button_text = tk.StringVar(value="查看完整方案")
         ttk.Button(
             plan_navigation, textvariable=self.plan_detail_button_text,
-            command=self.toggle_plan_details,
+            command=self.show_plan_details,
         ).pack(side="right")
         ttk.Label(
             plan_navigation, text="先选分镜目标，再到下方制作或选片。",
@@ -302,7 +303,6 @@ class MediaWorkerApp(tk.Tk):
         ).pack(side="left", padx=12)
 
         self.plan_detail = ttk.LabelFrame(plan_panel, text="完整分镜清单", padding=8)
-        self.plan_details_visible = False
         self.storyboard_tree = ttk.Treeview(
             self.plan_detail,
             columns=("sequence", "name", "purpose", "visual", "narration", "duration", "state"),
@@ -356,7 +356,7 @@ class MediaWorkerApp(tk.Tk):
             font=("Microsoft YaHei UI", 10, "bold"), foreground="#6f3f64",
         ).pack(side="left")
         ttk.Button(
-            source_target, text="展开上方完整方案",
+            source_target, text="查看完整方案",
             command=self.show_plan_details,
         ).pack(side="right")
 
@@ -546,13 +546,13 @@ class MediaWorkerApp(tk.Tk):
             font=("Microsoft YaHei UI", 10, "bold"), foreground="#6f3f64",
         ).pack(side="left")
         ttk.Button(
-            target_shot, text="展开上方完整方案",
+            target_shot, text="查看完整方案",
             command=self.show_plan_details,
         ).pack(side="right")
         library_actions = ttk.Frame(library_page, padding=(0, 0, 0, 8))
         library_actions.pack(fill="x")
         ttk.Button(
-            library_actions, text="选用此素材并加入成片", command=self.add_library_asset_to_current_shot,
+            library_actions, text="关联所选素材到当前分镜", command=self.add_library_asset_to_current_shot,
         ).pack(side="left", padx=(0, 6))
         ttk.Button(
             library_actions, text="预览所选素材", command=self.preview_library_asset,
@@ -1349,19 +1349,68 @@ class MediaWorkerApp(tk.Tk):
         except ValueError:
             pass
 
-    def toggle_plan_details(self):
-        if self.plan_details_visible:
-            self.plan_detail.pack_forget()
-            self.plan_details_visible = False
-            self.plan_detail_button_text.set("展开完整方案")
-        else:
-            self.plan_detail.pack(fill="x", pady=(8, 0))
-            self.plan_details_visible = True
-            self.plan_detail_button_text.set("收起完整方案")
-
     def show_plan_details(self):
-        if not self.plan_details_visible:
-            self.toggle_plan_details()
+        task = self._active_selection_task()
+        if not task:
+            messagebox.showinfo(APP_TITLE, "请先选择或新建一个视频项目")
+            return
+        dialog = tk.Toplevel(self)
+        dialog.title("视频整体方案与分镜关联")
+        dialog.transient(self)
+        dialog.geometry("1160x560")
+        dialog.minsize(900, 460)
+        ttk.Label(
+            dialog, text=task.get("video_plan_summary") or "当前项目尚未填写视频整体方案",
+            wraplength=1080, justify="left", font=("Microsoft YaHei UI", 10, "bold"),
+        ).pack(fill="x", padx=15, pady=12)
+        columns = ("sequence", "name", "purpose", "visual", "narration", "duration", "asset", "state")
+        tree = ttk.Treeview(dialog, columns=columns, show="headings", selectmode="browse")
+        for name, title, width in (
+            ("sequence", "顺序", 55), ("name", "分镜名称", 120),
+            ("purpose", "叙事作用", 125), ("visual", "画面要求", 260),
+            ("narration", "对应文案", 220), ("duration", "目标", 60),
+            ("asset", "已关联素材", 150), ("state", "状态", 75),
+        ):
+            tree.heading(name, text=title)
+            tree.column(name, width=width, anchor="w")
+        assets = {item["asset_uuid"]: item for item in self.selection_store.list_assets()}
+        state_labels = {
+            "missing": "缺少素材", "producing": "制作中", "ready": "已有候选",
+            "selected": "已关联",
+        }
+        for row in self.selection_store.list_storyboard(task["id"]):
+            asset = assets.get(row.get("selected_asset_uuid") or "") or {}
+            tree.insert("", "end", iid=row["slot_key"], values=(
+                row["sequence"], row["name"], row.get("purpose") or "—",
+                row.get("visual_requirement") or "—", row.get("narration") or "—",
+                "%g秒" % float(row.get("target_duration") or 0),
+                asset.get("name") or "尚未关联", state_labels.get(row["state"], row["state"]),
+            ))
+        tree.pack(fill="both", expand=True, padx=15)
+        if self.current_storyboard_slot_key and tree.exists(self.current_storyboard_slot_key):
+            tree.selection_set(self.current_storyboard_slot_key)
+            tree.see(self.current_storyboard_slot_key)
+
+        def choose_slot():
+            selected = tree.selection()
+            if not selected:
+                messagebox.showinfo(APP_TITLE, "请选择一条分镜", parent=dialog)
+                return
+            self.current_storyboard_slot_key = selected[0]
+            if self.storyboard_tree.exists(selected[0]):
+                self.storyboard_tree.selection_set(selected[0])
+            self._update_target_shot_label()
+            dialog.destroy()
+
+        actions = ttk.Frame(dialog, padding=15)
+        actions.pack(fill="x")
+        ttk.Label(
+            actions, text="每个画面要求只关联一个分镜素材；更换关联不会删除素材库原件。",
+            foreground="#666",
+        ).pack(side="left")
+        ttk.Button(actions, text="选择此分镜并关闭", command=choose_slot).pack(side="right", padx=5)
+        ttk.Button(actions, text="关闭", command=dialog.destroy).pack(side="right", padx=5)
+        tree.bind("<Double-1>", lambda _event: choose_slot())
 
     def _on_storyboard_choice(self, _event=None):
         slot_key = self.storyboard_choice_map.get(self.storyboard_choice_var.get(), "")
@@ -2027,8 +2076,223 @@ class MediaWorkerApp(tk.Tk):
         dialog.grab_set()
         dialog.focus_force()
 
+    def _planning_options(self):
+        options = fallback_options()
+        if not self.vars["odoo_url"].get().strip() or not self.vars["worker_token"].get().strip():
+            return options
+        try:
+            live = Worker(self.config()).planning_options()
+            if all(live.get(key) for key in ("roles", "tracks", "scopes")):
+                return live
+        except Exception as exc:
+            self.write_log("读取 Odoo 视频方案模板失败，已使用内置同版模板：%s" % exc)
+        return options
+
+    def _new_local_project_dialog(self):
+        options = self._planning_options()
+        dialog = tk.Toplevel(self)
+        dialog.title("新建视频方案")
+        dialog.transient(self)
+        dialog.update_idletasks()
+        width = min(1180, max(960, dialog.winfo_screenwidth() - 120))
+        height = min(780, max(660, dialog.winfo_screenheight() - 120))
+        x = max(20, (dialog.winfo_screenwidth() - width) // 2)
+        y = max(20, (dialog.winfo_screenheight() - height) // 2)
+        dialog.geometry("%sx%s+%s+%s" % (width, height, x, y))
+        dialog.minsize(min(940, width), min(640, height))
+
+        header = ttk.Frame(dialog, padding=(15, 12, 15, 6))
+        header.pack(fill="x")
+        ttk.Label(
+            header, text="先建立视频整体方案，再制作分镜",
+            font=("Microsoft YaHei UI", 14, "bold"),
+        ).pack(side="left")
+        ttk.Label(
+            header, text="新建时不做翻译、配音、字幕或 HeyGen；这些在具体分镜加工时完成。",
+            foreground="#666",
+        ).pack(side="left", padx=20)
+        ttk.Label(
+            header, text=options.get("source") or "Odoo 模板",
+            foreground="#397a66",
+        ).pack(side="right")
+
+        roles = options.get("roles") or []
+        tracks = options.get("tracks") or []
+        scopes = options.get("scopes") or []
+        role_labels = {item["name"]: item for item in roles}
+        track_labels = {item["name"]: item for item in tracks}
+        scope_labels = {item["name"]: item for item in scopes}
+        default_role = next((item["name"] for item in roles if item.get("code") == "trading_company"), roles[0]["name"])
+        default_track = next((item["name"] for item in tracks if item.get("code") == "footwear_apparel"), tracks[0]["name"])
+        default_scope = next((item["name"] for item in scopes if item.get("code") == "brand_positioning"), scopes[0]["name"])
+        values = {
+            "name": tk.StringVar(value="本地视频项目"),
+            "role": tk.StringVar(value=default_role),
+            "track": tk.StringVar(value=default_track),
+            "scope": tk.StringVar(value=default_scope),
+            "duration": tk.StringVar(value="30"),
+            "target_language": tk.StringVar(value="English"),
+            "aspect_ratio": tk.StringVar(value="9:16"),
+        }
+
+        choices = ttk.LabelFrame(dialog, text="1. 选择 Odoo 经营模板", padding=10)
+        choices.pack(fill="x", padx=15, pady=6)
+        fields = (
+            ("项目名称", "name", None, 28),
+            ("经营角色", "role", tuple(role_labels), 24),
+            ("项目赛道", "track", tuple(track_labels), 24),
+            ("内容模板", "scope", tuple(scope_labels), 24),
+            ("目标时长", "duration", None, 8),
+            ("目标语言", "target_language", ("English", "Spanish", "French", "German", "Arabic"), 12),
+            ("画面比例", "aspect_ratio", ("9:16", "4:5", "1:1"), 8),
+        )
+        choice_widgets = {}
+        column = 0
+        for label, key, items, width_value in fields:
+            ttk.Label(choices, text=label).grid(row=0, column=column, sticky="w", padx=(0, 5))
+            if items:
+                widget = ttk.Combobox(
+                    choices, textvariable=values[key], values=items,
+                    state="readonly", width=width_value,
+                )
+            else:
+                widget = ttk.Entry(choices, textvariable=values[key], width=width_value)
+            widget.grid(row=1, column=column, sticky="ew", padx=(0, 10), pady=(3, 0))
+            choice_widgets[key] = widget
+            choices.columnconfigure(column, weight=1 if key == "name" else 0)
+            column += 1
+
+        details = ttk.LabelFrame(dialog, text="2. 核对内容方向和画面要求", padding=10)
+        details.pack(fill="both", expand=True, padx=15, pady=6)
+        details.columnconfigure(0, weight=1)
+        details.columnconfigure(1, weight=1)
+        details.rowconfigure(2, weight=1)
+        role_summary = tk.StringVar()
+        goal_summary = tk.StringVar()
+        evidence_summary = tk.StringVar()
+        ttk.Label(
+            details, textvariable=role_summary, wraplength=520, justify="left",
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 8), pady=(0, 5))
+        ttk.Label(
+            details, textvariable=goal_summary, wraplength=520, justify="left",
+        ).grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=(0, 5))
+        ttk.Label(
+            details, textvariable=evidence_summary, wraplength=1080, justify="left",
+            foreground="#6f3f64",
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 8))
+
+        preview = ttk.Treeview(
+            details, columns=("sequence", "name", "purpose", "visual", "narration", "duration"),
+            show="headings", height=7,
+        )
+        for name, title, width_value in (
+            ("sequence", "顺序", 55), ("name", "分镜名称", 130),
+            ("purpose", "叙事作用", 135), ("visual", "画面要求", 360),
+            ("narration", "文案任务", 280), ("duration", "目标", 65),
+        ):
+            preview.heading(name, text=title)
+            preview.column(name, width=width_value, anchor="w")
+        preview.grid(row=2, column=0, columnspan=2, sticky="nsew")
+
+        copy_box = ttk.LabelFrame(dialog, text="3. 中文文案结构模板（这里只确认方向，不翻译）", padding=8)
+        copy_box.pack(fill="x", padx=15, pady=6)
+        copy_preview = tk.Text(copy_box, height=4, wrap="word", background="#f5f6f7")
+        copy_preview.pack(fill="x")
+        current_plan = {"value": None}
+
+        def update_preview(_event=None):
+            try:
+                role = role_labels[values["role"].get()]
+                track = track_labels[values["track"].get()]
+                scope = scope_labels[values["scope"].get()]
+                plan = build_video_plan(
+                    options, role["code"], track["code"], scope["code"],
+                    int(values["duration"].get() or 30),
+                )
+            except (KeyError, TypeError, ValueError):
+                return
+            current_plan["value"] = plan
+            role_summary.set("经营身份：%s｜%s" % (
+                role["name"], role.get("description") or role.get("content_focus") or "",
+            ))
+            goal_summary.set("本条内容：%s｜%s" % (scope["name"], plan["goal"]))
+            evidence_summary.set("画面与证据要求：%s" % plan["visual_requirements"])
+            for item in preview.get_children():
+                preview.delete(item)
+            for shot in plan["storyboard"]:
+                preview.insert("", "end", values=(
+                    shot["sequence"], shot["name"], shot["purpose"],
+                    shot["visual_requirement"], shot["narration"],
+                    "%g秒" % float(shot["target_duration"]),
+                ))
+            copy_preview.config(state="normal")
+            copy_preview.delete("1.0", "end")
+            copy_preview.insert("1.0", plan["copy_template"])
+            copy_preview.config(state="disabled")
+
+        for key in ("role", "track", "scope"):
+            choice_widgets[key].bind("<<ComboboxSelected>>", update_preview)
+        values["duration"].trace_add("write", update_preview)
+        update_preview()
+
+        def create_project():
+            try:
+                name = values["name"].get().strip()
+                if not name:
+                    raise ValueError("请填写项目名称")
+                plan = current_plan["value"]
+                if not plan:
+                    raise ValueError("请选择经营角色、项目赛道和内容模板")
+                task_id = self.selection_store.next_local_task_id()
+                aspect = values["aspect_ratio"].get()
+                project = {
+                    "id": task_id, "type": "local_project", "local_only": True,
+                    "name": name, "keywords": "", "source_language": "Chinese",
+                    "target_language": values["target_language"].get() or "English",
+                    "duration_seconds": int(values["duration"].get() or 30),
+                    "aspect_ratio": aspect, "export_preset": {
+                        "9:16": "douyin", "4:5": "feed", "1:1": "square",
+                    }.get(aspect, "douyin"),
+                    "video_plan_summary": plan["summary"],
+                    "storyboard": plan["storyboard"],
+                    "business_role": {"code": plan["role"]["code"], "name": plan["role"]["name"]},
+                    "project_track": {"code": plan["track"]["code"], "name": plan["track"]["name"]},
+                    "content_scope": {"code": plan["scope"]["code"], "name": plan["scope"]["name"]},
+                    "prompt": plan["goal"], "video_script": plan["copy_template"],
+                    "content_source": "odoo_translation", "source_urls": [], "local_files": [],
+                    "edit_mode": "sequence", "transition": "none",
+                    "tts_provider": "none", "tts_voice": "", "tts_model_id": "",
+                    "tts_speed": 1.0, "tts_volume": 1.0,
+                    "background_music": "", "music_volume": 0.2,
+                    "remove_hard_subtitles": False, "subtitle_cleanup_mode": "quick",
+                    "subtitle_cleanup_engine": "sttn", "subtitle_cleanup_quality": "standard",
+                    "subtitle_quick_method": "blur", "subtitle_region": "5,72,90,22",
+                    "overlay_translation_in_cleanup_region": True,
+                }
+                self.selection_store.save_task(project, status="draft")
+                self.selection_store.sync_storyboard(task_id, plan["storyboard"])
+                self.selection_task_id = task_id
+                dialog.destroy()
+                self._refresh_selection_tasks()
+                self._refresh_selection_tree()
+                self.notebook.select(self.selection_tab)
+                self.selection_workflow.select(self.selection_source_page)
+            except Exception as exc:
+                messagebox.showerror(APP_TITLE, str(exc), parent=dialog)
+
+        actions = ttk.Frame(dialog, padding=(15, 6, 15, 12))
+        actions.pack(fill="x")
+        ttk.Button(actions, text="创建并进入分镜制作", command=create_project).pack(side="left")
+        ttk.Label(
+            actions, text="创建后：导入全局原素材 → 逐条制作分镜 → 关联到画面要求 → 排序合成。",
+            foreground="#666",
+        ).pack(side="left", padx=18)
+        ttk.Button(actions, text="取消", command=dialog.destroy).pack(side="right")
+        dialog.grab_set()
+        dialog.focus_force()
+
     def create_local_project(self):
-        self._project_dialog()
+        self._new_local_project_dialog()
 
     def edit_active_project(self):
         task = self._active_selection_task()
@@ -2243,7 +2507,7 @@ class MediaWorkerApp(tk.Tk):
         )
         state_labels = {
             "missing": "缺少素材", "producing": "制作中", "ready": "已有候选",
-            "selected": "已选定",
+            "selected": "已关联",
         }
         rows = self.selection_store.list_storyboard(task["id"])
         selected_count = sum(1 for row in rows if row["state"] == "selected")
@@ -2255,9 +2519,12 @@ class MediaWorkerApp(tk.Tk):
         )
         labels = []
         self.storyboard_choice_map = {}
+        assets = {item["asset_uuid"]: item for item in self.selection_store.list_assets()}
         for index, row in enumerate(rows, 1):
-            label = "%02d. %s · %s" % (
+            asset = assets.get(row.get("selected_asset_uuid") or "") or {}
+            label = "%02d. %s · %s%s" % (
                 index, row["name"], state_labels.get(row["state"], row["state"]),
+                (" · " + asset["name"]) if asset.get("name") else "",
             )
             labels.append(label)
             self.storyboard_choice_map[label] = row["slot_key"]
@@ -2371,7 +2638,8 @@ class MediaWorkerApp(tk.Tk):
             self._refresh_assembly()
             messagebox.showinfo(
                 APP_TITLE,
-                "已把所选分镜素材放入本次成片时间线。\n素材库原件仍保留，可继续供其他视频使用。",
+                "已将所选素材关联到当前画面要求，并按视频方案顺序加入成片。\n"
+                "素材库原件仍保留，可继续供其他视频使用。",
             )
         except Exception as exc:
             messagebox.showerror(APP_TITLE, str(exc))

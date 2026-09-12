@@ -60,6 +60,40 @@ class LocalWorkerController(http.Controller):
         self._touch_worker_node(self._worker_id())
         return request.make_json_response({"ok": True})
 
+    @http.route("/psc/local-worker/planning/options", type="http", auth="none", methods=["GET"], csrf=False)
+    def planning_options(self, **kwargs):
+        """Expose Odoo's canonical planning catalog to the Windows workstation."""
+        self._authorize()
+        roles = request.env["psc.business.role"].sudo().search([("active", "=", True)])
+        tracks = request.env["psc.industry.track"].sudo().search([("active", "=", True)])
+        scopes = request.env["psc.content.scope"].sudo().search([("active", "=", True)])
+        guides = request.env["psc.content.mix.rule"].sudo().search([("active", "=", True)])
+        return request.make_json_response({
+            "source": "Odoo 经营角色与内容模板",
+            "roles": [{
+                "code": role.code or "", "name": role.name or "",
+                "description": role.description or "", "content_focus": role.content_focus or "",
+            } for role in roles],
+            "tracks": [{
+                "code": track.code or "", "name": track.name or "",
+                "description": track.description or "",
+                "role_codes": track.role_ids.mapped("code"),
+            } for track in tracks],
+            "scopes": [{
+                "code": scope.code or "", "name": scope.name or "",
+                "description": scope.description or "",
+            } for scope in scopes],
+            "guides": [{
+                "track_code": guide.track_id.code or "",
+                "role_code": guide.role_id.code or "",
+                "scope_code": guide.scope_id.code or "",
+                "execution_goal": guide.execution_goal or "",
+                "copy_template_zh": guide.copy_template_zh or "",
+                "required_evidence": guide.required_evidence or "",
+                "video_ratio": guide.video_ratio,
+            } for guide in guides],
+        })
+
     @http.route("/psc/local-worker/assets/sync", type="http", auth="none", methods=["POST"], csrf=False)
     def sync_local_assets(self, **kwargs):
         self._authorize()

@@ -502,7 +502,8 @@ class Worker:
     def api(self, method, path, **kwargs):
         headers = dict(self.headers)
         headers.update(kwargs.pop("headers", {}))
-        response = requests.request(method, self.base + path, headers=headers, timeout=300, **kwargs)
+        timeout = kwargs.pop("timeout", 300)
+        response = requests.request(method, self.base + path, headers=headers, timeout=timeout, **kwargs)
         response.raise_for_status()
         return response
 
@@ -513,6 +514,11 @@ class Worker:
 
     def health(self):
         return self.api("GET", "/psc/local-worker/ping").json()
+
+    def planning_options(self):
+        return self.api(
+            "GET", "/psc/local-worker/planning/options", timeout=5,
+        ).json()
 
     def sync_bitbrowser_environments(self, environments):
         safe_environments = []
