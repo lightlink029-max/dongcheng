@@ -318,6 +318,7 @@ class MediaWorkerApp(tk.Tk):
         ttk.Button(edit_controls, text="删除所选", command=self.delete_selected_videos).pack(side="left", padx=3)
         ttk.Button(edit_controls, text="下载/重新下载", command=self.redownload_selected_videos).pack(side="left", padx=3)
         ttk.Button(edit_controls, text="预览所选素材", command=self.preview_selected_video).pack(side="left", padx=3)
+        ttk.Button(edit_controls, text="打开素材文件夹", command=self.open_selection_folder).pack(side="left", padx=3)
         self.selection_summary = tk.StringVar(value="0 条")
         ttk.Label(add_controls, textvariable=self.selection_summary).pack(side="right")
 
@@ -1828,6 +1829,25 @@ class MediaWorkerApp(tk.Tk):
             self._open_local_path(row["local_path"])
         except Exception as exc:
             messagebox.showerror(APP_TITLE, str(exc))
+
+    @staticmethod
+    def _selection_folder(task, rows, work_dir):
+        if len(rows) == 1:
+            local_path = Path(rows[0].get("local_path") or "").expanduser()
+            if local_path.is_file():
+                return local_path.resolve().parent
+        return Path(work_dir).expanduser().resolve() / str(task["id"]) / "selected-videos"
+
+    def open_selection_folder(self):
+        task = self._active_selection_task()
+        if not task:
+            messagebox.showerror(APP_TITLE, "请先选择或新建一个项目")
+            return
+        ids = self._selection_ids()
+        rows = self.selection_store.get_many(ids) if ids else []
+        folder = self._selection_folder(task, rows, self.vars["work_dir"].get())
+        folder.mkdir(parents=True, exist_ok=True)
+        os.startfile(str(folder))
 
     def edit_selected_clip(self):
         ids = self._selection_ids()
