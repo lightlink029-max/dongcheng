@@ -7,6 +7,8 @@ access_psc_content_variant_user,psc.content.variant user,model_psc_content_varia
 access_psc_media_asset_user,psc.media.asset user,model_psc_media_asset,base.group_user,1,1,1,1
 access_psc_media_model_user,psc.media.model user,model_psc_media_model,base.group_user,1,1,1,1
 access_psc_local_production_task_user,psc.local.production.task user,model_psc_local_production_task,base.group_user,1,1,1,1
+access_psc_video_shot_requirement_user,psc.video.shot.requirement user,model_psc_video_shot_requirement,base.group_user,1,1,1,1
+access_psc_local_media_asset_user,psc.local.media.asset user,model_psc_local_media_asset,base.group_user,1,1,1,0
 access_psc_local_worker_node_user,psc.local.worker.node user,model_psc_local_worker_node,base.group_user,1,1,1,0
 access_psc_bitbrowser_environment_user,psc.bitbrowser.environment user,model_psc_bitbrowser_environment,base.group_user,1,0,0,0
 access_psc_social_publishing_account_user,psc.social.publishing.account user,model_psc_social_publishing_account,base.group_user,1,1,1,1

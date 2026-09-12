@@ -14,10 +14,12 @@
   "font_file": "C:/Windows/Fonts/msyh.ttc",
   "local_ai": {
     "ollama_url": "http://127.0.0.1:11434",
+    "ollama_command": "D:/odooAiwoker/AI/ollama/bin/ollama.exe",
     "translation_model": "qwen3:8b",
     "whisper_command": "",
     "whisper_model": "small",
-    "ai_edit_command": ""
+    "ai_edit_command": "",
+    "vsr_command": ""
   },
   "speech": {
     "sherpa_command": "",
@@ -26,5 +28,11 @@
     "sherpa_data_dir": "",
     "volc_api_key": "",
     "volc_resource_id": "seed-tts-2.0"
+  },
+  "heygen": {
+    "api_key": "",
+    "mode": "precision",
+    "poll_seconds": 10,
+    "timeout_seconds": 3600
   }
 }

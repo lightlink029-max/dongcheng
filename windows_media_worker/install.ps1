@@ -17,6 +17,18 @@ if (-not $installParent -or $installPath -eq [System.IO.Path]::GetPathRoot($inst
 }
 New-Item -ItemType Directory -Force -Path $installParent | Out-Null
 
+$appDataPath = Join-Path $env:LOCALAPPDATA "LightLinkMediaWorker"
+$legacyDatabase = Join-Path $appDataPath "selections.db"
+$v2Database = Join-Path $appDataPath "media-library-v2.db"
+if ((Test-Path -LiteralPath $legacyDatabase) -and -not (Test-Path -LiteralPath $v2Database)) {
+    $archivePath = Join-Path $appDataPath "archive"
+    New-Item -ItemType Directory -Force -Path $archivePath | Out-Null
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $backupFile = Join-Path $archivePath "selections-$stamp.db"
+    Copy-Item -LiteralPath $legacyDatabase -Destination $backupFile -ErrorAction Stop
+    Write-Host "Archived legacy database: $backupFile"
+}
+
 if (Test-Path -LiteralPath $installPath) {
     $installedProcesses = Get-Process -ErrorAction SilentlyContinue | Where-Object {
         try {

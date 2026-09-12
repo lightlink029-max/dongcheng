@@ -1,6 +1,7 @@
 import re
 import sqlite3
 import json
+import uuid
 from pathlib import Path
 from contextlib import contextmanager
 from datetime import datetime
@@ -77,6 +78,28 @@ class SelectionStore:
                     duration REAL NOT NULL DEFAULT 0,
                     media_checked INTEGER NOT NULL DEFAULT 0,
                     sort_order INTEGER NOT NULL DEFAULT 0,
+                    subtitle_cleanup_policy TEXT NOT NULL DEFAULT 'inherit',
+                    subtitle_cleanup_mode TEXT NOT NULL DEFAULT 'quick',
+                    subtitle_cleanup_engine TEXT NOT NULL DEFAULT 'sttn',
+                    subtitle_cleanup_quality TEXT NOT NULL DEFAULT 'standard',
+                    subtitle_quick_method TEXT NOT NULL DEFAULT 'blur',
+                    subtitle_region TEXT NOT NULL DEFAULT '5,72,90,22',
+                    subtitle_cleaned_path TEXT NOT NULL DEFAULT '',
+                    subtitle_cleanup_signature TEXT NOT NULL DEFAULT '',
+                    subtitle_cleanup_status TEXT NOT NULL DEFAULT '',
+                    subtitle_cleanup_error TEXT NOT NULL DEFAULT '',
+                    source_kind TEXT NOT NULL DEFAULT 'pasted_link',
+                    record_kind TEXT NOT NULL DEFAULT 'source',
+                    parent_id INTEGER,
+                    clip_name TEXT NOT NULL DEFAULT '',
+                    clip_type TEXT NOT NULL DEFAULT 'unknown',
+                    processed_path TEXT NOT NULL DEFAULT '',
+                    processed_kind TEXT NOT NULL DEFAULT '',
+                    processing_status TEXT NOT NULL DEFAULT '',
+                    processing_error TEXT NOT NULL DEFAULT '',
+                    voice_signature TEXT NOT NULL DEFAULT '',
+                    storyboard_slot_key TEXT NOT NULL DEFAULT '',
+                    library_asset_uuid TEXT NOT NULL DEFAULT '',
                     UNIQUE(task_id, url)
                 )
             """)
@@ -118,6 +141,28 @@ class SelectionStore:
                 "duration": "REAL NOT NULL DEFAULT 0",
                 "media_checked": "INTEGER NOT NULL DEFAULT 0",
                 "sort_order": "INTEGER NOT NULL DEFAULT 0",
+                "subtitle_cleanup_policy": "TEXT NOT NULL DEFAULT 'inherit'",
+                "subtitle_cleanup_mode": "TEXT NOT NULL DEFAULT 'quick'",
+                "subtitle_cleanup_engine": "TEXT NOT NULL DEFAULT 'sttn'",
+                "subtitle_cleanup_quality": "TEXT NOT NULL DEFAULT 'standard'",
+                "subtitle_quick_method": "TEXT NOT NULL DEFAULT 'blur'",
+                "subtitle_region": "TEXT NOT NULL DEFAULT '5,72,90,22'",
+                "subtitle_cleaned_path": "TEXT NOT NULL DEFAULT ''",
+                "subtitle_cleanup_signature": "TEXT NOT NULL DEFAULT ''",
+                "subtitle_cleanup_status": "TEXT NOT NULL DEFAULT ''",
+                "subtitle_cleanup_error": "TEXT NOT NULL DEFAULT ''",
+                "source_kind": "TEXT NOT NULL DEFAULT 'pasted_link'",
+                "record_kind": "TEXT NOT NULL DEFAULT 'source'",
+                "parent_id": "INTEGER",
+                "clip_name": "TEXT NOT NULL DEFAULT ''",
+                "clip_type": "TEXT NOT NULL DEFAULT 'unknown'",
+                "processed_path": "TEXT NOT NULL DEFAULT ''",
+                "processed_kind": "TEXT NOT NULL DEFAULT ''",
+                "processing_status": "TEXT NOT NULL DEFAULT ''",
+                "processing_error": "TEXT NOT NULL DEFAULT ''",
+                "voice_signature": "TEXT NOT NULL DEFAULT ''",
+                "storyboard_slot_key": "TEXT NOT NULL DEFAULT ''",
+                "library_asset_uuid": "TEXT NOT NULL DEFAULT ''",
             }
             for name, definition in video_additions.items():
                 if name not in video_columns:
@@ -147,6 +192,57 @@ class SelectionStore:
                     connection.execute(
                         "ALTER TABLE selection_task ADD COLUMN %s TEXT NOT NULL DEFAULT ''" % name
                     )
+            connection.execute("""
+                CREATE TABLE IF NOT EXISTS local_media_asset (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    asset_uuid TEXT NOT NULL UNIQUE,
+                    name TEXT NOT NULL,
+                    file_path TEXT NOT NULL,
+                    preview_path TEXT NOT NULL DEFAULT '',
+                    source_path TEXT NOT NULL DEFAULT '',
+                    source_task_id INTEGER,
+                    source_record_id INTEGER,
+                    asset_kind TEXT NOT NULL DEFAULT 'standard_shot',
+                    clip_type TEXT NOT NULL DEFAULT 'unknown',
+                    role_code TEXT NOT NULL DEFAULT '',
+                    role_name TEXT NOT NULL DEFAULT '',
+                    track_code TEXT NOT NULL DEFAULT '',
+                    track_name TEXT NOT NULL DEFAULT '',
+                    scope_code TEXT NOT NULL DEFAULT '',
+                    scope_name TEXT NOT NULL DEFAULT '',
+                    shot_purpose TEXT NOT NULL DEFAULT '',
+                    language TEXT NOT NULL DEFAULT '',
+                    aspect_ratio TEXT NOT NULL DEFAULT '',
+                    duration REAL NOT NULL DEFAULT 0,
+                    subtitle_state TEXT NOT NULL DEFAULT 'unchanged',
+                    voice_signature TEXT NOT NULL DEFAULT '',
+                    copyright_status TEXT NOT NULL DEFAULT 'unreviewed',
+                    content_hash TEXT NOT NULL DEFAULT '',
+                    metadata_json TEXT NOT NULL DEFAULT '{}',
+                    active INTEGER NOT NULL DEFAULT 1,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            connection.execute("""
+                CREATE TABLE IF NOT EXISTS storyboard_slot (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id INTEGER NOT NULL,
+                    slot_key TEXT NOT NULL,
+                    sequence INTEGER NOT NULL DEFAULT 10,
+                    name TEXT NOT NULL,
+                    purpose TEXT NOT NULL DEFAULT '',
+                    visual_requirement TEXT NOT NULL DEFAULT '',
+                    narration TEXT NOT NULL DEFAULT '',
+                    target_duration REAL NOT NULL DEFAULT 0,
+                    required INTEGER NOT NULL DEFAULT 1,
+                    state TEXT NOT NULL DEFAULT 'missing',
+                    selected_asset_uuid TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(task_id, slot_key)
+                )
+            """)
 
     def next_local_task_id(self):
         with self._connect() as connection:
@@ -302,7 +398,7 @@ class SelectionStore:
             connection.execute("DELETE FROM render_version WHERE task_id = ?", (int(task_id),))
             connection.execute("DELETE FROM selection_task WHERE task_id = ?", (int(task_id),))
 
-    def add_text(self, task_id, text):
+    def add_text(self, task_id, text, source_kind="pasted_link"):
         added = 0
         now = datetime.now().astimezone().isoformat(timespec="seconds")
         with self._connect() as connection:
@@ -313,9 +409,9 @@ class SelectionStore:
                 ).fetchone()["next_order"]
                 cursor = connection.execute(
                     """INSERT OR IGNORE INTO selected_video
-                       (task_id, url, video_id, selected_at, sort_order)
-                       VALUES (?, ?, ?, ?, ?)""",
-                    (int(task_id), url, extract_video_id(url), now, order),
+                       (task_id, url, video_id, selected_at, sort_order, source_kind)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (int(task_id), url, extract_video_id(url), now, order, source_kind),
                 )
                 added += cursor.rowcount
         return added
@@ -335,12 +431,61 @@ class SelectionStore:
                 ).fetchone()["next_order"]
                 cursor = connection.execute(
                     """INSERT OR IGNORE INTO selected_video
-                       (task_id, url, video_id, selected_at, status, local_path, caption, sort_order)
-                       VALUES (?, ?, ?, ?, 'downloaded', ?, ?, ?)""",
+                       (task_id, url, video_id, selected_at, status, local_path, caption,
+                        sort_order, source_kind)
+                       VALUES (?, ?, ?, ?, 'downloaded', ?, ?, ?, 'local_upload')""",
                     (int(task_id), url, path.stem, now, str(path), path.stem, order),
                 )
                 added += cursor.rowcount
         return added
+
+    def create_clip(self, source_id, trim_start, trim_end, clip_name="", clip_type="unknown"):
+        source = self.get_many([source_id])
+        if not source:
+            raise ValueError("原始素材不存在")
+        source = source[0]
+        start, end = float(trim_start or 0), float(trim_end or 0)
+        if start < 0 or end <= start:
+            raise ValueError("片段出点必须大于入点")
+        if clip_type not in {"unknown", "talking_face", "face_no_speech", "no_face"}:
+            raise ValueError("无效的片段类型")
+        parent_id = int(source.get("parent_id") or source["id"])
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        url = "clip://%s/%s" % (parent_id, uuid.uuid4().hex)
+        with self._connect() as connection:
+            order = connection.execute(
+                "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order "
+                "FROM selected_video WHERE task_id = ?", (int(source["task_id"]),),
+            ).fetchone()["next_order"]
+            cursor = connection.execute(
+                """INSERT INTO selected_video (
+                       task_id, url, video_id, selected_at, status, local_path, error,
+                       trim_start, trim_end, copyright_status, copyright_note,
+                       cover_path, caption, caption_checked, duration, media_checked,
+                       sort_order, subtitle_cleanup_policy, subtitle_cleanup_mode,
+                       subtitle_cleanup_engine, subtitle_cleanup_quality,
+                       subtitle_quick_method, subtitle_region, source_kind, record_kind,
+                       parent_id, clip_name, clip_type
+                   ) VALUES (?, ?, ?, ?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                             ?, 'derived_clip', ?, ?, ?)""",
+                (
+                    int(source["task_id"]), url, source.get("video_id") or "", now,
+                    "downloaded", source.get("local_path") or "", start, end,
+                    source.get("copyright_status") or "unreviewed",
+                    source.get("copyright_note") or "", source.get("cover_path") or "",
+                    source.get("caption") or "", int(source.get("caption_checked") or 0),
+                    max(0.0, end - start), int(source.get("media_checked") or 0), order,
+                    source.get("subtitle_cleanup_policy") or "inherit",
+                    source.get("subtitle_cleanup_mode") or "quick",
+                    source.get("subtitle_cleanup_engine") or "sttn",
+                    source.get("subtitle_cleanup_quality") or "standard",
+                    source.get("subtitle_quick_method") or "blur",
+                    source.get("subtitle_region") or "5,72,90,22",
+                    source.get("source_kind") or "pasted_link", parent_id,
+                    clip_name.strip() or "片段 %.1f-%.1f秒" % (start, end), clip_type,
+                ),
+            )
+            return int(cursor.lastrowid)
 
     def list(self, task_id):
         with self._connect() as connection:
@@ -394,6 +539,15 @@ class SelectionStore:
             "copyright_status", "copyright_note", "cover_path", "caption",
             "caption_checked", "duration",
             "media_checked",
+            "subtitle_cleanup_policy", "subtitle_cleanup_mode",
+            "subtitle_cleanup_engine",
+            "subtitle_cleanup_quality", "subtitle_quick_method", "subtitle_region",
+            "subtitle_cleaned_path", "subtitle_cleanup_signature",
+            "subtitle_cleanup_status", "subtitle_cleanup_error",
+            "source_kind", "record_kind", "parent_id", "clip_name", "clip_type",
+            "processed_path", "processed_kind", "processing_status",
+            "processing_error", "voice_signature", "storyboard_slot_key",
+            "library_asset_uuid",
         }
         values = {key: value for key, value in values.items() if key in allowed}
         if not values:
@@ -407,13 +561,27 @@ class SelectionStore:
 
     def reset_download(self, ids):
         for row in self.get_many(ids):
-            if row["url"].startswith("file:"):
+            if row["url"].startswith("file:") or row.get("record_kind") == "derived_clip":
                 self.update(row["id"], status="downloaded", error="")
             else:
                 self.update(
                     row["id"], status="selected", local_path="", error="",
                     caption_checked=0, media_checked=0,
+                    subtitle_cleaned_path="", subtitle_cleanup_signature="",
+                    subtitle_cleanup_status="", subtitle_cleanup_error="",
+                    processed_path="", processed_kind="", processing_status="",
+                    processing_error="", voice_signature="",
                 )
+
+    def invalidate_processed(self, task_id):
+        with self._connect() as connection:
+            connection.execute(
+                """UPDATE selected_video
+                   SET processed_path = '', processed_kind = '', processing_status = '',
+                       processing_error = '', voice_signature = ''
+                   WHERE task_id = ?""",
+                (int(task_id),),
+            )
 
     def delete(self, ids):
         values = [int(value) for value in ids]
@@ -422,3 +590,160 @@ class SelectionStore:
         placeholders = ",".join("?" for _ in values)
         with self._connect() as connection:
             connection.execute(f"DELETE FROM selected_video WHERE id IN ({placeholders})", values)
+
+    def sync_storyboard(self, task_id, shots):
+        """Replace the task storyboard with the locked snapshot supplied by Odoo."""
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        task_id = int(task_id)
+        current = {row["slot_key"]: row for row in self.list_storyboard(task_id)}
+        normalized = []
+        for index, shot in enumerate(shots or [], 1):
+            slot_key = str(shot.get("slot_key") or shot.get("key") or shot.get("id") or index)
+            previous = current.get(slot_key) or {}
+            selected_asset_uuid = str(
+                shot.get("selected_asset_uuid") or previous.get("selected_asset_uuid") or ""
+            )
+            state = str(shot.get("state") or "missing")
+            if selected_asset_uuid and state in ("missing", "producing"):
+                state = "ready"
+            normalized.append((
+                task_id, slot_key, int(shot.get("sequence") or index * 10),
+                str(shot.get("name") or f"分镜 {index}"), str(shot.get("purpose") or ""),
+                str(shot.get("visual_requirement") or ""), str(shot.get("narration") or ""),
+                float(shot.get("target_duration") or 0), int(bool(shot.get("required", True))),
+                state, selected_asset_uuid,
+                now, now,
+            ))
+        with self._connect() as connection:
+            connection.execute("DELETE FROM storyboard_slot WHERE task_id = ?", (task_id,))
+            connection.executemany(
+                """INSERT INTO storyboard_slot (
+                       task_id, slot_key, sequence, name, purpose, visual_requirement,
+                       narration, target_duration, required, state, selected_asset_uuid,
+                       created_at, updated_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                normalized,
+            )
+
+    def list_storyboard(self, task_id):
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM storyboard_slot WHERE task_id = ? ORDER BY sequence, id",
+                (int(task_id),),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def assign_storyboard_asset(self, task_id, slot_key, asset_uuid):
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """UPDATE storyboard_slot
+                      SET selected_asset_uuid = ?, state = 'ready', updated_at = ?
+                    WHERE task_id = ? AND slot_key = ?""",
+                (str(asset_uuid), now, int(task_id), str(slot_key)),
+            )
+        if not cursor.rowcount:
+            raise ValueError("分镜不存在，请先从 Odoo 刷新任务")
+
+    def register_asset(self, values):
+        file_path = str(values.get("file_path") or "")
+        if not file_path or not Path(file_path).is_file():
+            raise ValueError("素材文件不存在")
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        asset_uuid = str(values.get("asset_uuid") or uuid.uuid4())
+        metadata = values.get("metadata") or {}
+        record = {
+            "asset_uuid": asset_uuid,
+            "name": str(values.get("name") or Path(file_path).stem),
+            "file_path": file_path,
+            "preview_path": str(values.get("preview_path") or ""),
+            "source_path": str(values.get("source_path") or ""),
+            "source_task_id": values.get("source_task_id"),
+            "source_record_id": values.get("source_record_id"),
+            "asset_kind": str(values.get("asset_kind") or "standard_shot"),
+            "clip_type": str(values.get("clip_type") or "unknown"),
+            "role_code": str(values.get("role_code") or ""),
+            "role_name": str(values.get("role_name") or ""),
+            "track_code": str(values.get("track_code") or ""),
+            "track_name": str(values.get("track_name") or ""),
+            "scope_code": str(values.get("scope_code") or ""),
+            "scope_name": str(values.get("scope_name") or ""),
+            "shot_purpose": str(values.get("shot_purpose") or ""),
+            "language": str(values.get("language") or ""),
+            "aspect_ratio": str(values.get("aspect_ratio") or ""),
+            "duration": float(values.get("duration") or 0),
+            "subtitle_state": str(values.get("subtitle_state") or "unchanged"),
+            "voice_signature": str(values.get("voice_signature") or ""),
+            "copyright_status": str(values.get("copyright_status") or "unreviewed"),
+            "content_hash": str(values.get("content_hash") or ""),
+            "metadata_json": json.dumps(metadata, ensure_ascii=False),
+            "active": int(bool(values.get("active", True))),
+        }
+        columns = list(record)
+        assignments = ", ".join(
+            f"{column} = excluded.{column}" for column in columns if column != "asset_uuid"
+        )
+        with self._connect() as connection:
+            connection.execute(
+                f"""INSERT INTO local_media_asset ({', '.join(columns)}, created_at, updated_at)
+                    VALUES ({', '.join('?' for _ in columns)}, ?, ?)
+                    ON CONFLICT(asset_uuid) DO UPDATE SET {assignments}, updated_at = excluded.updated_at""",
+                [*record.values(), now, now],
+            )
+        return asset_uuid
+
+    def list_assets(self, active_only=True):
+        query = "SELECT * FROM local_media_asset"
+        if active_only:
+            query += " WHERE active = 1"
+        query += " ORDER BY updated_at DESC, id DESC"
+        with self._connect() as connection:
+            rows = connection.execute(query).fetchall()
+        result = []
+        for row in rows:
+            value = dict(row)
+            try:
+                value["metadata"] = json.loads(value.pop("metadata_json") or "{}")
+            except (TypeError, ValueError):
+                value["metadata"] = {}
+            result.append(value)
+        return result
+
+    def get_asset(self, asset_uuid):
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM local_media_asset WHERE asset_uuid = ?", (str(asset_uuid),),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def add_asset_to_task(self, task_id, asset_uuid, slot_key=""):
+        asset = self.get_asset(asset_uuid)
+        if not asset:
+            raise ValueError("本地素材库中找不到该素材")
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        url = "library://%s/%s" % (asset_uuid, uuid.uuid4().hex)
+        with self._connect() as connection:
+            order = connection.execute(
+                "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order "
+                "FROM selected_video WHERE task_id = ?", (int(task_id),),
+            ).fetchone()["next_order"]
+            cursor = connection.execute(
+                """INSERT INTO selected_video (
+                       task_id, url, video_id, selected_at, status, local_path, caption,
+                       duration, sort_order, source_kind, record_kind, clip_name, clip_type,
+                       processed_path, processed_kind, processing_status, voice_signature,
+                       copyright_status, storyboard_slot_key, library_asset_uuid
+                   ) VALUES (?, ?, ?, ?, 'downloaded', ?, ?, ?, ?, 'local_library',
+                             'library_asset', ?, ?, ?, ?, 'ready', ?, ?, ?, ?)""",
+                (
+                    int(task_id), url, asset_uuid, now, asset["file_path"], asset["name"],
+                    float(asset.get("duration") or 0), int(order), asset["name"],
+                    asset.get("clip_type") or "unknown", asset["file_path"],
+                    asset.get("asset_kind") or "standard_shot",
+                    asset.get("voice_signature") or "",
+                    asset.get("copyright_status") or "unreviewed", str(slot_key or ""), asset_uuid,
+                ),
+            )
+        if slot_key:
+            self.assign_storyboard_asset(task_id, slot_key, asset_uuid)
+        return int(cursor.lastrowid)

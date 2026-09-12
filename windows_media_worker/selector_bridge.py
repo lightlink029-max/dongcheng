@@ -27,7 +27,9 @@ class SelectorBridge:
                     urls = payload.get("urls") or []
                     if not isinstance(urls, list):
                         raise ValueError("urls must be a list")
-                    added = bridge.store.add_text(task_id, "\n".join(map(str, urls)))
+                    added = bridge.store.add_text(
+                        task_id, "\n".join(map(str, urls)), source_kind="douyin_search",
+                    )
                     if bridge.on_change:
                         bridge.on_change(task_id, added)
                     self._reply(200, {"ok": True, "added": added})
@@ -55,4 +57,3 @@ class SelectorBridge:
     def close(self):
         self.server.shutdown()
         self.server.server_close()
-

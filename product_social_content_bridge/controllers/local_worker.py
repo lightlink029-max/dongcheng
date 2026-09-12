@@ -1,4 +1,5 @@
 from datetime import timedelta
+import json
 import re
 from urllib.parse import urlparse
 
@@ -48,11 +49,79 @@ class LocalWorkerController(http.Controller):
             node = model.create({"name": worker_id, **values})
         return node
 
+    @staticmethod
+    def _code_record(model, code):
+        value = str(code or "").strip()[:128]
+        return model.search([("code", "=", value)], limit=1) if value else model
+
     @http.route("/psc/local-worker/ping", type="http", auth="none", methods=["GET"], csrf=False)
     def ping(self, **kwargs):
         self._authorize()
         self._touch_worker_node(self._worker_id())
         return request.make_json_response({"ok": True})
+
+    @http.route("/psc/local-worker/assets/sync", type="http", auth="none", methods=["POST"], csrf=False)
+    def sync_local_assets(self, **kwargs):
+        self._authorize()
+        payload = request.httprequest.get_json(silent=True) or {}
+        worker_id = self._worker_id() or str(payload.get("worker_id") or "").strip()[:128]
+        assets = payload.get("assets") or []
+        if not worker_id:
+            raise Forbidden()
+        if not isinstance(assets, list) or len(assets) > 500:
+            return request.make_json_response({"error": "invalid_assets"}, status=400)
+        self._touch_worker_node(worker_id)
+        model = request.env["psc.local.media.asset"].sudo()
+        roles = request.env["psc.business.role"].sudo()
+        tracks = request.env["psc.industry.track"].sudo()
+        scopes = request.env["psc.content.scope"].sudo()
+        saved = []
+        now = fields.Datetime.now()
+        allowed_kinds = {"standard_shot", "voice_variant", "heygen_variant", "music"}
+        allowed_clip_types = {"talking_face", "face_no_speech", "no_face", "unknown"}
+        allowed_subtitle_states = {"clean", "cleaned", "present", "unknown"}
+        for item in assets:
+            if not isinstance(item, dict):
+                continue
+            asset_uuid = str(item.get("asset_uuid") or "").strip()[:64]
+            name = str(item.get("name") or "").strip()[:256]
+            if not asset_uuid or not name:
+                continue
+            role = self._code_record(roles, item.get("business_role_code"))
+            track = self._code_record(tracks, item.get("track_code"))
+            scope = self._code_record(scopes, item.get("scope_code"))
+            values = {
+                "name": name,
+                "asset_uuid": asset_uuid,
+                "worker_id": worker_id,
+                "active": bool(item.get("active", True)),
+                "asset_kind": item.get("asset_kind") if item.get("asset_kind") in allowed_kinds else "standard_shot",
+                "clip_type": item.get("clip_type") if item.get("clip_type") in allowed_clip_types else "unknown",
+                "business_role_id": role.id or False,
+                "track_id": track.id or False,
+                "scope_id": scope.id or False,
+                "shot_purpose": str(item.get("shot_purpose") or "")[:256],
+                "duration": max(0.0, float(item.get("duration") or 0)),
+                "aspect_ratio": str(item.get("aspect_ratio") or "")[:32],
+                "language": str(item.get("language") or "")[:64],
+                "subtitle_state": item.get("subtitle_state") if item.get("subtitle_state") in allowed_subtitle_states else "unknown",
+                "voice_signature": str(item.get("voice_signature") or "")[:256],
+                "copyright_status": str(item.get("copyright_status") or "")[:64],
+                "local_relative_path": str(item.get("local_relative_path") or "")[:1024],
+                "file_size": max(0, int(item.get("file_size") or 0)),
+                "content_hash": str(item.get("content_hash") or "")[:128],
+                "metadata": item.get("metadata") if isinstance(item.get("metadata"), dict) else {},
+                "last_seen_at": now,
+            }
+            asset = model.search([
+                ("asset_uuid", "=", asset_uuid), ("worker_id", "=", worker_id),
+            ], limit=1)
+            if asset:
+                asset.write(values)
+            else:
+                asset = model.create(values)
+            saved.append(asset.id)
+        return request.make_json_response({"ok": True, "saved": len(saved), "asset_ids": saved})
 
     @http.route("/psc/local-worker/bitbrowser/environments", type="http", auth="none", methods=["POST"], csrf=False)
     def sync_bitbrowser_environments(self, **kwargs):
@@ -148,6 +217,7 @@ class LocalWorkerController(http.Controller):
             "status_message": "本地工具已领取",
         })
         attachments = task.source_media_attachment_ids
+        project = task.project_id
         return request.make_json_response({"task": {
             "id": task.id, "type": task.task_type, "target_language": task.target_language,
             "source_mode": task.source_mode, "keywords": task.keywords or "",
@@ -156,6 +226,18 @@ class LocalWorkerController(http.Controller):
             "aspect_ratio": task.aspect_ratio, "duration_seconds": task.duration_seconds,
             "source_image_id": task.source_image_attachment_id.id or None,
             "source_media": [{"id": item.id, "name": item.name} for item in attachments],
+            "video_plan_summary": task.video_plan_summary or "",
+            "storyboard": task.storyboard_snapshot or [],
+            "business_role": {
+                "code": project.business_role_id.code or "",
+                "name": project.business_role_id.name or "",
+            } if project.business_role_id else {},
+            "project_track": {
+                "code": project.track_id.code or "", "name": project.track_id.name or "",
+            } if project.track_id else {},
+            "content_scope": {
+                "code": task.content_scope_id.code or "", "name": task.content_scope_id.name or "",
+            } if task.content_scope_id else {},
         }})
 
     @http.route("/psc/local-worker/attachments/<int:attachment_id>", type="http", auth="none", methods=["GET"], csrf=False)
@@ -259,16 +341,48 @@ class LocalWorkerController(http.Controller):
                 "mimetype": subtitle.mimetype or "text/plain", "res_model": "psc.content.variant",
                 "res_id": task.content_id.id,
             })
+        manifest = {}
+        raw_manifest = request.httprequest.form.get("manifest", "")
+        if raw_manifest:
+            if len(raw_manifest) > 200000:
+                return request.make_json_response({"error": "manifest_too_large"}, status=413)
+            try:
+                manifest = json.loads(raw_manifest)
+            except (TypeError, ValueError):
+                return request.make_json_response({"error": "invalid_manifest"}, status=400)
+            if not isinstance(manifest, dict):
+                return request.make_json_response({"error": "invalid_manifest"}, status=400)
+        asset_uuids = [
+            str(item.get("asset_uuid") or "")[:64]
+            for item in (manifest.get("used_assets") or []) if isinstance(item, dict)
+            if item.get("asset_uuid")
+        ]
+        indexed_assets = request.env["psc.local.media.asset"].sudo().search([
+            ("worker_id", "=", task.worker_id), ("asset_uuid", "in", asset_uuids),
+        ]) if asset_uuids else request.env["psc.local.media.asset"]
         task.write({"state": "done", "progress": 100, "finished_at": fields.Datetime.now(),
                     "status_message": "成品已回传", "output_attachment_id": attachment.id,
                     "output_subtitle_attachment_id": subtitle_attachment.id if subtitle_attachment else False,
+                    "output_manifest": manifest,
+                    "used_local_asset_ids": [(6, 0, indexed_assets.ids)],
                     "lease_expires_at": False})
         if task.task_type == "image":
             task.content_id.sudo().write({"image_attachment_id": attachment.id, "image_ai_state": "done",
                                           "image_ai_model": "Windows本地工具", "image_generated_at": fields.Datetime.now()})
         else:
             task.content_id.sudo().write({"video_attachment_id": attachment.id, "video_ai_state": "done",
-                                          "video_ai_model": "Windows本地工具", "video_generated_at": fields.Datetime.now()})
+                                          "video_ai_model": "Windows本地工具", "video_generated_at": fields.Datetime.now(),
+                                          "video_production_state": "done"})
+            asset_by_uuid = {asset.asset_uuid: asset for asset in indexed_assets}
+            for item in manifest.get("used_assets") or []:
+                if not isinstance(item, dict):
+                    continue
+                shot_key = str(item.get("shot_key") or "")[:128]
+                asset = asset_by_uuid.get(str(item.get("asset_uuid") or ""))
+                if shot_key and asset:
+                    shot = task.content_id.video_shot_ids.filtered(lambda row: row.slot_key == shot_key)[:1]
+                    if shot:
+                        shot.write({"selected_asset_id": asset.id, "state": "selected"})
         return request.make_json_response({"ok": True, "attachment_id": attachment.id})
 
     @http.route("/psc/local-worker/tasks/<int:task_id>/fail", type="http", auth="none", methods=["POST"], csrf=False)

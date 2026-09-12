@@ -37,9 +37,10 @@
                         <group><field name="worker_id"/><field name="progress" widget="progressbar"/><field name="status_message"/><field name="attempt_count"/><field name="claimed_at"/><field name="lease_expires_at"/><field name="finished_at"/></group>
                     </group>
                     <notebook>
+                        <page string="视频方案与分镜"><group><field name="video_plan_summary"/><field name="storyboard_snapshot"/></group></page>
                         <page string="输入参数"><group><field name="keywords"/><field name="source_urls"/><field name="prompt"/><field name="video_script"/><field name="aspect_ratio"/><field name="duration_seconds"/></group></page>
                         <page string="输入素材"><group><field name="source_image_attachment_id"/><field name="source_media_attachment_ids" widget="many2many_tags"/></group></page>
-                        <page string="输出"><group><field name="output_attachment_id"/><field name="output_subtitle_attachment_id"/><field name="error_message"/></group></page>
+                        <page string="输出"><group><field name="output_attachment_id"/><field name="output_subtitle_attachment_id"/><field name="used_local_asset_ids" widget="many2many_tags"/><field name="output_manifest"/><field name="error_message"/></group></page>
                     </notebook>
                 </sheet>
             </form>
@@ -64,6 +65,28 @@
             <xpath expr="//field[@name='video_model_id']" position="attributes"><attribute name="invisible">1</attribute></xpath>
             <xpath expr="//field[@name='ai_output_tokens']/following-sibling::separator[1]" position="attributes"><attribute name="invisible">1</attribute></xpath>
             <xpath expr="//field[@name='video_script']" position="after">
+                <separator string="视频整体方案与故事板"/>
+                <field name="video_plan_summary" placeholder="说明面向谁、为什么制作、核心观点、叙事顺序和行动引导"/>
+                <div class="o_row">
+                    <field name="video_production_state" widget="badge" readonly="1"/>
+                    <button name="action_lock_storyboard" type="object" string="确认并锁定故事板" class="btn-primary" invisible="storyboard_locked"/>
+                    <button name="action_unlock_storyboard" type="object" string="解锁修改" class="btn-secondary" invisible="not storyboard_locked"/>
+                </div>
+                <field name="storyboard_locked" invisible="1"/>
+                <field name="video_shot_ids" readonly="storyboard_locked">
+                    <list editable="bottom">
+                        <field name="sequence" widget="handle"/>
+                        <field name="slot_key" optional="hide"/>
+                        <field name="name"/>
+                        <field name="purpose"/>
+                        <field name="visual_requirement"/>
+                        <field name="narration"/>
+                        <field name="target_duration"/>
+                        <field name="required"/>
+                        <field name="state" widget="badge"/>
+                        <field name="selected_asset_id" optional="hide"/>
+                    </list>
+                </field>
                 <separator string="抖音人工选片"/>
                 <field name="douyin_search_keyword" placeholder="默认使用当前标题或产品名称"/>
                 <div class="o_row">
@@ -89,4 +112,53 @@
     <record id="menu_psc_media_models" model="ir.ui.menu">
         <field name="active" eval="False"/>
     </record>
+
+    <record id="view_psc_local_media_asset_list" model="ir.ui.view">
+        <field name="name">psc.local.media.asset.list</field>
+        <field name="model">psc.local.media.asset</field>
+        <field name="arch" type="xml">
+            <list create="false" delete="false" decoration-muted="not active">
+                <field name="name"/>
+                <field name="asset_kind"/>
+                <field name="clip_type"/>
+                <field name="business_role_id"/>
+                <field name="track_id"/>
+                <field name="scope_id"/>
+                <field name="shot_purpose"/>
+                <field name="duration"/>
+                <field name="aspect_ratio"/>
+                <field name="subtitle_state"/>
+                <field name="copyright_status"/>
+                <field name="worker_id"/>
+                <field name="last_seen_at"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_psc_local_media_asset_form" model="ir.ui.view">
+        <field name="name">psc.local.media.asset.form</field>
+        <field name="model">psc.local.media.asset</field>
+        <field name="arch" type="xml">
+            <form create="false" delete="false">
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group><field name="asset_uuid"/><field name="worker_id"/><field name="asset_kind"/><field name="clip_type"/><field name="active"/></group>
+                        <group><field name="business_role_id"/><field name="track_id"/><field name="scope_id"/><field name="shot_purpose"/></group>
+                    </group>
+                    <group>
+                        <group><field name="duration"/><field name="aspect_ratio"/><field name="language"/><field name="subtitle_state"/><field name="voice_signature"/></group>
+                        <group><field name="copyright_status"/><field name="local_relative_path"/><field name="file_size"/><field name="content_hash"/><field name="last_seen_at"/></group>
+                    </group>
+                    <field name="metadata"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_psc_local_media_assets" model="ir.actions.act_window">
+        <field name="name">本地分镜素材索引</field>
+        <field name="res_model">psc.local.media.asset</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_active': 1}</field>
+    </record>
+    <menuitem id="menu_psc_local_media_assets" name="④ 本地分镜素材索引" parent="menu_psc_workflow" action="action_psc_local_media_assets" sequence="40"/>
 </odoo>

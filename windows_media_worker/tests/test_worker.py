@@ -215,6 +215,36 @@ class WorkerLeaseTests(unittest.TestCase):
         srt = worker.make_srt(task, Path(self.work_dir.name))
         self.assertIn("Ready-to-use English subtitle", srt.read_text(encoding="utf-8"))
 
+    def test_translate_auto_starts_local_ollama_and_retries(self):
+        worker = Worker({
+            **self.config(),
+            "local_ai": {
+                "ollama_url": "http://127.0.0.1:11434",
+                "translation_model": "qwen3:8b",
+            },
+        })
+        translated = mock.Mock(status_code=200)
+        translated.json.return_value = {"response": "Hello"}
+        translated.raise_for_status.return_value = None
+        with mock.patch("worker.requests.post", side_effect=[requests.ConnectionError(), translated]), \
+                mock.patch.object(worker, "_start_local_ollama") as start:
+            self.assertEqual(worker.translate("你好", "English"), "Hello")
+        start.assert_called_once_with("http://127.0.0.1:11434")
+
+    def test_translate_does_not_start_local_program_for_remote_ollama(self):
+        worker = Worker({
+            **self.config(),
+            "local_ai": {
+                "ollama_url": "https://ollama.example.com",
+                "translation_model": "qwen3:8b",
+            },
+        })
+        with mock.patch("worker.requests.post", side_effect=requests.ConnectionError()), \
+                mock.patch("worker.subprocess.Popen") as popen:
+            with self.assertRaisesRegex(RuntimeError, "检查配置的地址和网络"):
+                worker.translate("你好", "English")
+        popen.assert_not_called()
+
     def test_operator_can_choose_each_editable_content_source(self):
         task = {
             "original_translation": "Original video translation",
@@ -287,6 +317,146 @@ class WorkerLeaseTests(unittest.TestCase):
         task = {"subtitle_mode": "none", "target_language": "English"}
         self.assertIsNone(worker.make_srt(task, Path(self.work_dir.name)))
 
+    def test_subtitle_region_accepts_percentages_and_rejects_overflow(self):
+        self.assertEqual(Worker.subtitle_region("5,72,90,22"), (0.05, 0.72, 0.9, 0.22))
+        self.assertEqual(Worker.subtitle_region(""), Worker.DEFAULT_SUBTITLE_REGION)
+        with self.assertRaisesRegex(ValueError, "四个百分比"):
+            Worker.subtitle_region("5,72,90")
+        with self.assertRaisesRegex(ValueError, "字幕区域"):
+            Worker.subtitle_region("5,90,90,20")
+
+    def test_translated_subtitles_are_laid_out_inside_cleanup_region(self):
+        folder = Path(self.work_dir.name)
+        srt = folder / "subtitle.srt"
+        ass = folder / "subtitle-overlay.ass"
+        srt.write_text(
+            "1\n00:00:00,000 --> 00:00:05,000\nA verified English translation.\n",
+            encoding="utf-8",
+        )
+        Worker.srt_to_region_ass(srt, ass, 1080, 1920, "5,72,90,22")
+        content = ass.read_text(encoding="utf-8-sig")
+        self.assertIn("PlayResX: 1080", content)
+        self.assertIn("PlayResY: 1920", content)
+        self.assertIn(",2,76,76,233,1", content)
+        self.assertIn("Dialogue: 0,0:00:00.00,0:00:05.00", content)
+        self.assertIn("A verified English translation.", content)
+
+    def test_quick_subtitle_cleanup_writes_new_file_and_keeps_source(self):
+        config = self.config()
+        config["ffmpeg"] = "C:/test/ffmpeg.exe"
+        worker = Worker(config)
+        folder = Path(self.work_dir.name)
+        source = folder / "source.mp4"
+        output = folder / "cleaned.mp4"
+        source.write_bytes(b"original")
+
+        def create_output(command, **_kwargs):
+            Path(command[-1]).write_bytes(b"cleaned")
+
+        with mock.patch("worker.subprocess.run", side_effect=create_output) as run:
+            worker.clean_hard_subtitles({
+                "subtitle_cleanup_mode": "quick",
+                "subtitle_cleanup_quality": "standard",
+                "subtitle_quick_method": "blur",
+                "subtitle_region": "5,72,90,22",
+            }, source, output, preview_seconds=5)
+        command = run.call_args.args[0]
+        self.assertIn("boxblur", command[command.index("-filter_complex") + 1])
+        self.assertEqual(command[command.index("-t") + 1], "5.0")
+        self.assertEqual(source.read_bytes(), b"original")
+        self.assertEqual(output.read_bytes(), b"cleaned")
+
+    def test_vsr_cleanup_manifest_uses_sttn_and_manual_region(self):
+        folder = Path(self.work_dir.name)
+        adapter = folder / "vsr-adapter.exe"
+        adapter.write_bytes(b"stub")
+        config = self.config()
+        config["local_ai"] = {"vsr_command": str(adapter)}
+        worker = Worker(config)
+        source, output = folder / "source.mp4", folder / "cleaned.mp4"
+        source.write_bytes(b"original")
+
+        def create_output(command, **_kwargs):
+            Path(command[-1]).write_bytes(b"cleaned")
+
+        with mock.patch("worker.subprocess.run", side_effect=create_output):
+            worker.clean_hard_subtitles({
+                "subtitle_cleanup_mode": "ai_manual",
+                "subtitle_cleanup_engine": "sttn",
+                "subtitle_cleanup_quality": "high",
+                "subtitle_region": "4,70,92,24",
+            }, source, output)
+        manifest = json.loads(output.with_suffix(".json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["engine"], "sttn")
+        self.assertFalse(manifest["auto_detect"])
+        self.assertEqual(manifest["region_percent"], [4.0, 70.0, 92.0, 24.0])
+        self.assertEqual(manifest["quality"], "high")
+
+    def test_cleanup_failure_falls_back_without_overwriting_source(self):
+        config = self.config()
+        worker = Worker(config)
+        folder = Path(self.work_dir.name)
+        source = folder / "source.mp4"
+        source.write_bytes(b"original")
+        events = []
+        worker.event_callback = lambda event, data: events.append((event, data))
+        result = worker.prepare_subtitle_cleanup({
+            "remove_hard_subtitles": True,
+            "subtitle_cleanup_mode": "ai_manual",
+        }, [{"path": source}], folder)
+        self.assertEqual(result[0]["path"], source)
+        self.assertEqual(source.read_bytes(), b"original")
+        self.assertTrue(any(event == "subtitle_cleanup_warning" for event, _data in events))
+        report = json.loads((folder / "subtitle-cleanup-report.json").read_text(encoding="utf-8"))
+        self.assertEqual(report[0]["status"], "fallback")
+
+    def test_cleanup_is_applied_only_to_marked_clips(self):
+        worker = Worker(self.config())
+        folder = Path(self.work_dir.name)
+        first, second = folder / "first.mp4", folder / "second.mp4"
+        first.write_bytes(b"first")
+        second.write_bytes(b"second")
+        cleaned = folder / "cleaned.mp4"
+        cleaned.write_bytes(b"cleaned")
+        with mock.patch.object(worker, "clean_hard_subtitles", return_value=cleaned) as clean:
+            result = worker.prepare_subtitle_cleanup({
+                "remove_hard_subtitles": False,
+            }, [
+                {"path": first, "subtitle_cleanup_policy": "clean"},
+                {"path": second, "subtitle_cleanup_policy": "skip"},
+            ], folder)
+        clean.assert_called_once()
+        self.assertEqual(result[0]["path"], cleaned)
+        self.assertEqual(result[1]["path"], second)
+        report = json.loads((folder / "subtitle-cleanup-report.json").read_text(encoding="utf-8"))
+        self.assertEqual([row["status"] for row in report], ["cleaned", "skipped"])
+
+    def test_cleanup_reuses_matching_preprocessed_clip(self):
+        worker = Worker(self.config())
+        folder = Path(self.work_dir.name)
+        source = folder / "source.mp4"
+        prepared = folder / "prepared.mp4"
+        source.write_bytes(b"original")
+        prepared.write_bytes(b"cleaned")
+        settings = {
+            "subtitle_cleanup_policy": "clean",
+            "subtitle_cleanup_mode": "quick",
+            "subtitle_cleanup_quality": "standard",
+            "subtitle_quick_method": "blur",
+            "subtitle_region": "5,72,90,22",
+        }
+        settings["path"] = source
+        settings["subtitle_cleaned_path"] = str(prepared)
+        settings["subtitle_cleanup_signature"] = worker.subtitle_cleanup_signature(
+            settings, source,
+        )
+        with mock.patch.object(worker, "clean_hard_subtitles") as clean:
+            result = worker.prepare_subtitle_cleanup({}, [settings], folder)
+        clean.assert_not_called()
+        self.assertEqual(result[0]["path"], prepared)
+        report = json.loads((folder / "subtitle-cleanup-report.json").read_text(encoding="utf-8"))
+        self.assertEqual(report[0]["status"], "reused")
+
     def test_srt_timestamp_supports_more_than_one_minute(self):
         worker = NoTranslationWorker(self.config())
         task = {
@@ -339,6 +509,66 @@ class WorkerLeaseTests(unittest.TestCase):
             }, srt, folder)
         self.assertEqual(result, expected)
         self.assertEqual(synthesize.call_args.args[0]["volc_resource_id"], "seed-tts-custom")
+
+    def test_heygen_audio_is_padded_to_the_review_duration(self):
+        config = self.config()
+        config["ffmpeg"] = "C:/test/ffmpeg.exe"
+        worker = Worker(config)
+        folder = Path(self.work_dir.name)
+        video = folder / "review.mp4"
+        output = folder / "heygen-audio.mp3"
+        video.write_bytes(b"video")
+
+        def write_audio(command, **_kwargs):
+            Path(command[-1]).write_bytes(b"audio")
+            return SimpleNamespace(returncode=0, stderr="")
+
+        with mock.patch.object(worker, "probe_duration", return_value=46.2), \
+                mock.patch("worker.subprocess.run", side_effect=write_audio) as run:
+            result = worker.prepare_heygen_audio(video, output)
+        command = run.call_args.args[0]
+        self.assertEqual(result, output)
+        self.assertEqual(command[command.index("-t") + 1], "46.2")
+        self.assertIn("apad", command)
+
+    def test_heygen_lipsync_uses_assets_and_preserves_duration(self):
+        config = self.config()
+        config["heygen"] = {
+            "api_key": "secret", "mode": "precision", "poll_seconds": 3,
+        }
+        worker = Worker(config)
+        folder = Path(self.work_dir.name)
+        video, audio, output = folder / "review.mp4", folder / "audio.mp3", folder / "result.mp4"
+        video.write_bytes(b"video")
+        audio.write_bytes(b"audio")
+
+        created = mock.Mock(status_code=200, text="")
+        created.json.return_value = {"data": {"lipsync_id": "lip-1"}}
+        completed = mock.Mock(status_code=200, text="")
+        completed.json.return_value = {
+            "data": {"status": "completed", "video_url": "https://files.example/result.mp4"},
+        }
+        download = mock.Mock(status_code=200, text="")
+        download.iter_content.return_value = [b"result-video"]
+
+        with mock.patch.object(worker, "heygen_upload_asset", side_effect=["video-asset", "audio-asset"]), \
+                mock.patch.object(worker, "probe_duration", return_value=46.2), \
+                mock.patch("worker.requests.post", return_value=created) as post, \
+                mock.patch("worker.requests.get", side_effect=[completed, download]):
+            result = worker.heygen_lipsync(video, audio, output, title="Review V2")
+        payload = post.call_args.kwargs["json"]
+        self.assertEqual(result, output)
+        self.assertEqual(output.read_bytes(), b"result-video")
+        self.assertEqual(payload["video"], {"type": "asset_id", "asset_id": "video-asset"})
+        self.assertEqual(payload["audio"], {"type": "asset_id", "asset_id": "audio-asset"})
+        self.assertEqual(payload["mode"], "precision")
+        self.assertFalse(payload["enable_dynamic_duration"])
+
+    def test_heygen_api_error_reports_remote_message(self):
+        response = mock.Mock(status_code=401, text="unauthorized")
+        response.json.return_value = {"error": {"message": "Invalid API key"}}
+        with self.assertRaisesRegex(RuntimeError, "Invalid API key"):
+            Worker._heygen_response_data(response)
 
     def test_overlong_voiceover_extends_video_without_speed_change(self):
         config = self.config()
@@ -455,6 +685,34 @@ class WorkerLeaseTests(unittest.TestCase):
             )
         manifest = (Path(self.work_dir.name) / "render" / "concat.txt").read_text(encoding="utf-8")
         self.assertIn(str(Path("relative.mp4").resolve()), manifest)
+
+    def test_final_stitch_uses_only_processed_paths_in_given_order(self):
+        config = self.config()
+        config["ffmpeg"] = "C:/test/ffmpeg.exe"
+        worker = Worker(config)
+        folder = Path(self.work_dir.name) / "final-stitch"
+        first = Path(self.work_dir.name) / "first-processed.mp4"
+        second = Path(self.work_dir.name) / "second-processed.mp4"
+        first.write_bytes(b"one")
+        second.write_bytes(b"two")
+
+        def create_output(command, **_kwargs):
+            Path(command[-1]).parent.mkdir(parents=True, exist_ok=True)
+            Path(command[-1]).write_bytes(b"video")
+            return SimpleNamespace(returncode=0, stderr="")
+
+        with mock.patch.object(worker, "probe_duration", side_effect=[2.0, 3.0]), \
+                mock.patch("worker.subprocess.run", side_effect=create_output):
+            output, subtitle = worker.stitch_processed_clips({"aspect_ratio": "9:16"}, [
+                {"path": first, "record_id": 2, "clip_name": "先播"},
+                {"path": second, "record_id": 1, "clip_name": "后播"},
+            ], folder)
+
+        self.assertTrue(output.is_file())
+        self.assertIsNone(subtitle)
+        timeline = json.loads((folder / "clip-timeline.json").read_text(encoding="utf-8"))
+        self.assertEqual([item["record_id"] for item in timeline], [2, 1])
+        self.assertEqual([item["start"] for item in timeline], [0.0, 2.0])
 
     def test_mumu_bridge_uses_configured_serial(self):
         calls = []
@@ -628,6 +886,78 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertEqual(saved["trim_end"], 8.5)
         self.assertEqual(saved["copyright_status"], "authorized")
 
+    def test_source_and_derived_clip_workflow_are_persisted(self):
+        store = SelectionStore(Path(self.work_dir.name) / "clip-workflow.db")
+        store.add_text(
+            9, "https://www.douyin.com/video/7531234567890123456",
+            source_kind="douyin_search",
+        )
+        source = store.list(9)[0]
+        store.update(
+            source["id"], status="downloaded", local_path="D:/source.mp4",
+            duration=30, clip_type="no_face",
+        )
+        clip_id = store.create_clip(
+            source["id"], 3.5, 11.25, "产品口播", "talking_face",
+        )
+        source, clip = store.list(9)
+        self.assertEqual(source["source_kind"], "douyin_search")
+        self.assertEqual(source["record_kind"], "source")
+        self.assertEqual(clip["id"], clip_id)
+        self.assertEqual(clip["record_kind"], "derived_clip")
+        self.assertEqual(clip["parent_id"], source["id"])
+        self.assertEqual(clip["clip_name"], "产品口播")
+        self.assertEqual(clip["clip_type"], "talking_face")
+        self.assertEqual(clip["local_path"], "D:/source.mp4")
+        self.assertEqual(clip["trim_start"], 3.5)
+        self.assertEqual(clip["trim_end"], 11.25)
+
+    def test_per_clip_subtitle_cleanup_settings_are_persisted(self):
+        store = SelectionStore(Path(self.work_dir.name) / "subtitle-cleanup.db")
+        store.add_text(8, "https://www.douyin.com/video/7531234567890123456")
+        row = store.list(8)[0]
+        self.assertEqual(row["subtitle_cleanup_policy"], "inherit")
+        store.update(
+            row["id"], subtitle_cleanup_policy="clean",
+            subtitle_cleanup_mode="ai_manual", subtitle_cleanup_quality="high",
+            subtitle_cleanup_engine="sttn", subtitle_quick_method="blur",
+            subtitle_region="5,70,90,24",
+        )
+        saved = store.list(8)[0]
+        self.assertEqual(saved["subtitle_cleanup_policy"], "clean")
+        self.assertEqual(saved["subtitle_cleanup_mode"], "ai_manual")
+        self.assertEqual(saved["subtitle_cleanup_engine"], "sttn")
+        self.assertEqual(saved["subtitle_cleanup_quality"], "high")
+        self.assertEqual(saved["subtitle_region"], "5,70,90,24")
+        store.update(
+            row["id"], subtitle_cleaned_path="C:/prepared.mp4",
+            subtitle_cleanup_signature="abc", subtitle_cleanup_status="ready",
+        )
+        prepared = store.list(8)[0]
+        self.assertEqual(prepared["subtitle_cleanup_status"], "ready")
+        self.assertEqual(prepared["subtitle_cleaned_path"], "C:/prepared.mp4")
+
+    def test_project_voice_change_invalidates_all_processed_clips(self):
+        store = SelectionStore(Path(self.work_dir.name) / "processed-clips.db")
+        store.add_text(12, "\n".join((
+            "https://www.douyin.com/video/7531234567890123456",
+            "https://www.douyin.com/video/7531234567890123457",
+        )))
+        rows = store.list(12)
+        for index, row in enumerate(rows, 1):
+            store.update(
+                row["id"], processed_path="C:/clip-%s.mp4" % index,
+                processed_kind="HeyGen口型片段", processing_status="ready",
+                voice_signature="old-voice",
+            )
+
+        store.invalidate_processed(12)
+
+        for row in store.list(12):
+            self.assertEqual(row["processed_path"], "")
+            self.assertEqual(row["processing_status"], "")
+            self.assertEqual(row["voice_signature"], "")
+
     def test_selection_url_parser_accepts_only_douyin(self):
         urls = extract_douyin_urls(
             "https://v.douyin.com/abc123/ https://example.com/video "
@@ -635,6 +965,47 @@ class WorkerLeaseTests(unittest.TestCase):
         )
         self.assertEqual(len(urls), 2)
         self.assertEqual(extract_video_id(urls[1]), "7531234567890123456")
+
+    def test_v2_storyboard_and_local_library_workflow(self):
+        folder = Path(self.work_dir.name)
+        store = SelectionStore(folder / "media-library-v2.db")
+        store.save_task({"id": 88, "name": "工厂介绍"})
+        store.sync_storyboard(88, [{
+            "slot_key": "factory-opening", "sequence": 10, "name": "厂房开场",
+            "purpose": "建立可信度", "visual_requirement": "厂房外景",
+            "target_duration": 3, "required": True,
+        }])
+        video = folder / "factory-opening.mp4"
+        video.write_bytes(b"video")
+        asset_uuid = store.register_asset({
+            "name": "厂房开场", "file_path": str(video), "asset_kind": "standard_shot",
+            "clip_type": "no_face", "role_code": "factory", "track_code": "footwear",
+            "scope_code": "factory_intro", "shot_purpose": "建立可信度",
+            "copyright_status": "authorized",
+        })
+
+        record_id = store.add_asset_to_task(88, asset_uuid, "factory-opening")
+
+        row = store.get_many([record_id])[0]
+        self.assertEqual(row["source_kind"], "local_library")
+        self.assertEqual(row["processing_status"], "ready")
+        self.assertEqual(row["storyboard_slot_key"], "factory-opening")
+        self.assertEqual(row["library_asset_uuid"], asset_uuid)
+        self.assertEqual(store.list_storyboard(88)[0]["state"], "ready")
+        self.assertEqual(store.list_assets()[0]["scope_code"], "factory_intro")
+
+    def test_complete_uploads_final_manifest(self):
+        folder = Path(self.work_dir.name)
+        output = folder / "final.mp4"
+        output.write_bytes(b"video")
+        worker = Worker(self.config())
+        manifest = {"schema": "lightlink-media-v2", "used_assets": [{
+            "asset_uuid": "asset-1", "shot_key": "opening",
+        }]}
+        with mock.patch.object(worker, "api") as api:
+            worker.complete({"id": 9}, output, None, manifest=manifest)
+        _args, kwargs = api.call_args
+        self.assertEqual(json.loads(kwargs["data"]["manifest"]), manifest)
 
 
 if __name__ == "__main__":

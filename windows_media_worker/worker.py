@@ -1,13 +1,16 @@
 import mimetypes
+import hashlib
 import json
 import os
 import random
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
 import textwrap
+import uuid
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -36,6 +39,11 @@ def create_version_directory(task_root, first_version):
 
 
 class Worker:
+    DEFAULT_SUBTITLE_REGION = (0.05, 0.72, 0.90, 0.22)
+    HEYGEN_BASE_URL = "https://api.heygen.com"
+    HEYGEN_DIRECT_UPLOAD_LIMIT = 32 * 1024 * 1024
+    _ollama_start_lock = threading.Lock()
+
     def __init__(self, config, event_callback=None):
         self.config = config
         self.base = config["odoo_url"].rstrip("/")
@@ -67,6 +75,211 @@ class Worker:
             return 0.0
         return int(match.group(1)) * 3600 + int(match.group(2)) * 60 + float(match.group(3))
 
+    @staticmethod
+    def _heygen_response_data(response):
+        try:
+            payload = response.json()
+        except (TypeError, ValueError):
+            payload = {}
+        if 200 <= int(response.status_code) < 300:
+            return payload.get("data") or {}
+        error = payload.get("error") or {}
+        message = error.get("message") or payload.get("message") or response.text
+        raise RuntimeError(
+            "HeyGen 请求失败（HTTP %s）：%s" %
+            (response.status_code, str(message or "未知错误").strip())
+        )
+
+    def _heygen_api_key(self):
+        api_key = (self.config.get("heygen", {}).get("api_key") or "").strip()
+        if not api_key:
+            raise RuntimeError("尚未配置 HeyGen API Key，请先到“连接与配置 → HeyGen口型同步”填写并保存")
+        return api_key
+
+    def heygen_upload_asset(self, path):
+        path = Path(path)
+        if not path.is_file():
+            raise FileNotFoundError("HeyGen 上传文件不存在：%s" % path)
+        size = path.stat().st_size
+        if size > self.HEYGEN_DIRECT_UPLOAD_LIMIT:
+            raise RuntimeError(
+                "文件 %.1f MB，超过 HeyGen 直接上传 32 MB 限制。请先压缩视频后再试。" %
+                (size / 1024 / 1024)
+            )
+        content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        self.emit("log", message="正在上传到 HeyGen：%s（%.1f MB）" % (path.name, size / 1024 / 1024))
+        with path.open("rb") as stream:
+            response = requests.post(
+                self.HEYGEN_BASE_URL + "/v3/assets",
+                headers={"x-api-key": self._heygen_api_key()},
+                files={"file": (path.name, stream, content_type)},
+                timeout=(20, 300),
+            )
+        data = self._heygen_response_data(response)
+        asset_id = data.get("asset_id")
+        if not asset_id:
+            raise RuntimeError("HeyGen 上传成功但没有返回 asset_id")
+        return asset_id
+
+    def prepare_heygen_audio(self, video, output):
+        """Extract the approved mix audio and pad it to the exact video duration."""
+        video, output = Path(video), Path(output)
+        duration = self.probe_duration(video)
+        if duration <= 0:
+            raise RuntimeError("无法读取审核稿时长，不能执行 HeyGen 口型同步")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run([
+            self.ffmpeg(), "-y", "-i", str(video), "-vn", "-af", "apad",
+            "-t", str(duration), "-c:a", "libmp3lame", "-b:a", "128k", str(output),
+        ], capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if result.returncode or not output.is_file() or not output.stat().st_size:
+            raise RuntimeError("审核稿没有可用的英文配音音轨，无法执行 HeyGen 口型同步")
+        return output
+
+    def heygen_lipsync(self, video, audio, output, title=""):
+        """Create and download a HeyGen lip-sync render without changing duration."""
+        video, audio, output = Path(video), Path(audio), Path(output)
+        source_duration = self.probe_duration(video)
+        video_asset = self.heygen_upload_asset(video)
+        audio_asset = self.heygen_upload_asset(audio)
+        mode = self.config.get("heygen", {}).get("mode") or "precision"
+        if mode not in ("speed", "precision"):
+            mode = "precision"
+        response = requests.post(
+            self.HEYGEN_BASE_URL + "/v3/lipsyncs",
+            headers={
+                "x-api-key": self._heygen_api_key(),
+                "Content-Type": "application/json",
+                "Idempotency-Key": str(uuid.uuid4()),
+            },
+            json={
+                "video": {"type": "asset_id", "asset_id": video_asset},
+                "audio": {"type": "asset_id", "asset_id": audio_asset},
+                "title": title or video.stem,
+                "mode": mode,
+                "keep_the_same_format": True,
+                "enable_dynamic_duration": False,
+                "disable_music_track": False,
+                "enable_speech_enhancement": False,
+                "enable_watermark": False,
+                "fps_mode": "passthrough",
+            },
+            timeout=(20, 120),
+        )
+        lipsync_id = self._heygen_response_data(response).get("lipsync_id")
+        if not lipsync_id:
+            raise RuntimeError("HeyGen 没有返回口型同步任务 ID")
+        self.emit("log", message="HeyGen 口型同步任务已提交：%s" % lipsync_id)
+        poll_seconds = max(3, int(self.config.get("heygen", {}).get("poll_seconds") or 10))
+        timeout_seconds = max(60, int(self.config.get("heygen", {}).get("timeout_seconds") or 3600))
+        deadline = time.monotonic() + timeout_seconds
+        video_url = ""
+        while time.monotonic() < deadline:
+            status_response = requests.get(
+                self.HEYGEN_BASE_URL + "/v3/lipsyncs/" + lipsync_id,
+                headers={"x-api-key": self._heygen_api_key()}, timeout=(20, 60),
+            )
+            data = self._heygen_response_data(status_response)
+            status = (data.get("status") or "").lower()
+            if status == "completed":
+                video_url = data.get("video_url") or ""
+                break
+            if status == "failed":
+                raise RuntimeError("HeyGen 口型同步失败：%s" % (data.get("failure_message") or "未知错误"))
+            self.emit("log", message="HeyGen 处理中：%s" % (status or "pending"))
+            time.sleep(poll_seconds)
+        if not video_url:
+            raise RuntimeError("HeyGen 口型同步等待超时，可稍后在 HeyGen 后台查看任务 %s" % lipsync_id)
+
+        output.parent.mkdir(parents=True, exist_ok=True)
+        partial = output.with_suffix(output.suffix + ".part")
+        download = requests.get(video_url, stream=True, timeout=(20, 300))
+        if not 200 <= int(download.status_code) < 300:
+            self._heygen_response_data(download)
+        try:
+            with partial.open("wb") as stream:
+                for chunk in download.iter_content(1024 * 1024):
+                    if chunk:
+                        stream.write(chunk)
+            if not partial.is_file() or not partial.stat().st_size:
+                raise RuntimeError("HeyGen 返回的成片为空")
+            partial.replace(output)
+        finally:
+            partial.unlink(missing_ok=True)
+        result_duration = self.probe_duration(output)
+        if source_duration > 0 and result_duration > 0 and abs(result_duration - source_duration) > 0.5:
+            self.emit("log", message=(
+                "提醒：HeyGen 返回时长 %.2f 秒，与原审核稿 %.2f 秒相差 %.2f 秒" %
+                (result_duration, source_duration, abs(result_duration - source_duration))
+            ))
+        return output
+
+    def heygen_lipsync_timeline(self, video, timeline, output, title="", width=1080, height=1920):
+        """Apply HeyGen only to talking-face segments, then rebuild the approved timeline."""
+        video, output = Path(video), Path(output)
+        segments = [item for item in timeline if float(item.get("end") or 0) > float(item.get("start") or 0)]
+        talking = [item for item in segments if item.get("clip_type") == "talking_face"]
+        if not talking:
+            raise RuntimeError("当前审核稿没有标记为“口播人脸”的片段，不需要执行 HeyGen")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        ready_parts = []
+        for index, item in enumerate(segments, 1):
+            start = float(item["start"])
+            duration = float(item["end"]) - start
+            extracted = output.parent / ("route-%02d-source.mp4" % index)
+            result = subprocess.run([
+                self.ffmpeg(), "-y", "-ss", "%.3f" % start, "-i", str(video),
+                "-t", "%.3f" % duration, "-c:v", "libx264", "-preset", "veryfast",
+                "-crf", "22", "-c:a", "aac", "-movflags", "+faststart", str(extracted),
+            ], capture_output=True, text=True, encoding="utf-8", errors="replace")
+            if result.returncode or not extracted.is_file():
+                raise RuntimeError("无法提取第 %s 个成片片段：%s" % (index, result.stderr[-500:]))
+            routed = extracted
+            if item.get("clip_type") == "talking_face":
+                audio = self.prepare_heygen_audio(
+                    extracted, output.parent / ("route-%02d-audio.mp3" % index),
+                )
+                routed = self.heygen_lipsync(
+                    extracted, audio, output.parent / ("route-%02d-heygen.mp4" % index),
+                    title="%s - %s" % (title or video.stem, item.get("clip_name") or index),
+                )
+            else:
+                self.emit(
+                    "log", message="片段 %s 为%s，已跳过 HeyGen" % (
+                        item.get("clip_name") or index,
+                        {"face_no_speech": "非口播人脸", "no_face": "无人脸"}.get(
+                            item.get("clip_type"), "未分类",
+                        ),
+                    ),
+                )
+            ready = output.parent / ("route-%02d-ready.mp4" % index)
+            normalize = subprocess.run([
+                self.ffmpeg(), "-y", "-i", str(routed),
+                "-vf", (
+                    "scale=%s:%s:force_original_aspect_ratio=decrease," % (width, height)
+                    + "pad=%s:%s:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30,format=yuv420p" %
+                    (width, height)
+                ),
+                "-af", "apad", "-t", "%.3f" % duration,
+                "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
+                "-c:a", "aac", "-ar", "48000", "-ac", "2", str(ready),
+            ], capture_output=True, text=True, encoding="utf-8", errors="replace")
+            if normalize.returncode or not ready.is_file():
+                raise RuntimeError("无法标准化第 %s 个成片片段：%s" % (index, normalize.stderr[-500:]))
+            ready_parts.append(ready)
+        concat = output.parent / "heygen-route-concat.txt"
+        concat.write_text("".join(
+            "file '%s'\n" % str(path.resolve()).replace(chr(39), chr(39) * 2)
+            for path in ready_parts
+        ), encoding="utf-8")
+        result = subprocess.run([
+            self.ffmpeg(), "-y", "-f", "concat", "-safe", "0", "-i", str(concat),
+            "-c", "copy", "-movflags", "+faststart", str(output),
+        ], capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if result.returncode or not output.is_file():
+            raise RuntimeError("口型片段重组失败：%s" % result.stderr[-700:])
+        return output
+
     def create_video_cover(self, path, target):
         duration = self.probe_duration(path)
         target = Path(target)
@@ -77,6 +290,214 @@ class Worker:
             "-frames:v", "1", "-vf", "scale=180:-2", str(target),
         ], capture_output=True)
         return duration, target if result.returncode == 0 and target.is_file() else None
+
+    def extract_video_frame(self, path, target, at_seconds=1.0):
+        """Write one full-size frame for subtitle-region selection."""
+        target = Path(target)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run([
+            self.ffmpeg(), "-y", "-ss", str(max(0.0, float(at_seconds))),
+            "-i", str(path), "-frames:v", "1", str(target),
+        ], capture_output=True)
+        if result.returncode or not target.is_file():
+            raise RuntimeError("无法读取视频画面，请确认视频文件完整")
+        return target
+
+    @classmethod
+    def subtitle_region(cls, value):
+        """Return a validated normalized x/y/width/height subtitle rectangle."""
+        if value in (None, "", [], ()):
+            return cls.DEFAULT_SUBTITLE_REGION
+        if isinstance(value, str):
+            parts = [item.strip() for item in value.split(",")]
+        elif isinstance(value, (list, tuple)):
+            parts = list(value)
+        else:
+            parts = []
+        try:
+            numbers = [float(item) for item in parts]
+        except (TypeError, ValueError):
+            numbers = []
+        if len(numbers) != 4:
+            raise ValueError("字幕区域必须填写左、上、宽、高四个百分比")
+        # The desktop UI stores percentages; Odoo/API callers may send 0..1.
+        if any(number > 1 for number in numbers):
+            numbers = [number / 100 for number in numbers]
+        x, y, width, height = numbers
+        if x < 0 or y < 0 or width <= 0 or height <= 0 or x + width > 1 or y + height > 1:
+            raise ValueError("字幕区域必须是有效的左、上、宽、高百分比")
+        return tuple(numbers)
+
+    @staticmethod
+    def _subtitle_cleanup_quality(quality):
+        return {
+            "fast": ("superfast", "26", 8),
+            "high": ("medium", "18", 20),
+        }.get(quality, ("veryfast", "22", 14))
+
+    def _quick_subtitle_filter(self, task):
+        x, y, width, height = self.subtitle_region(task.get("subtitle_region"))
+        method = task.get("subtitle_quick_method") or "blur"
+        _preset, _crf, blur_radius = self._subtitle_cleanup_quality(
+            task.get("subtitle_cleanup_quality") or "standard"
+        )
+        if method == "cover":
+            return (
+                "[0:v]drawbox=x=iw*%.6f:y=ih*%.6f:w=iw*%.6f:h=ih*%.6f:"
+                "color=black@0.78:t=fill[outv]" % (x, y, width, height)
+            )
+        if method == "crop":
+            if y + height < 0.96:
+                raise ValueError("裁切方式只适用于靠近画面底部的字幕区域")
+            return (
+                "[0:v]crop=iw:ih*%.6f:0:0,"
+                "scale=trunc(iw/2)*2:trunc(ih/%.6f/2)*2[outv]" % (y, y)
+            )
+        if method != "blur":
+            raise ValueError("未知的快速字幕处理方式")
+        return (
+            "[0:v]split=2[base][zone];"
+            "[zone]crop=iw*%.6f:ih*%.6f:iw*%.6f:ih*%.6f,"
+            "boxblur=luma_radius=%s:luma_power=1[clean];"
+            "[base][clean]overlay=x=main_w*%.6f:y=main_h*%.6f[outv]"
+        ) % (width, height, x, y, blur_radius, x, y)
+
+    def _run_vsr_subtitle_cleanup(self, task, source, output, preview_seconds=None):
+        command = (self.config.get("local_ai", {}).get("vsr_command") or "").strip()
+        executable = Path(command).expanduser() if command else None
+        if not executable or not executable.is_file():
+            raise RuntimeError(
+                "当前素材选择了AI无痕去字幕，但尚未配置VSR/STTN适配程序；"
+                "可改选“快速遮盖（无需AI）”，或到“连接与配置 → 本地AI”配置程序。"
+            )
+        mode = task.get("subtitle_cleanup_mode") or "ai_manual"
+        engine = task.get("subtitle_cleanup_engine") or "sttn"
+        if engine != "sttn":
+            raise ValueError("当前版本暂不支持所选AI字幕修复模型")
+        manifest = output.with_suffix(".json")
+        manifest.write_text(json.dumps({
+            "input_video": str(Path(source).resolve()),
+            "output_video": str(output.resolve()),
+            "engine": engine,
+            "auto_detect": mode == "ai_auto",
+            "region_percent": (
+                None if mode == "ai_auto"
+                else [round(value * 100, 4) for value in self.subtitle_region(task.get("subtitle_region"))]
+            ),
+            "quality": task.get("subtitle_cleanup_quality") or "standard",
+            "preview_seconds": float(preview_seconds) if preview_seconds else None,
+            "preserve_audio": True,
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
+        runner = [str(executable)]
+        if executable.suffix.lower() == ".py":
+            runner.insert(0, sys.executable)
+        subprocess.run(runner + [str(manifest), str(output)], check=True, capture_output=True)
+
+    def clean_hard_subtitles(self, task, source, output, preview_seconds=None):
+        """Create a cleaned copy. The source file is never modified."""
+        source, output = Path(source), Path(output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        if source.resolve() == output.resolve():
+            raise ValueError("字幕清理输出不能覆盖原始素材")
+        mode = task.get("subtitle_cleanup_mode") or "quick"
+        if mode == "quick":
+            preset, crf, _blur = self._subtitle_cleanup_quality(
+                task.get("subtitle_cleanup_quality") or "standard"
+            )
+            command = [
+                self.ffmpeg(), "-y", "-i", str(source),
+                "-filter_complex", self._quick_subtitle_filter(task),
+                "-map", "[outv]", "-map", "0:a?",
+            ]
+            if preview_seconds:
+                command += ["-t", str(float(preview_seconds))]
+            command += [
+                "-c:v", "libx264", "-preset", preset, "-crf", crf,
+                "-c:a", "aac", "-movflags", "+faststart", str(output),
+            ]
+            subprocess.run(command, check=True, capture_output=True)
+        elif mode in ("ai_auto", "ai_manual"):
+            self._run_vsr_subtitle_cleanup(task, source, output, preview_seconds)
+        else:
+            raise ValueError("未知的硬字幕清理模式")
+        if not output.is_file() or output.stat().st_size <= 0:
+            raise RuntimeError("字幕清理程序没有生成有效的新视频")
+        return output
+
+    @staticmethod
+    def subtitle_cleanup_signature(task, source):
+        """Identify a prepared copy by source revision and cleanup settings."""
+        source = Path(source).resolve()
+        stat = source.stat()
+        payload = {
+            "source": str(source),
+            "size": stat.st_size,
+            "mtime_ns": stat.st_mtime_ns,
+            "mode": task.get("subtitle_cleanup_mode") or "quick",
+            "engine": task.get("subtitle_cleanup_engine") or "sttn",
+            "quality": task.get("subtitle_cleanup_quality") or "standard",
+            "quick_method": task.get("subtitle_quick_method") or "blur",
+            "region": [round(value, 6) for value in Worker.subtitle_region(
+                task.get("subtitle_region")
+            )],
+        }
+        return hashlib.sha256(
+            json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+
+    def prepare_subtitle_cleanup(self, task, clip_specs, job_dir):
+        if not task.get("remove_hard_subtitles") and not any(
+            item.get("subtitle_cleanup_policy") == "clean" for item in clip_specs
+        ):
+            return clip_specs
+        cleaned_specs, report = [], []
+        for index, item in enumerate(clip_specs, 1):
+            source = Path(item["path"])
+            output = Path(job_dir) / ("subtitle-cleaned-%02d.mp4" % index)
+            updated = dict(item)
+            policy = item.get("subtitle_cleanup_policy") or "inherit"
+            enabled = (
+                policy == "clean" or
+                (policy == "inherit" and bool(task.get("remove_hard_subtitles")))
+            )
+            if policy == "skip" or not enabled:
+                report.append({"source": str(source), "status": "skipped"})
+                cleaned_specs.append(updated)
+                continue
+            cleanup_task = dict(task)
+            for field in (
+                "subtitle_cleanup_mode", "subtitle_cleanup_engine",
+                "subtitle_cleanup_quality",
+                "subtitle_quick_method", "subtitle_region",
+            ):
+                if item.get(field) not in (None, ""):
+                    cleanup_task[field] = item[field]
+            prepared = Path(item.get("subtitle_cleaned_path") or "")
+            expected_signature = self.subtitle_cleanup_signature(cleanup_task, source)
+            if (
+                prepared.is_file() and
+                item.get("subtitle_cleanup_signature") == expected_signature
+            ):
+                updated["path"] = prepared
+                report.append({
+                    "source": str(source), "output": str(prepared), "status": "reused",
+                })
+                cleaned_specs.append(updated)
+                continue
+            try:
+                updated["path"] = self.clean_hard_subtitles(cleanup_task, source, output)
+                report.append({"source": str(source), "output": str(output), "status": "cleaned"})
+            except Exception as exc:
+                updated["path"] = source
+                message = "视频%s去字幕失败，已保留并继续使用原始素材：%s" % (index, exc)
+                report.append({"source": str(source), "status": "fallback", "error": str(exc)})
+                self.emit("log", message=message)
+                self.emit("subtitle_cleanup_warning", message=message)
+            cleaned_specs.append(updated)
+        (Path(job_dir) / "subtitle-cleanup-report.json").write_text(
+            json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8",
+        )
+        return cleaned_specs
 
     def api(self, method, path, **kwargs):
         headers = dict(self.headers)
@@ -105,6 +526,12 @@ class Worker:
         return self.api(
             "POST", "/psc/local-worker/bitbrowser/environments",
             json={"worker_id": self.worker_id, "environments": safe_environments},
+        ).json()
+
+    def sync_local_assets(self, assets):
+        return self.api(
+            "POST", "/psc/local-worker/assets/sync",
+            json={"worker_id": self.worker_id, "assets": assets},
         ).json()
 
     def registration_tasks(self):
@@ -255,6 +682,80 @@ class Worker:
             raise ValueError("当前本地下载器仅接受抖音链接")
         return self.download_via_douyin(url, target_dir / f"source-{index}.mp4")
 
+    @staticmethod
+    def _is_local_ollama(endpoint):
+        return (urlparse(endpoint).hostname or "").lower() in {
+            "127.0.0.1", "localhost", "::1",
+        }
+
+    def _ollama_executable(self):
+        ai = self.config.get("local_ai", {})
+        configured = (ai.get("ollama_command") or "").strip()
+        candidates = [
+            configured,
+            r"D:\odooAiwoker\AI\ollama\bin\ollama.exe",
+            str(Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Ollama" / "ollama.exe"),
+            str(Path(os.environ.get("ProgramFiles", "")) / "Ollama" / "ollama.exe"),
+            shutil.which("ollama") or "",
+        ]
+        for candidate in candidates:
+            if candidate and Path(candidate).is_file():
+                return Path(candidate).resolve()
+        return None
+
+    @staticmethod
+    def _ollama_ready(endpoint):
+        try:
+            response = requests.get(endpoint + "/api/tags", timeout=2)
+            return response.ok
+        except requests.RequestException:
+            return False
+
+    def _start_local_ollama(self, endpoint):
+        if not self._is_local_ollama(endpoint):
+            raise RuntimeError("Ollama 服务连接失败，请检查配置的地址和网络")
+        with self._ollama_start_lock:
+            if self._ollama_ready(endpoint):
+                return
+            executable = self._ollama_executable()
+            if not executable:
+                raise RuntimeError(
+                    "需要翻译字幕，但未找到本机 Ollama。请在“连接与配置 → 本地AI”中"
+                    "选择 Ollama 程序，或改用已经按目标语种生成的视频脚本"
+                )
+            environment = os.environ.copy()
+            configured_models = (
+                self.config.get("local_ai", {}).get("ollama_models") or ""
+            ).strip()
+            portable_models = executable.parent.parent / "models"
+            if configured_models:
+                environment["OLLAMA_MODELS"] = configured_models
+            elif portable_models.is_dir():
+                environment["OLLAMA_MODELS"] = str(portable_models)
+            creation_flags = 0
+            if os.name == "nt":
+                creation_flags = (
+                    getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                    | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                )
+            process = subprocess.Popen(
+                [str(executable), "serve"],
+                cwd=str(executable.parent),
+                env=environment,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=creation_flags,
+            )
+            deadline = time.monotonic() + 30
+            while time.monotonic() < deadline:
+                if self._ollama_ready(endpoint):
+                    self.emit("log", message="本机 Ollama 已自动启动")
+                    return
+                if process.poll() is not None:
+                    break
+                time.sleep(0.5)
+        raise RuntimeError("已尝试自动启动 Ollama，但服务仍不可用，请检查本机 Ollama 安装")
+
     def translate(self, text, language):
         if not text.strip():
             return text
@@ -263,16 +764,27 @@ class Worker:
         model = ai.get("translation_model")
         if not endpoint or not model:
             return text
-        try:
-            response = requests.post(endpoint + "/api/generate", json={
+        payload = {
                 "model": model, "stream": False,
                 "prompt": f"Translate the following subtitle into {language}. Return only the translation:\n{text}",
-            }, timeout=300)
-        except requests.ConnectionError as exc:
-            raise RuntimeError(
-                "需要翻译字幕，但本机 Ollama 未启动；请安装并启动 Ollama，"
-                "或改用已经按目标语种生成的视频脚本"
-            ) from exc
+            }
+        try:
+            response = requests.post(endpoint + "/api/generate", json=payload, timeout=300)
+        except requests.ConnectionError:
+            self._start_local_ollama(endpoint)
+            try:
+                response = requests.post(endpoint + "/api/generate", json=payload, timeout=300)
+            except requests.ConnectionError as exc:
+                raise RuntimeError("Ollama 已启动，但翻译服务仍无法连接") from exc
+        if response.status_code == 404:
+            try:
+                detail = response.json().get("error", "")
+            except (TypeError, ValueError):
+                detail = ""
+            if "model" in str(detail).lower():
+                raise RuntimeError(
+                    "本机 Ollama 中没有翻译模型 %s，请先安装该模型" % model
+                )
         response.raise_for_status()
         return response.json().get("response", text).strip()
 
@@ -283,6 +795,68 @@ class Worker:
         minutes, remainder = divmod(remainder, 60000)
         seconds, milliseconds = divmod(remainder, 1000)
         return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
+
+    @staticmethod
+    def _ass_time(value):
+        match = re.fullmatch(r"(\d+):(\d+):(\d+)[,.](\d+)", value.strip())
+        if not match:
+            raise ValueError("无法识别字幕时间：%s" % value)
+        hours, minutes, seconds, fraction = match.groups()
+        centiseconds = int((fraction + "00")[:2])
+        return "%d:%02d:%02d.%02d" % (
+            int(hours), int(minutes), int(seconds), centiseconds,
+        )
+
+    @classmethod
+    def srt_to_region_ass(cls, srt, output, width, height, region):
+        """Create an ASS subtitle track constrained to the cleaned subtitle area."""
+        x, y, region_width, region_height = cls.subtitle_region(region)
+        width, height = int(width), int(height)
+        font_size = max(28, min(64, int(round(height * 0.032))))
+        outline = max(2, int(round(font_size * 0.055)))
+        margin_l = max(0, int(round(width * (x + 0.02))))
+        margin_r = max(0, int(round(width * (1 - x - region_width + 0.02))))
+        baseline = min(0.98, y + region_height * 0.72)
+        margin_v = max(0, int(round(height * (1 - baseline))))
+        events = []
+        content = Path(srt).read_text(encoding="utf-8-sig").strip()
+        for block in re.split(r"\r?\n\s*\r?\n", content):
+            lines = block.splitlines()
+            time_index = next((index for index, line in enumerate(lines) if "-->" in line), None)
+            if time_index is None:
+                continue
+            start, end = [item.strip() for item in lines[time_index].split("-->", 1)]
+            text = r"\N".join(line.strip() for line in lines[time_index + 1:] if line.strip())
+            text = text.replace("{", "（").replace("}", "）")
+            if text:
+                events.append(
+                    "Dialogue: 0,%s,%s,Default,,0,0,0,,%s" %
+                    (cls._ass_time(start), cls._ass_time(end), text)
+                )
+        if not events:
+            raise RuntimeError("没有可覆盖到字幕清理区域的有效译文字幕")
+        ass = """[Script Info]
+ScriptType: v4.00+
+PlayResX: {width}
+PlayResY: {height}
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Default,Arial,{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,{outline},1,2,{margin_l},{margin_r},{margin_v},1
+
+[Events]
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+{events}
+""".format(
+            width=width, height=height, font_size=font_size, outline=outline,
+            margin_l=margin_l, margin_r=margin_r, margin_v=margin_v,
+            events="\n".join(events),
+        )
+        output = Path(output)
+        output.write_text(ass, encoding="utf-8-sig")
+        return output
 
     def _translate_srt(self, text, language):
         translated = self.translate(
@@ -504,6 +1078,69 @@ class Worker:
         canvas.save(output, quality=92)
         return output, None
 
+    def stitch_processed_clips(self, task, clips, job_dir):
+        """Normalize and concatenate already-produced clips without reprocessing them."""
+        if not clips:
+            raise ValueError("没有可拼接的已处理片段")
+        job_dir = Path(job_dir)
+        job_dir.mkdir(parents=True, exist_ok=True)
+        ratio = task.get("aspect_ratio", "9:16")
+        width, height = {
+            "9:16": (1080, 1920), "4:5": (1080, 1350), "1:1": (1080, 1080),
+        }.get(ratio, (1080, 1920))
+        ready_parts = []
+        timeline = []
+        cursor = 0.0
+        for index, item in enumerate(clips, 1):
+            spec = item if isinstance(item, dict) else {"path": item}
+            source = Path(spec.get("path") or "")
+            if not source.is_file():
+                raise FileNotFoundError("第 %s 条已处理片段不存在：%s" % (index, source))
+            duration = self.probe_duration(source)
+            if duration <= 0:
+                raise RuntimeError("无法读取第 %s 条已处理片段的时长" % index)
+            ready = job_dir / ("ready-%02d.mp4" % index)
+            result = subprocess.run([
+                self.ffmpeg(), "-y", "-i", str(source),
+                "-vf", (
+                    "scale=%s:%s:force_original_aspect_ratio=decrease," % (width, height)
+                    + "pad=%s:%s:(ow-iw)/2:(oh-ih)/2:black," % (width, height)
+                    + "setsar=1,fps=30,format=yuv420p"
+                ),
+                "-af", "aresample=48000:async=1:first_pts=0,apad",
+                "-t", "%.3f" % duration,
+                "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
+                "-c:a", "aac", "-ar", "48000", "-ac", "2",
+                "-movflags", "+faststart", str(ready),
+            ], capture_output=True, text=True, encoding="utf-8", errors="replace")
+            if result.returncode or not ready.is_file():
+                raise RuntimeError("第 %s 条已处理片段标准化失败：%s" % (index, result.stderr[-700:]))
+            ready_parts.append(ready)
+            timeline.append({
+                "record_id": spec.get("record_id"),
+                "clip_name": spec.get("clip_name") or source.stem,
+                "clip_type": spec.get("clip_type") or "unknown",
+                "processed_kind": spec.get("processed_kind") or "已处理片段",
+                "start": round(cursor, 3), "end": round(cursor + duration, 3),
+            })
+            cursor += duration
+        concat = job_dir / "processed-concat.txt"
+        concat.write_text("".join(
+            "file '%s'\n" % str(path.resolve()).replace(chr(39), chr(39) * 2)
+            for path in ready_parts
+        ), encoding="utf-8")
+        output = job_dir / "output.mp4"
+        result = subprocess.run([
+            self.ffmpeg(), "-y", "-f", "concat", "-safe", "0", "-i", str(concat),
+            "-c", "copy", "-movflags", "+faststart", str(output),
+        ], capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if result.returncode or not output.is_file():
+            raise RuntimeError("最终片段拼接失败：%s" % result.stderr[-700:])
+        (job_dir / "clip-timeline.json").write_text(
+            json.dumps(timeline, ensure_ascii=False, indent=2), encoding="utf-8",
+        )
+        return output, None
+
     def compose_video(self, task, clips, job_dir):
         if not clips:
             raise ValueError("任务没有视频URL或视频素材")
@@ -511,6 +1148,7 @@ class Worker:
         job_dir.mkdir(parents=True, exist_ok=True)
         clip_specs = [item if isinstance(item, dict) else {"path": item} for item in clips]
         clip_specs = self.arrange_clips(task, clip_specs, job_dir)
+        clip_specs = self.prepare_subtitle_cleanup(task, clip_specs, job_dir)
         concat = job_dir / "concat.txt"
         concat_lines = []
         for item in clip_specs:
@@ -602,12 +1240,24 @@ class Worker:
         if task.get("transition") == "fade":
             filters.extend(["fade=t=in:st=0:d=0.35", f"fade=t=out:st={max(0, duration - 0.35)}:d=0.35"])
         if srt:
-            subtitle_path = str(srt).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
-            filters.append(
-                f"subtitles='{subtitle_path}':"
-                "force_style='FontName=Arial,FontSize=10,Outline=1.5,Shadow=0,"
-                "Alignment=8,MarginV=55'"
-            )
+            overlay_in_cleanup_region = task.get("overlay_translation_in_cleanup_region", True)
+            subtitle_source = srt
+            if overlay_in_cleanup_region:
+                subtitle_region = task.get("subtitle_region") or "5,72,90,22"
+                if len(clip_specs) == 1 and clip_specs[0].get("subtitle_cleanup_policy") == "clean":
+                    subtitle_region = clip_specs[0].get("subtitle_region") or subtitle_region
+                subtitle_source = self.srt_to_region_ass(
+                    srt, job_dir / "subtitle-overlay.ass", width, height, subtitle_region,
+                )
+            subtitle_path = str(subtitle_source).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
+            if overlay_in_cleanup_region:
+                filters.append(f"subtitles='{subtitle_path}'")
+            else:
+                filters.append(
+                    f"subtitles='{subtitle_path}':"
+                    "force_style='FontName=Arial,FontSize=10,Outline=1.5,Shadow=0,"
+                    "Alignment=8,MarginV=55'"
+                )
         vf = ",".join(filters) or "null"
         command = [self.ffmpeg(), "-y"]
         if normalized_video:
@@ -641,6 +1291,35 @@ class Worker:
             command += ["-an"] if task.get("audio_mode") == "mute" else ["-c:a", "aac"]
         command.append(str(output))
         subprocess.run(command, check=True)
+        output_duration = float(duration)
+        raw_durations = []
+        for item in clip_specs:
+            start = max(0.0, float(item.get("trim_start") or 0))
+            requested_end = float(item.get("trim_end") or 0)
+            known_duration = float(item.get("duration") or 0)
+            raw_durations.append(max(
+                0.001,
+                (requested_end - start) if requested_end > start
+                else (known_duration - start) if known_duration > start else 1.0,
+            ))
+        duration_scale = output_duration / sum(raw_durations)
+        cursor = 0.0
+        timeline = []
+        for index, item in enumerate(clip_specs):
+            segment_duration = raw_durations[index] * duration_scale
+            segment_end = min(output_duration, cursor + segment_duration)
+            if index == len(clip_specs) - 1:
+                segment_end = output_duration
+            timeline.append({
+                "record_id": item.get("record_id"),
+                "clip_name": item.get("clip_name") or "片段 %s" % (index + 1),
+                "clip_type": item.get("clip_type") or "unknown",
+                "start": round(cursor, 3), "end": round(segment_end, 3),
+            })
+            cursor = segment_end
+        (job_dir / "clip-timeline.json").write_text(
+            json.dumps(timeline, ensure_ascii=False, indent=2), encoding="utf-8",
+        )
         for artifact in normalized_artifacts:
             artifact.unlink(missing_ok=True)
         return output, srt
@@ -656,14 +1335,18 @@ class Worker:
             clips.append(target)
         return self.compose_video(task, clips, job_dir)
 
-    def complete(self, task, output, subtitle):
+    def complete(self, task, output, subtitle, manifest=None):
         with output.open("rb") as stream:
             files = {"file": (output.name, stream, mimetypes.guess_type(output.name)[0] or "application/octet-stream")}
             subtitle_stream = subtitle.open("rb") if subtitle else None
             try:
                 if subtitle_stream:
                     files["subtitle"] = (subtitle.name, subtitle_stream, "application/x-subrip")
-                self.api("POST", f"/psc/local-worker/tasks/{task['id']}/complete", files=files)
+                self.api(
+                    "POST", f"/psc/local-worker/tasks/{task['id']}/complete",
+                    files=files,
+                    data={"manifest": json.dumps(manifest or {}, ensure_ascii=False)},
+                )
             finally:
                 if subtitle_stream:
                     subtitle_stream.close()

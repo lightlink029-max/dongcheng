@@ -275,12 +275,22 @@ class MarketOperationsWorkflowCase(TransactionCase):
             "title": "[AUTO TEST] Medical product video",
             "caption": "Verified sourcing workflow.",
             "video_script": "Show product, documents and delivery support.",
-            "source_video_urls": "https://v.douyin.com/auto-test/",
+            "video_plan_summary": "A 30-second sourcing proof video with a clear opening and delivery evidence.",
         })
+        self.env["psc.video.shot.requirement"].create({
+            "content_id": content.id,
+            "name": "Verified product opening",
+            "purpose": "Establish credibility",
+            "visual_requirement": "Show the real product and verified documents.",
+            "target_duration": 5,
+        })
+        content.action_lock_storyboard()
         content.action_generate_social_video()
         task = content.local_task_ids.ensure_one()
         self.assertEqual(task.task_type, "translate_mix")
         self.assertEqual(task.state, "queued")
+        self.assertTrue(content.storyboard_locked)
+        self.assertEqual(task.storyboard_snapshot[0]["name"], "Verified product opening")
         with self.assertRaises(UserError):
             content.action_generate_social_video()
 
@@ -292,7 +302,10 @@ class MarketOperationsWorkflowCase(TransactionCase):
         self.assertEqual(task.progress, 0)
         self.assertFalse(task.error_message)
 
-        empty_content = content.copy({"title": "[AUTO TEST] Missing source", "source_video_urls": False})
+        empty_content = content.copy({
+            "title": "[AUTO TEST] Missing storyboard", "storyboard_locked": False,
+            "video_plan_summary": False,
+        })
         with self.assertRaises(UserError):
             empty_content.action_generate_social_video()
 

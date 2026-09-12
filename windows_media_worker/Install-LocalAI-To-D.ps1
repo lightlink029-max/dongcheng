@@ -135,6 +135,8 @@ else { $config = [pscustomobject]@{} }
 if (-not $config.PSObject.Properties["local_ai"]) { Set-JsonProperty $config "local_ai" ([pscustomobject]@{}) }
 if (-not $config.PSObject.Properties["speech"]) { Set-JsonProperty $config "speech" ([pscustomobject]@{}) }
 Set-JsonProperty $config.local_ai "ollama_url" "http://127.0.0.1:11434"
+Set-JsonProperty $config.local_ai "ollama_command" $ollamaExe.FullName
+Set-JsonProperty $config.local_ai "ollama_models" $ollamaModels
 Set-JsonProperty $config.local_ai "translation_model" $TranslationModel
 Set-JsonProperty $config.local_ai "whisper_command" $whisperCommand
 Set-JsonProperty $config.local_ai "whisper_model" $WhisperModel
