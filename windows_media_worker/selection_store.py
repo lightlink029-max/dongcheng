@@ -7,6 +7,8 @@ from contextlib import contextmanager
 from datetime import datetime
 from urllib.parse import parse_qs, urlparse
 
+from media_taxonomy import normalize_tags
+
 
 DOUYIN_HOSTS = {"douyin.com", "www.douyin.com", "v.douyin.com", "v.iesdouyin.com"}
 URL_PATTERN = re.compile(r"https?://[^\s<>\"']+")
@@ -100,6 +102,10 @@ class SelectionStore:
                     voice_signature TEXT NOT NULL DEFAULT '',
                     storyboard_slot_key TEXT NOT NULL DEFAULT '',
                     library_asset_uuid TEXT NOT NULL DEFAULT '',
+                    role_tags_json TEXT NOT NULL DEFAULT '[]',
+                    scene_tags_json TEXT NOT NULL DEFAULT '[]',
+                    usage_tags_json TEXT NOT NULL DEFAULT '[]',
+                    custom_tags_json TEXT NOT NULL DEFAULT '[]',
                     UNIQUE(task_id, url)
                 )
             """)
@@ -163,6 +169,10 @@ class SelectionStore:
                 "voice_signature": "TEXT NOT NULL DEFAULT ''",
                 "storyboard_slot_key": "TEXT NOT NULL DEFAULT ''",
                 "library_asset_uuid": "TEXT NOT NULL DEFAULT ''",
+                "role_tags_json": "TEXT NOT NULL DEFAULT '[]'",
+                "scene_tags_json": "TEXT NOT NULL DEFAULT '[]'",
+                "usage_tags_json": "TEXT NOT NULL DEFAULT '[]'",
+                "custom_tags_json": "TEXT NOT NULL DEFAULT '[]'",
             }
             for name, definition in video_additions.items():
                 if name not in video_columns:
@@ -219,6 +229,10 @@ class SelectionStore:
                     copyright_status TEXT NOT NULL DEFAULT 'unreviewed',
                     content_hash TEXT NOT NULL DEFAULT '',
                     metadata_json TEXT NOT NULL DEFAULT '{}',
+                    role_tags_json TEXT NOT NULL DEFAULT '[]',
+                    scene_tags_json TEXT NOT NULL DEFAULT '[]',
+                    usage_tags_json TEXT NOT NULL DEFAULT '[]',
+                    custom_tags_json TEXT NOT NULL DEFAULT '[]',
                     active INTEGER NOT NULL DEFAULT 1,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
@@ -243,6 +257,22 @@ class SelectionStore:
                     UNIQUE(task_id, slot_key)
                 )
             """)
+            asset_columns = {
+                row["name"] for row in connection.execute(
+                    "PRAGMA table_info(local_media_asset)"
+                ).fetchall()
+            }
+            asset_additions = {
+                "role_tags_json": "TEXT NOT NULL DEFAULT '[]'",
+                "scene_tags_json": "TEXT NOT NULL DEFAULT '[]'",
+                "usage_tags_json": "TEXT NOT NULL DEFAULT '[]'",
+                "custom_tags_json": "TEXT NOT NULL DEFAULT '[]'",
+            }
+            for name, definition in asset_additions.items():
+                if name not in asset_columns:
+                    connection.execute(
+                        f"ALTER TABLE local_media_asset ADD COLUMN {name} {definition}"
+                    )
             connection.execute("""
                 CREATE TABLE IF NOT EXISTS composition_item (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -510,7 +540,46 @@ class SelectionStore:
                     clip_name.strip() or "片段 %.1f-%.1f秒" % (start, end), clip_type,
                 ),
             )
+            connection.execute(
+                """UPDATE selected_video
+                      SET role_tags_json = ?, scene_tags_json = ?,
+                          usage_tags_json = ?, custom_tags_json = ?
+                    WHERE id = ?""",
+                (
+                    source.get("role_tags_json") or "[]",
+                    source.get("scene_tags_json") or "[]",
+                    source.get("usage_tags_json") or "[]",
+                    source.get("custom_tags_json") or "[]",
+                    int(cursor.lastrowid),
+                ),
+            )
             return int(cursor.lastrowid)
+
+    @staticmethod
+    def _decode_tags(row):
+        value = dict(row)
+        for field in ("role", "scene", "usage", "custom"):
+            raw = value.get(field + "_tags_json") or "[]"
+            try:
+                value[field + "_tags"] = normalize_tags(json.loads(raw))
+            except (TypeError, ValueError):
+                value[field + "_tags"] = []
+        return value
+
+    @classmethod
+    def _decode_asset(cls, row):
+        value = cls._decode_tags(row)
+        if not value["role_tags"]:
+            value["role_tags"] = normalize_tags([
+                value.get("role_name"), value.get("role_code"),
+            ])
+        if not value["usage_tags"]:
+            value["usage_tags"] = normalize_tags([value.get("shot_purpose")])
+        try:
+            value["metadata"] = json.loads(value.pop("metadata_json") or "{}")
+        except (TypeError, ValueError):
+            value["metadata"] = {}
+        return value
 
     def list(self, task_id):
         with self._connect() as connection:
@@ -518,7 +587,7 @@ class SelectionStore:
                 "SELECT * FROM selected_video WHERE task_id = ? ORDER BY sort_order, id",
                 (int(task_id),),
             ).fetchall()
-        return [dict(row) for row in rows]
+        return [self._decode_tags(row) for row in rows]
 
     def list_sources(self):
         """Return the workstation-wide raw and derived source library.
@@ -532,7 +601,7 @@ class SelectionStore:
                     WHERE record_kind != 'library_asset'
                     ORDER BY selected_at DESC, id DESC""",
             ).fetchall()
-        return [dict(row) for row in rows]
+        return [self._decode_tags(row) for row in rows]
 
     def get_many(self, ids):
         values = [int(value) for value in ids]
@@ -544,7 +613,7 @@ class SelectionStore:
                 f"SELECT * FROM selected_video WHERE id IN ({placeholders}) ORDER BY sort_order, id",
                 values,
             ).fetchall()
-        return [dict(row) for row in rows]
+        return [self._decode_tags(row) for row in rows]
 
     def list_selected(self, task_id, ids=None):
         rows = self.list(task_id)
@@ -597,6 +666,26 @@ class SelectionStore:
                 f"UPDATE selected_video SET {assignments} WHERE id = ?",
                 [*values.values(), int(record_id)],
             )
+
+    def update_media_tags(
+        self, record_id, role_tags=None, scene_tags=None, usage_tags=None, custom_tags=None,
+    ):
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """UPDATE selected_video
+                      SET role_tags_json = ?, scene_tags_json = ?,
+                          usage_tags_json = ?, custom_tags_json = ?
+                    WHERE id = ?""",
+                (
+                    json.dumps(normalize_tags(role_tags), ensure_ascii=False),
+                    json.dumps(normalize_tags(scene_tags), ensure_ascii=False),
+                    json.dumps(normalize_tags(usage_tags), ensure_ascii=False),
+                    json.dumps(normalize_tags(custom_tags), ensure_ascii=False),
+                    int(record_id),
+                ),
+            )
+        if not cursor.rowcount:
+            raise ValueError("原始素材不存在")
 
     def reset_download(self, ids):
         for row in self.get_many(ids):
@@ -727,6 +816,18 @@ class SelectionStore:
             "copyright_status": str(values.get("copyright_status") or "unreviewed"),
             "content_hash": str(values.get("content_hash") or ""),
             "metadata_json": json.dumps(metadata, ensure_ascii=False),
+            "role_tags_json": json.dumps(normalize_tags(
+                values.get("role_tags") or [values.get("role_name") or values.get("role_code")]
+            ), ensure_ascii=False),
+            "scene_tags_json": json.dumps(
+                normalize_tags(values.get("scene_tags")), ensure_ascii=False,
+            ),
+            "usage_tags_json": json.dumps(normalize_tags(
+                values.get("usage_tags") or [values.get("shot_purpose")]
+            ), ensure_ascii=False),
+            "custom_tags_json": json.dumps(
+                normalize_tags(values.get("custom_tags")), ensure_ascii=False,
+            ),
             "active": int(bool(values.get("active", True))),
         }
         columns = list(record)
@@ -751,12 +852,7 @@ class SelectionStore:
             rows = connection.execute(query).fetchall()
         result = []
         for row in rows:
-            value = dict(row)
-            try:
-                value["metadata"] = json.loads(value.pop("metadata_json") or "{}")
-            except (TypeError, ValueError):
-                value["metadata"] = {}
-            result.append(value)
+            result.append(self._decode_asset(row))
         return result
 
     def get_asset(self, asset_uuid):
@@ -764,7 +860,30 @@ class SelectionStore:
             row = connection.execute(
                 "SELECT * FROM local_media_asset WHERE asset_uuid = ?", (str(asset_uuid),),
             ).fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+        return self._decode_asset(row)
+
+    def update_asset_tags(
+        self, asset_uuid, role_tags=None, scene_tags=None, usage_tags=None, custom_tags=None,
+    ):
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """UPDATE local_media_asset
+                      SET role_tags_json = ?, scene_tags_json = ?,
+                          usage_tags_json = ?, custom_tags_json = ?, updated_at = ?
+                    WHERE asset_uuid = ?""",
+                (
+                    json.dumps(normalize_tags(role_tags), ensure_ascii=False),
+                    json.dumps(normalize_tags(scene_tags), ensure_ascii=False),
+                    json.dumps(normalize_tags(usage_tags), ensure_ascii=False),
+                    json.dumps(normalize_tags(custom_tags), ensure_ascii=False),
+                    now, str(asset_uuid),
+                ),
+            )
+        if not cursor.rowcount:
+            raise ValueError("本地分镜素材库中找不到该素材")
 
     def select_asset_for_composition(self, task_id, slot_key, asset_uuid):
         task_id, slot_key = int(task_id), str(slot_key or "")
@@ -819,7 +938,7 @@ class SelectionStore:
                     ORDER BY item.sequence, item.id""",
                 (int(task_id),),
             ).fetchall()
-        return [dict(row) for row in rows]
+        return [self._decode_tags(row) for row in rows]
 
     def move_composition(self, task_id, ids, direction):
         selected = {int(value) for value in ids}

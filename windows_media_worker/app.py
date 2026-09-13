@@ -25,6 +25,10 @@ from bitbrowser_adapter import BitBrowserClient
 from registration_assistant import EnvironmentMismatch, capture_current_page, prepare_registration
 from douyin_adapter import _dpapi, capture_login, has_login, open_keyword_search, self_test
 from mumu_adapter import MumuBridge, check_mumu, install_selector_apk
+from media_taxonomy import (
+    ROLE_TAGS, SCENE_TAGS, USAGE_TAGS, filter_media, format_tags, normalize_tags,
+    rank_assets,
+)
 from planning_templates import build_video_plan, fallback_options
 from selection_store import SelectionStore
 from selector_bridge import SelectorBridge
@@ -360,9 +364,49 @@ class MediaWorkerApp(tk.Tk):
             command=self.show_plan_details,
         ).pack(side="right")
 
+        source_filters = ttk.LabelFrame(source_page, text="筛选与标记全局原始素材", padding=7)
+        source_filters.pack(fill="x", pady=(0, 8))
+        self.source_filter_vars = {
+            "role": tk.StringVar(value="全部经营角色"),
+            "scene": tk.StringVar(value="全部业务场景"),
+            "usage": tk.StringVar(value="全部分镜用途"),
+            "keyword": tk.StringVar(value=""),
+        }
+        for index, (label, key, choices, width) in enumerate((
+            ("经营角色", "role", ("全部经营角色", *ROLE_TAGS), 20),
+            ("业务场景", "scene", ("全部业务场景", *SCENE_TAGS), 16),
+            ("分镜用途", "usage", ("全部分镜用途", *USAGE_TAGS), 16),
+        )):
+            ttk.Label(source_filters, text=label).grid(
+                row=0, column=index * 2, sticky="e", padx=(4, 3), pady=3,
+            )
+            ttk.Combobox(
+                source_filters, textvariable=self.source_filter_vars[key], values=choices,
+                state="readonly", width=width,
+            ).grid(row=0, column=index * 2 + 1, sticky="ew", padx=(0, 8), pady=3)
+        ttk.Label(source_filters, text="关键词").grid(
+            row=1, column=0, sticky="e", padx=(4, 3), pady=3,
+        )
+        source_keyword = ttk.Entry(
+            source_filters, textvariable=self.source_filter_vars["keyword"], width=16,
+        )
+        source_keyword.grid(row=1, column=1, sticky="ew", padx=(0, 8), pady=3)
+        source_keyword.bind("<Return>", lambda _event: self._refresh_selection_tree())
+        ttk.Button(
+            source_filters, text="筛选", command=self._refresh_selection_tree,
+        ).grid(row=1, column=2, sticky="w", padx=3, pady=3)
+        ttk.Button(
+            source_filters, text="清除筛选", command=self.clear_source_filters,
+        ).grid(row=1, column=3, sticky="w", padx=3, pady=3)
+        ttk.Button(
+            source_filters, text="给所选素材打标签", command=self.edit_selected_source_tags,
+        ).grid(row=1, column=4, columnspan=2, sticky="e", padx=3, pady=3)
+        for column in (1, 3, 5):
+            source_filters.columnconfigure(column, weight=1)
+
         ttk.Style(self).configure("Media.Treeview", rowheight=78)
         selection_columns = (
-            "clip_name", "source_kind", "clip_type", "caption", "duration", "status", "trim",
+            "clip_name", "source_kind", "clip_type", "tags", "caption", "duration", "status", "trim",
             "subtitle_cleanup", "final_source", "copyright", "url", "error",
         )
         self.selection_tree = ttk.Treeview(
@@ -372,10 +416,10 @@ class MediaWorkerApp(tk.Tk):
         self.selection_tree.heading("#0", text="封面")
         self.selection_tree.column("#0", width=100, minwidth=100, stretch=False, anchor="center")
         titles = (
-            "素材/片段名称", "来源", "片段类型", "原视频文案", "时长", "处理状态", "入点-出点",
+            "素材/片段名称", "来源", "片段类型", "经营角色 / 场景 / 用途标签", "原视频文案", "时长", "处理状态", "入点-出点",
             "原字幕处理", "最终使用", "版权", "分享链接", "错误",
         )
-        widths = (180, 95, 110, 280, 75, 90, 100, 110, 125, 90, 260, 180)
+        widths = (180, 95, 110, 260, 260, 75, 90, 100, 110, 125, 90, 240, 180)
         for column, title, width in zip(selection_columns, titles, widths):
             self.selection_tree.heading(column, text=title)
             self.selection_tree.column(column, width=width, anchor="w")
@@ -549,6 +593,48 @@ class MediaWorkerApp(tk.Tk):
             target_shot, text="查看完整方案",
             command=self.show_plan_details,
         ).pack(side="right")
+        library_filters = ttk.LabelFrame(library_page, text="按标签和当前画面要求筛选", padding=7)
+        library_filters.pack(fill="x", pady=(0, 8))
+        self.library_filter_vars = {
+            "mode": tk.StringVar(value="优先推荐"),
+            "role": tk.StringVar(value="全部经营角色"),
+            "scene": tk.StringVar(value="全部业务场景"),
+            "usage": tk.StringVar(value="全部分镜用途"),
+            "keyword": tk.StringVar(value=""),
+        }
+        for index, (label, key, choices, width) in enumerate((
+            ("匹配方式", "mode", ("优先推荐", "仅完全匹配", "全部素材"), 12),
+            ("经营角色", "role", ("全部经营角色", *ROLE_TAGS), 18),
+            ("业务场景", "scene", ("全部业务场景", *SCENE_TAGS), 14),
+            ("分镜用途", "usage", ("全部分镜用途", *USAGE_TAGS), 14),
+        )):
+            ttk.Label(library_filters, text=label).grid(
+                row=0, column=index * 2, sticky="e", padx=(4, 3), pady=3,
+            )
+            ttk.Combobox(
+                library_filters, textvariable=self.library_filter_vars[key], values=choices,
+                state="readonly", width=width,
+            ).grid(row=0, column=index * 2 + 1, sticky="ew", padx=(0, 8), pady=3)
+        ttk.Label(library_filters, text="关键词").grid(
+            row=1, column=0, sticky="e", padx=(4, 3), pady=3,
+        )
+        library_keyword = ttk.Entry(
+            library_filters, textvariable=self.library_filter_vars["keyword"], width=14,
+        )
+        library_keyword.grid(row=1, column=1, sticky="ew", padx=(0, 8), pady=3)
+        library_keyword.bind("<Return>", lambda _event: self._refresh_media_library())
+        ttk.Button(
+            library_filters, text="应用筛选", command=self._refresh_media_library,
+        ).grid(row=1, column=2, sticky="w", padx=3, pady=3)
+        ttk.Button(
+            library_filters, text="清除", command=self.clear_library_filters,
+        ).grid(row=1, column=3, sticky="w", padx=3, pady=3)
+        self.library_filter_summary = tk.StringVar(value="")
+        ttk.Label(
+            library_filters, textvariable=self.library_filter_summary, foreground="#6f3f64",
+        ).grid(row=1, column=6, columnspan=2, sticky="e", padx=8, pady=3)
+        for column in (1, 3, 5, 7):
+            library_filters.columnconfigure(column, weight=1)
         library_actions = ttk.Frame(library_page, padding=(0, 0, 0, 8))
         library_actions.pack(fill="x")
         ttk.Button(
@@ -557,6 +643,9 @@ class MediaWorkerApp(tk.Tk):
         ttk.Button(
             library_actions, text="预览所选素材", command=self.preview_library_asset,
         ).pack(side="left")
+        ttk.Button(
+            library_actions, text="重新标记所选分镜", command=self.edit_selected_library_asset_tags,
+        ).pack(side="left", padx=6)
         ttk.Button(
             library_actions, text="进入第③步：查看成片时间线 →",
             command=lambda: selection_workflow.select(assembly_page),
@@ -568,13 +657,14 @@ class MediaWorkerApp(tk.Tk):
         ).pack(side="left", padx=18)
         self.library_tree = ttk.Treeview(
             library_page,
-            columns=("name", "kind", "clip_type", "role", "track", "scope", "purpose",
+            columns=("match", "name", "kind", "clip_type", "tags", "role", "track", "scope", "purpose",
                      "duration", "subtitle", "copyright", "path"),
             show="headings", selectmode="browse",
         )
         library_titles = (
-            ("name", "素材名称", 190), ("kind", "素材类型", 110),
+            ("match", "方案匹配", 105), ("name", "素材名称", 190), ("kind", "素材类型", 110),
             ("clip_type", "画面类型", 95), ("role", "经营角色", 100),
+            ("tags", "场景 / 用途 / 自定义标签", 260),
             ("track", "项目赛道", 100), ("scope", "内容场景", 110),
             ("purpose", "分镜用途", 120), ("duration", "时长", 65),
             ("subtitle", "字幕", 80), ("copyright", "版权", 85), ("path", "本地文件", 320),
@@ -2401,6 +2491,28 @@ class MediaWorkerApp(tk.Tk):
             return self.pending_selections[self.selection_task_id]
         return None
 
+    @staticmethod
+    def _active_tag_filter(value):
+        value = str(value or "").strip()
+        return "" if not value or value.startswith("全部") else value
+
+    def clear_source_filters(self):
+        for key, value in (
+            ("role", "全部经营角色"), ("scene", "全部业务场景"),
+            ("usage", "全部分镜用途"), ("keyword", ""),
+        ):
+            self.source_filter_vars[key].set(value)
+        self._refresh_selection_tree()
+
+    def clear_library_filters(self):
+        for key, value in (
+            ("mode", "优先推荐"), ("role", "全部经营角色"),
+            ("scene", "全部业务场景"), ("usage", "全部分镜用途"),
+            ("keyword", ""),
+        ):
+            self.library_filter_vars[key].set(value)
+        self._refresh_media_library()
+
     def _refresh_selection_tree(self):
         task = self._active_selection_task()
         selected_before = set(self.selection_tree.selection())
@@ -2427,7 +2539,15 @@ class MediaWorkerApp(tk.Tk):
         if isinstance(task.get("storyboard"), list):
             self.selection_store.sync_storyboard(task["id"], task.get("storyboard") or [])
         self._refresh_storyboard(task)
-        rows = self.selection_store.list_sources()
+        all_rows = self.selection_store.list_sources()
+        filters = getattr(self, "source_filter_vars", {})
+        rows = filter_media(
+            all_rows,
+            role=self._active_tag_filter(filters.get("role").get()) if filters else "",
+            scene=self._active_tag_filter(filters.get("scene").get()) if filters else "",
+            usage=self._active_tag_filter(filters.get("usage").get()) if filters else "",
+            keyword=filters.get("keyword").get() if filters else "",
+        )
         labels = {
             "selected": "已选择", "downloading": "下载中", "downloaded": "已下载",
             "mixing": "混剪中", "ready_review": "待审核", "done": "已完成", "failed": "失败",
@@ -2472,6 +2592,7 @@ class MediaWorkerApp(tk.Tk):
                 row.get("clip_name") or row["video_id"] or "待下载解析",
                 source_labels.get(row.get("source_kind"), "粘贴链接"),
                 clip_type_labels.get(row.get("clip_type"), "未分类"),
+                format_tags(row),
                 caption.replace("\n", " "),
                 self._format_duration(row.get("duration") or 0),
                 status_label,
@@ -2487,9 +2608,9 @@ class MediaWorkerApp(tk.Tk):
             self.selection_tree.selection_set(preserved)
         self._schedule_selection_metadata(task, rows)
         kind = "本地项目" if task.get("local_only") else "Odoo任务"
-        self.selection_title.set("%s %s · %s · %s｜全局原始素材 %s 条" % (
+        self.selection_title.set("%s %s · %s · %s｜全局原始素材 %s 条，当前显示 %s 条" % (
             kind, task["id"], task.get("name") or task.get("keywords") or task.get("target_language") or "抖音选片",
-            task.get("local_status") or "处理中", len(rows),
+            task.get("local_status") or "处理中", len(all_rows), len(rows),
         ))
         self._refresh_selection_summary()
         self._refresh_media_library()
@@ -2588,6 +2709,8 @@ class MediaWorkerApp(tk.Tk):
             self.storyboard_choice_var.set(selected_label)
         if hasattr(self, "production_shot_label"):
             self.production_shot_label.set(description + "｜完成后仅进入素材库")
+        if hasattr(self, "library_filter_vars"):
+            self._refresh_media_library()
 
     def _refresh_media_library(self):
         if not hasattr(self, "library_tree"):
@@ -2603,17 +2726,45 @@ class MediaWorkerApp(tk.Tk):
             "talking_face": "口播人脸", "face_no_speech": "非口播人脸",
             "no_face": "无人脸", "unknown": "未分类",
         }
-        for asset in self.selection_store.list_assets():
+        task = self._active_selection_task()
+        slot_key = self._selected_storyboard_slot() if task else ""
+        slot = next((row for row in self.selection_store.list_storyboard(task["id"])
+                     if row["slot_key"] == slot_key), {}) if task and slot_key else {}
+        filters = getattr(self, "library_filter_vars", {})
+        all_assets = self.selection_store.list_assets()
+        assets = filter_media(
+            all_assets,
+            role=self._active_tag_filter(filters.get("role").get()) if filters else "",
+            scene=self._active_tag_filter(filters.get("scene").get()) if filters else "",
+            usage=self._active_tag_filter(filters.get("usage").get()) if filters else "",
+            keyword=filters.get("keyword").get() if filters else "",
+        )
+        mode_label = filters.get("mode").get() if filters else "优先推荐"
+        if mode_label == "全部素材":
+            ranked = [(rank_assets([asset], slot, task)[0][0], asset) for asset in assets]
+        else:
+            ranked = rank_assets(
+                assets, slot, task, mode="exact" if mode_label == "仅完全匹配" else "recommended",
+            )
+        for match, asset in ranked:
+            detail_tags = normalize_tags(
+                list(asset.get("scene_tags") or []) + list(asset.get("usage_tags") or [])
+                + list(asset.get("custom_tags") or [])
+            )
+            match_label = "%s %s" % (match["level"], match["score"])
             self.library_tree.insert("", "end", iid=asset["asset_uuid"], values=(
-                asset["name"], kind_labels.get(asset["asset_kind"], asset["asset_kind"]),
+                match_label, asset["name"], kind_labels.get(asset["asset_kind"], asset["asset_kind"]),
                 type_labels.get(asset["clip_type"], asset["clip_type"]),
-                asset.get("role_name") or asset.get("role_code") or "—",
+                "、".join(detail_tags) or "未打标签",
+                "、".join(asset.get("role_tags") or []) or "—",
                 asset.get("track_name") or asset.get("track_code") or "—",
                 asset.get("scope_name") or asset.get("scope_code") or "—",
                 asset.get("shot_purpose") or "—", self._format_duration(asset.get("duration") or 0),
                 asset.get("subtitle_state") or "unknown",
                 asset.get("copyright_status") or "unreviewed", asset["file_path"],
             ))
+        if hasattr(self, "library_filter_summary"):
+            self.library_filter_summary.set("显示 %s / %s 条" % (len(ranked), len(all_assets)))
         available = set(self.library_tree.get_children())
         if selected and selected[0] in available:
             self.library_tree.selection_set(selected[0])
@@ -2757,6 +2908,13 @@ class MediaWorkerApp(tk.Tk):
         payload = []
         for asset in assets:
             path = Path(asset["file_path"])
+            metadata = dict(asset.get("metadata") or {})
+            metadata.update({
+                "role_tags": asset.get("role_tags") or [],
+                "scene_tags": asset.get("scene_tags") or [],
+                "usage_tags": asset.get("usage_tags") or [],
+                "custom_tags": asset.get("custom_tags") or [],
+            })
             try:
                 relative_path = str(path.resolve().relative_to(root))
             except ValueError:
@@ -2777,7 +2935,7 @@ class MediaWorkerApp(tk.Tk):
                 "local_relative_path": relative_path,
                 "file_size": path.stat().st_size if path.is_file() else 0,
                 "content_hash": asset.get("content_hash") or "",
-                "metadata": asset.get("metadata") or {}, "active": bool(asset.get("active", 1)),
+                "metadata": metadata, "active": bool(asset.get("active", 1)),
             })
         return payload
 
@@ -3187,6 +3345,104 @@ class MediaWorkerApp(tk.Tk):
         folder.mkdir(parents=True, exist_ok=True)
         os.startfile(str(folder))
 
+    def _open_media_tag_editor(self, title, record, on_save, parent=None, batch_count=1):
+        dialog = tk.Toplevel(parent or self)
+        dialog.title(title)
+        dialog.geometry("980x640")
+        dialog.minsize(820, 560)
+        dialog.transient(parent or self)
+        body = ttk.Frame(dialog, padding=14)
+        body.pack(fill="both", expand=True)
+        explanation = (
+            "经营角色、业务场景和分镜用途使用统一标签；自定义标签只补充产品、地点或特殊动作。"
+        )
+        if batch_count > 1:
+            explanation += " 当前将统一覆盖所选 %s 条素材的标签。" % batch_count
+        ttk.Label(
+            body, text=explanation, foreground="#555", wraplength=920,
+        ).pack(fill="x", pady=(0, 10))
+        tag_vars = {}
+        groups = (
+            ("经营角色", "role_tags", ROLE_TAGS, 5),
+            ("业务场景", "scene_tags", SCENE_TAGS, 5),
+            ("分镜用途", "usage_tags", USAGE_TAGS, 4),
+        )
+        for group_title, key, choices, columns in groups:
+            selected = set(normalize_tags(record.get(key)))
+            frame = ttk.LabelFrame(body, text=group_title, padding=8)
+            frame.pack(fill="x", pady=5)
+            variables = {}
+            for index, label in enumerate(choices):
+                variable = tk.BooleanVar(value=label in selected)
+                ttk.Checkbutton(frame, text=label, variable=variable).grid(
+                    row=index // columns, column=index % columns,
+                    sticky="w", padx=8, pady=4,
+                )
+                variables[label] = variable
+            tag_vars[key] = variables
+        custom = tk.StringVar(value="，".join(normalize_tags(record.get("custom_tags"))))
+        custom_frame = ttk.LabelFrame(body, text="自定义标签", padding=8)
+        custom_frame.pack(fill="x", pady=5)
+        ttk.Label(custom_frame, text="例如：运动鞋、广州仓、40尺柜；用逗号分隔").pack(side="left")
+        ttk.Entry(custom_frame, textvariable=custom).pack(
+            side="left", fill="x", expand=True, padx=(12, 0),
+        )
+
+        def save():
+            values = {
+                key: [label for label, variable in variables.items() if variable.get()]
+                for key, variables in tag_vars.items()
+            }
+            values["custom_tags"] = normalize_tags(custom.get())
+            on_save(values)
+            dialog.destroy()
+
+        actions = ttk.Frame(body)
+        actions.pack(fill="x", pady=(12, 0))
+        ttk.Button(actions, text="保存标签", command=save).pack(side="right", padx=4)
+        ttk.Button(actions, text="取消", command=dialog.destroy).pack(side="right", padx=4)
+
+    def edit_selected_source_tags(self):
+        ids = self._selection_ids()
+        if not ids:
+            messagebox.showerror(APP_TITLE, "请先选择一条或多条原始素材")
+            return
+        rows = self.selection_store.get_many(ids)
+
+        def save(values):
+            for row in rows:
+                self.selection_store.update_media_tags(row["id"], **values)
+            self._refresh_selection_tree()
+            for row in rows:
+                if self.selection_tree.exists(str(row["id"])):
+                    self.selection_tree.selection_add(str(row["id"]))
+            messagebox.showinfo(APP_TITLE, "已保存 %s 条原始素材的标签" % len(rows))
+
+        self._open_media_tag_editor(
+            "原始素材标签", rows[0], save, batch_count=len(rows),
+        )
+
+    def edit_selected_library_asset_tags(self):
+        selected = self.library_tree.selection()
+        if len(selected) != 1:
+            messagebox.showerror(APP_TITLE, "请先选择一条分镜素材")
+            return
+        asset = self.selection_store.get_asset(selected[0])
+        if not asset:
+            messagebox.showerror(APP_TITLE, "本地分镜素材不存在，请刷新素材库")
+            return
+
+        def save(values):
+            self.selection_store.update_asset_tags(asset["asset_uuid"], **values)
+            self._refresh_media_library()
+            if self.library_tree.exists(asset["asset_uuid"]):
+                self.library_tree.selection_set(asset["asset_uuid"])
+            messagebox.showinfo(
+                APP_TITLE, "分镜标签已更新。需要在 Odoo 查看新标签时，请点击“同步索引到 Odoo”。",
+            )
+
+        self._open_media_tag_editor("分镜素材标签", asset, save)
+
     def edit_selected_clip(self):
         ids = self._selection_ids()
         if len(ids) != 1:
@@ -3235,6 +3491,11 @@ class MediaWorkerApp(tk.Tk):
         cleanup_needed = tk.BooleanVar(
             value=(row.get("subtitle_cleanup_policy") == "clean")
         )
+        tag_values = {
+            key: list(row.get(key) or [])
+            for key in ("role_tags", "scene_tags", "usage_tags", "custom_tags")
+        }
+        tag_summary = tk.StringVar(value=format_tags(tag_values))
         trim_entries = []
         for index, (label, variable) in enumerate((("入点（秒）", trim_start), ("出点（秒）", trim_end))):
             ttk.Label(fields, text=label).grid(row=0, column=index * 2, sticky="w", padx=(0, 6))
@@ -3266,6 +3527,22 @@ class MediaWorkerApp(tk.Tk):
         ).grid(row=2, column=3, columnspan=2, sticky="w", pady=8)
         ttk.Label(fields, text="版权备注").grid(row=3, column=0, sticky="w")
         ttk.Entry(fields, textvariable=copyright_note).grid(row=3, column=1, columnspan=4, sticky="ew")
+        ttk.Label(fields, text="素材标签").grid(row=4, column=0, sticky="w", pady=8)
+        ttk.Label(
+            fields, textvariable=tag_summary, foreground="#6f3f64", wraplength=560,
+        ).grid(row=4, column=1, columnspan=3, sticky="w", pady=8)
+
+        def edit_tags():
+            def apply_tags(values):
+                tag_values.update(values)
+                tag_summary.set(format_tags(tag_values))
+            self._open_media_tag_editor(
+                "初剪素材标签", tag_values, apply_tags, parent=dialog,
+            )
+
+        ttk.Button(fields, text="编辑标签", command=edit_tags).grid(
+            row=4, column=4, sticky="w", pady=8,
+        )
         fields.columnconfigure(3, weight=1)
 
         frame_path = app_dir() / ("preview-%s.jpg" % row["id"])
@@ -3345,6 +3622,7 @@ class MediaWorkerApp(tk.Tk):
                 processed_path="", processed_kind="", processing_status="",
                 processing_error="", voice_signature="",
             )
+            self.selection_store.update_media_tags(row["id"], **tag_values)
             dialog.destroy()
             self._refresh_selection_tree()
             self.selection_tree.selection_set(str(row["id"]))
@@ -3366,6 +3644,7 @@ class MediaWorkerApp(tk.Tk):
                     subtitle_cleanup_status="pending" if cleanup_needed.get() else "",
                     subtitle_cleanup_error="",
                 )
+                self.selection_store.update_media_tags(new_id, **tag_values)
             except (ValueError, OSError) as exc:
                 messagebox.showerror(APP_TITLE, str(exc), parent=dialog)
                 return
@@ -4023,6 +4302,16 @@ class MediaWorkerApp(tk.Tk):
                         slot.get("purpose") or slot.get("name") or row.get("clip_name") or
                         scope.get("name") or task.get("name") or "通用分镜"
                     ),
+                    "role_tags": normalize_tags(
+                        list(row.get("role_tags") or [])
+                        + [role.get("name"), role.get("code")]
+                    ),
+                    "scene_tags": row.get("scene_tags") or [],
+                    "usage_tags": normalize_tags(
+                        list(row.get("usage_tags") or [])
+                        + [slot.get("name"), slot.get("purpose")]
+                    ),
+                    "custom_tags": row.get("custom_tags") or [],
                     "language": clip_task.get("target_language") or "",
                     "aspect_ratio": clip_task.get("aspect_ratio") or "",
                     "duration": worker.probe_duration(final_path),
@@ -4033,6 +4322,16 @@ class MediaWorkerApp(tk.Tk):
                         "source_record_id": row["id"],
                         "candidate_for_shot": slot_key,
                         "processed_kind": kind,
+                        "role_tags": normalize_tags(
+                            list(row.get("role_tags") or [])
+                            + [role.get("name"), role.get("code")]
+                        ),
+                        "scene_tags": row.get("scene_tags") or [],
+                        "usage_tags": normalize_tags(
+                            list(row.get("usage_tags") or [])
+                            + [slot.get("name"), slot.get("purpose")]
+                        ),
+                        "custom_tags": row.get("custom_tags") or [],
                     },
                 })
                 self.selection_store.update(

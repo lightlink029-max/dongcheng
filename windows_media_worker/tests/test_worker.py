@@ -9,6 +9,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from worker import Worker, create_version_directory
+from media_taxonomy import filter_media, rank_assets
 from mumu_adapter import MumuBridge, discover_serial
 from selection_store import SelectionStore, extract_douyin_urls, extract_video_id
 from selector_bridge import SelectorBridge
@@ -957,6 +958,57 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertEqual(clip["local_path"], "D:/source.mp4")
         self.assertEqual(clip["trim_start"], 3.5)
         self.assertEqual(clip["trim_end"], 11.25)
+
+    def test_raw_and_shot_tags_persist_inherit_and_can_be_retagged(self):
+        store = SelectionStore(Path(self.work_dir.name) / "media-tags.db")
+        source_file = Path(self.work_dir.name) / "factory.mp4"
+        source_file.write_bytes(b"video")
+        store.add_local_files(9, [source_file])
+        source = store.list_sources()[0]
+        store.update_media_tags(
+            source["id"], role_tags=["直营工厂"], scene_tags=["厂房", "生产线"],
+            usage_tags=["实力证明"], custom_tags=["运动鞋"],
+        )
+        source = store.list_sources()[0]
+        clip_id = store.create_clip(source["id"], 1, 3, "生产线分镜", "no_face")
+        clip = store.get_many([clip_id])[0]
+        self.assertEqual(clip["role_tags"], ["直营工厂"])
+        self.assertEqual(clip["scene_tags"], ["厂房", "生产线"])
+        self.assertEqual(clip["custom_tags"], ["运动鞋"])
+
+        shot = Path(self.work_dir.name) / "shot.mp4"
+        shot.write_bytes(b"video")
+        asset_uuid = store.register_asset({
+            "file_path": str(shot), "name": "生产线分镜",
+            "role_tags": clip["role_tags"], "scene_tags": clip["scene_tags"],
+            "usage_tags": clip["usage_tags"], "custom_tags": clip["custom_tags"],
+        })
+        asset = store.get_asset(asset_uuid)
+        self.assertEqual(asset["scene_tags"], ["厂房", "生产线"])
+        store.update_asset_tags(
+            asset_uuid, role_tags=["OEM/ODM 制造商"], scene_tags=["车间"],
+            usage_tags=["生产过程"], custom_tags=["鞋面针车"],
+        )
+        retagged = store.get_asset(asset_uuid)
+        self.assertEqual(retagged["role_tags"], ["OEM/ODM 制造商"])
+        self.assertEqual(retagged["scene_tags"], ["车间"])
+        self.assertEqual(retagged["usage_tags"], ["生产过程"])
+        self.assertEqual(retagged["custom_tags"], ["鞋面针车"])
+        store.sync_storyboard(9, [{
+            "slot_key": "line", "name": "生产线", "purpose": "生产过程",
+            "visual_requirement": "车间生产线", "target_duration": 2, "required": True,
+        }])
+        candidates = filter_media(
+            store.list_assets(), role="OEM/ODM 制造商", scene="车间", usage="生产过程",
+        )
+        ranked = rank_assets(
+            candidates, store.list_storyboard(9)[0],
+            {"business_role": {"name": "OEM/ODM 制造商"}},
+        )
+        self.assertEqual(ranked[0][0]["level"], "完全匹配")
+        store.select_asset_for_composition(9, "line", ranked[0][1]["asset_uuid"])
+        self.assertEqual(store.list_composition(9)[0]["asset_uuid"], asset_uuid)
+        self.assertEqual(store.list_storyboard(9)[0]["state"], "selected")
 
     def test_per_clip_subtitle_cleanup_settings_are_persisted(self):
         store = SelectionStore(Path(self.work_dir.name) / "subtitle-cleanup.db")
