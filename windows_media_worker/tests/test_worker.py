@@ -994,6 +994,8 @@ class WorkerLeaseTests(unittest.TestCase):
         self.assertEqual(retagged["scene_tags"], ["车间"])
         self.assertEqual(retagged["usage_tags"], ["生产过程"])
         self.assertEqual(retagged["custom_tags"], ["鞋面针车"])
+        self.assertEqual(retagged["role_name"], "OEM/ODM 制造商")
+        self.assertEqual(retagged["role_code"], "oem_factory")
         store.sync_storyboard(9, [{
             "slot_key": "line", "name": "生产线", "purpose": "生产过程",
             "visual_requirement": "车间生产线", "target_duration": 2, "required": True,

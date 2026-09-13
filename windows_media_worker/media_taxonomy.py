@@ -14,6 +14,19 @@ ROLE_TAGS = (
     "跨境零售/DTC",
 )
 
+ROLE_CODE_BY_NAME = {
+    "直营工厂": "direct_factory",
+    "OEM/ODM 制造商": "oem_factory",
+    "外贸公司": "trading_company",
+    "供应链服务商": "supply_chain_service",
+    "采购/寻源代理": "sourcing_agent",
+    "品牌商": "brand_owner",
+    "批发商/区域分销商": "distributor",
+    "系统集成商/解决方案商": "integrator",
+    "工程/EPC 服务商": "epc",
+    "跨境零售/DTC": "dtc",
+}
+
 SCENE_TAGS = (
     "厂房", "车间", "生产线", "仓库", "办公室", "装货", "发货", "验货",
     "装柜", "客户接待", "客户参观", "展会", "产品展示", "打样", "包装",

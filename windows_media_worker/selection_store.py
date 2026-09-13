@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from urllib.parse import parse_qs, urlparse
 
-from media_taxonomy import normalize_tags
+from media_taxonomy import ROLE_CODE_BY_NAME, normalize_tags
 
 
 DOUYIN_HOSTS = {"douyin.com", "www.douyin.com", "v.douyin.com", "v.iesdouyin.com"}
@@ -868,18 +868,21 @@ class SelectionStore:
         self, asset_uuid, role_tags=None, scene_tags=None, usage_tags=None, custom_tags=None,
     ):
         now = datetime.now().astimezone().isoformat(timespec="seconds")
+        normalized_roles = normalize_tags(role_tags)
+        primary_role = normalized_roles[0] if normalized_roles else ""
         with self._connect() as connection:
             cursor = connection.execute(
                 """UPDATE local_media_asset
                       SET role_tags_json = ?, scene_tags_json = ?,
-                          usage_tags_json = ?, custom_tags_json = ?, updated_at = ?
+                          usage_tags_json = ?, custom_tags_json = ?,
+                          role_name = ?, role_code = ?, updated_at = ?
                     WHERE asset_uuid = ?""",
                 (
-                    json.dumps(normalize_tags(role_tags), ensure_ascii=False),
+                    json.dumps(normalized_roles, ensure_ascii=False),
                     json.dumps(normalize_tags(scene_tags), ensure_ascii=False),
                     json.dumps(normalize_tags(usage_tags), ensure_ascii=False),
                     json.dumps(normalize_tags(custom_tags), ensure_ascii=False),
-                    now, str(asset_uuid),
+                    primary_role, ROLE_CODE_BY_NAME.get(primary_role, ""), now, str(asset_uuid),
                 ),
             )
         if not cursor.rowcount:
