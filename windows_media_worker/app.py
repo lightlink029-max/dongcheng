@@ -48,6 +48,16 @@ SOURCE_STATUS_FILTERS = {
     "可合成": "ready",
     "失败": "failed",
 }
+PRODUCTION_CLIP_TYPE_FILTERS = {
+    "全部片段类型": "", "未分类": "unknown",
+    "口播人脸": "talking_face", "非口播人脸": "face_no_speech",
+    "无人脸": "no_face",
+}
+PRODUCTION_STATUS_FILTERS = {
+    "全部制作状态": "", "待初剪 / 分类": "unclassified",
+    "待清理字幕": "pending_cleanup", "待生成分镜": "pending_generation",
+    "处理中": "processing", "已生成分镜": "ready", "失败": "failed",
+}
 
 
 def app_dir():
@@ -395,6 +405,63 @@ class MediaWorkerApp(tk.Tk):
             command=self.show_plan_details,
         ).pack(side="right")
 
+        production_filters = ttk.LabelFrame(
+            production_page, text="筛选本次分镜制作队列", padding=4,
+        )
+        production_filters.pack(fill="x", pady=(0, 4))
+        self.production_filter_vars = {
+            "role": tk.StringVar(value="全部经营角色"),
+            "scene": tk.StringVar(value="全部业务场景"),
+            "usage": tk.StringVar(value="全部分镜用途"),
+            "clip_type": tk.StringVar(value="全部片段类型"),
+            "status": tk.StringVar(value="全部制作状态"),
+            "keyword": tk.StringVar(value=""),
+        }
+        for index, (label, key, choices) in enumerate((
+            ("经营角色", "role", ("全部经营角色", *ROLE_TAGS)),
+            ("业务场景", "scene", ("全部业务场景", *SCENE_TAGS)),
+            ("分镜用途", "usage", ("全部分镜用途", *USAGE_TAGS)),
+        )):
+            ttk.Label(production_filters, text=label).grid(
+                row=0, column=index * 2, sticky="e", padx=(4, 3), pady=1,
+            )
+            ttk.Combobox(
+                production_filters, textvariable=self.production_filter_vars[key],
+                values=choices, state="readonly", width=18,
+            ).grid(row=0, column=index * 2 + 1, sticky="ew", padx=(0, 8), pady=1)
+        ttk.Label(production_filters, text="片段类型").grid(
+            row=1, column=0, sticky="e", padx=(4, 3), pady=1,
+        )
+        ttk.Combobox(
+            production_filters, textvariable=self.production_filter_vars["clip_type"],
+            values=tuple(PRODUCTION_CLIP_TYPE_FILTERS), state="readonly", width=18,
+        ).grid(row=1, column=1, sticky="ew", padx=(0, 8), pady=1)
+        ttk.Label(production_filters, text="制作状态").grid(
+            row=1, column=2, sticky="e", padx=(4, 3), pady=1,
+        )
+        ttk.Combobox(
+            production_filters, textvariable=self.production_filter_vars["status"],
+            values=tuple(PRODUCTION_STATUS_FILTERS), state="readonly", width=18,
+        ).grid(row=1, column=3, sticky="ew", padx=(0, 8), pady=1)
+        ttk.Label(production_filters, text="关键词").grid(
+            row=1, column=4, sticky="e", padx=(4, 3), pady=1,
+        )
+        production_keyword = ttk.Entry(
+            production_filters, textvariable=self.production_filter_vars["keyword"], width=18,
+        )
+        production_keyword.grid(row=1, column=5, sticky="ew", padx=(0, 8), pady=1)
+        production_keyword.bind("<Return>", lambda _event: self._refresh_production_queue())
+        production_filter_actions = ttk.Frame(production_filters)
+        production_filter_actions.grid(row=0, column=6, rowspan=2, sticky="e")
+        ttk.Button(
+            production_filter_actions, text="筛选", command=self._refresh_production_queue,
+        ).pack(side="left", padx=2)
+        ttk.Button(
+            production_filter_actions, text="清除筛选", command=self.clear_production_filters,
+        ).pack(side="left", padx=2)
+        for column in (1, 3, 5):
+            production_filters.columnconfigure(column, weight=1)
+
         source_filters = ttk.LabelFrame(source_page, text="筛选与标记全局原始素材", padding=4)
         source_filters.pack(fill="x", pady=(0, 4))
         self.source_filter_vars = {
@@ -538,6 +605,11 @@ class MediaWorkerApp(tk.Tk):
             text="这里只是本次工作队列，不会移动或删除原始素材。",
             foreground="#666",
         ).pack(side="right", padx=6)
+        self.production_queue_count = tk.StringVar(value="队列 0 条｜显示 0 条")
+        ttk.Label(
+            production_queue_actions, textvariable=self.production_queue_count,
+            foreground="#6f3f64",
+        ).pack(side="right", padx=8)
 
         production_table = ttk.Frame(production_page)
         self.production_tree = ttk.Treeview(
@@ -2716,6 +2788,25 @@ class MediaWorkerApp(tk.Tk):
             return "pending_download", "待下载"
         return "downloaded", "已下载 / 待制作"
 
+    @staticmethod
+    def _production_material_state(record):
+        """Return the next production action for one queued source."""
+        source_state = MediaWorkerApp._source_material_state(record)[0]
+        if source_state == "failed":
+            return "failed", "失败"
+        if source_state == "processing":
+            return "processing", "处理中"
+        if source_state == "ready":
+            return "ready", "已生成分镜"
+        if record.get("clip_type") in (None, "", "unknown"):
+            return "unclassified", "待初剪 / 分类"
+        if (
+            record.get("subtitle_cleanup_policy") == "clean"
+            and record.get("subtitle_cleanup_status") != "ready"
+        ):
+            return "pending_cleanup", "待清理字幕"
+        return "pending_generation", "待生成分镜"
+
     def clear_source_filters(self):
         for key, value in (
             ("role", "全部经营角色"), ("scene", "全部业务场景"),
@@ -2724,6 +2815,15 @@ class MediaWorkerApp(tk.Tk):
         ):
             self.source_filter_vars[key].set(value)
         self._refresh_selection_tree()
+
+    def clear_production_filters(self):
+        for key, value in (
+            ("role", "全部经营角色"), ("scene", "全部业务场景"),
+            ("usage", "全部分镜用途"), ("clip_type", "全部片段类型"),
+            ("status", "全部制作状态"), ("keyword", ""),
+        ):
+            self.production_filter_vars[key].set(value)
+        self._refresh_production_queue()
 
     def clear_library_filters(self):
         for key, value in (
@@ -3299,11 +3399,32 @@ class MediaWorkerApp(tk.Tk):
         selected_before = set(self.production_tree.selection())
         for item in self.production_tree.get_children():
             self.production_tree.delete(item)
-        rows = self.selection_store.get_many(self.production_queue_ids)
-        existing_ids = {row["id"] for row in rows}
+        all_rows = self.selection_store.get_many(self.production_queue_ids)
+        existing_ids = {row["id"] for row in all_rows}
         self.production_queue_ids = [
             value for value in self.production_queue_ids if value in existing_ids
         ]
+        filters = getattr(self, "production_filter_vars", {})
+        rows = filter_media(
+            all_rows,
+            role=self._active_tag_filter(filters.get("role").get()) if filters else "",
+            scene=self._active_tag_filter(filters.get("scene").get()) if filters else "",
+            usage=self._active_tag_filter(filters.get("usage").get()) if filters else "",
+            keyword=filters.get("keyword").get() if filters else "",
+        )
+        clip_type_filter = PRODUCTION_CLIP_TYPE_FILTERS.get(
+            filters.get("clip_type").get(), "",
+        ) if filters else ""
+        if clip_type_filter:
+            rows = [row for row in rows if row.get("clip_type") == clip_type_filter]
+        status_filter = PRODUCTION_STATUS_FILTERS.get(
+            filters.get("status").get(), "",
+        ) if filters else ""
+        if status_filter:
+            rows = [
+                row for row in rows
+                if self._production_material_state(row)[0] == status_filter
+            ]
         source_labels = {
             "douyin_search": "抖音选片", "pasted_link": "粘贴链接",
             "local_upload": "本地上传", "local_library": "本地素材库",
@@ -3334,8 +3455,12 @@ class MediaWorkerApp(tk.Tk):
                 clip_type_labels.get(row.get("clip_type"), "未分类"),
                 format_tags(row),
                 self._format_duration(row.get("duration") or 0),
-                self._source_material_state(row)[1], cleanup, result,
+                self._production_material_state(row)[1], cleanup, result,
             ))
+        if hasattr(self, "production_queue_count"):
+            self.production_queue_count.set(
+                "队列 %s 条｜显示 %s 条" % (len(all_rows), len(rows))
+            )
         available = set(self.production_tree.get_children())
         preserved = [item for item in selected_before if item in available]
         if preserved:

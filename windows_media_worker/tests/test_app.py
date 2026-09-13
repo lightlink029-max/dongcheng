@@ -135,6 +135,28 @@ class SelectionFolderTests(unittest.TestCase):
                 "ready",
             )
 
+    def test_production_material_state_identifies_the_next_action(self):
+        self.assertEqual(
+            MediaWorkerApp._production_material_state({
+                "status": "downloaded", "clip_type": "unknown",
+            })[0],
+            "unclassified",
+        )
+        self.assertEqual(
+            MediaWorkerApp._production_material_state({
+                "status": "downloaded", "clip_type": "talking_face",
+                "subtitle_cleanup_policy": "clean", "subtitle_cleanup_status": "pending",
+            })[0],
+            "pending_cleanup",
+        )
+        self.assertEqual(
+            MediaWorkerApp._production_material_state({
+                "status": "downloaded", "clip_type": "no_face",
+                "subtitle_cleanup_policy": "skip",
+            })[0],
+            "pending_generation",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
