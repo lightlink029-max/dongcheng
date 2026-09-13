@@ -97,6 +97,7 @@ class MediaWorkerApp(tk.Tk):
         self.selection_task_id = None
         self.selection_busy = False
         self.selection_cover_images = {}
+        self.production_cover_images = {}
         self.production_queue_ids = []
         self.production_queue_task_id = None
         self.selection_metadata_pending = set()
@@ -291,6 +292,10 @@ class MediaWorkerApp(tk.Tk):
         self.selection_task_choice = ttk.Combobox(selection_header, state="readonly", width=34)
         self.selection_task_choice.pack(side="left", padx=8)
         self.selection_task_choice.bind("<<ComboboxSelected>>", self._on_selection_task_choice)
+        ttk.Button(
+            selection_header, text="删除当前本地项目",
+            command=self.delete_local_project,
+        ).pack(side="left", padx=3)
 
         plan_panel = ttk.LabelFrame(
             selection_tab, text="视频整体方案（摘要始终可见）", padding=(8, 4),
@@ -560,6 +565,9 @@ class MediaWorkerApp(tk.Tk):
             source_actions, text="下载 / 重新下载", command=self.redownload_selected_videos,
         ).pack(side="left", padx=2)
         ttk.Button(
+            source_actions, text="删除所选原始素材", command=self.delete_selected_videos,
+        ).pack(side="left", padx=8)
+        ttk.Button(
             source_actions, text="预览", command=self.preview_selected_video,
         ).pack(side="right", padx=2)
         ttk.Button(
@@ -593,7 +601,7 @@ class MediaWorkerApp(tk.Tk):
             command=lambda: selection_workflow.select(source_page),
         ).pack(side="left", padx=2)
         ttk.Button(
-            production_queue_actions, text="移出制作区",
+            production_queue_actions, text="移出制作区（保留原素材）",
             command=self.remove_selected_from_production,
         ).pack(side="left", padx=2)
         ttk.Button(
@@ -615,8 +623,10 @@ class MediaWorkerApp(tk.Tk):
         self.production_tree = ttk.Treeview(
             production_table,
             columns=("name", "source", "type", "tags", "duration", "status", "cleanup", "result"),
-            show="headings", selectmode="extended", style="Media.Treeview", height=6,
+            show="tree headings", selectmode="extended", style="Media.Treeview", height=6,
         )
+        self.production_tree.heading("#0", text="封面")
+        self.production_tree.column("#0", width=82, minwidth=72, stretch=False, anchor="center")
         for name, title, width in (
             ("name", "候选素材", 190), ("source", "来源", 90),
             ("type", "片段类型", 105), ("tags", "经营角色 / 场景 / 用途标签", 300),
@@ -853,6 +863,10 @@ class MediaWorkerApp(tk.Tk):
             library_actions, text="重新标记所选分镜", command=self.edit_selected_library_asset_tags,
         ).pack(side="left", padx=6)
         ttk.Button(
+            library_actions, text="删除所选分镜素材",
+            command=self.delete_selected_library_assets,
+        ).pack(side="left", padx=6)
+        ttk.Button(
             library_actions, text="进入第④步：查看成片时间线 →",
             command=lambda: selection_workflow.select(assembly_page),
         ).pack(side="right")
@@ -865,7 +879,7 @@ class MediaWorkerApp(tk.Tk):
             library_page,
             columns=("match", "name", "kind", "clip_type", "tags", "role", "track", "scope", "purpose",
                      "duration", "subtitle", "copyright", "path"),
-            show="headings", selectmode="browse",
+            show="headings", selectmode="extended",
         )
         library_titles = (
             ("match", "方案匹配", 105), ("name", "素材名称", 190), ("kind", "素材类型", 110),
@@ -3280,7 +3294,7 @@ class MediaWorkerApp(tk.Tk):
         minutes, seconds = divmod(seconds, 60)
         return "%d:%02d" % (minutes, seconds)
 
-    def _selection_cover(self, row):
+    def _selection_cover(self, row, cache=None):
         path = Path(row.get("cover_path") or "")
         if not path.is_file():
             return ""
@@ -3290,7 +3304,7 @@ class MediaWorkerApp(tk.Tk):
             canvas = Image.new("RGB", (82, 68), "#eeeeee")
             canvas.paste(image, ((82 - image.width) // 2, (68 - image.height) // 2))
             photo = ImageTk.PhotoImage(canvas)
-            self.selection_cover_images[row["id"]] = photo
+            (cache if cache is not None else self.selection_cover_images)[row["id"]] = photo
             return photo
         except (OSError, ValueError):
             return ""
@@ -3397,6 +3411,7 @@ class MediaWorkerApp(tk.Tk):
         if not hasattr(self, "production_tree"):
             return
         selected_before = set(self.production_tree.selection())
+        self.production_cover_images.clear()
         for item in self.production_tree.get_children():
             self.production_tree.delete(item)
         all_rows = self.selection_store.get_many(self.production_queue_ids)
@@ -3437,6 +3452,7 @@ class MediaWorkerApp(tk.Tk):
             "inherit": "按项目默认", "skip": "无需清理", "clean": "待清理",
         }
         for row in rows:
+            cover = self._selection_cover(row, self.production_cover_images)
             cleanup = cleanup_labels.get(
                 row.get("subtitle_cleanup_policy"), "按项目默认",
             )
@@ -3449,7 +3465,7 @@ class MediaWorkerApp(tk.Tk):
             result = "尚未生成"
             if row.get("processing_status") == "ready" and processed.is_file():
                 result = row.get("processed_kind") or "已生成分镜"
-            self.production_tree.insert("", "end", iid=str(row["id"]), values=(
+            self.production_tree.insert("", "end", iid=str(row["id"]), image=cover, values=(
                 row.get("clip_name") or row.get("video_id") or "待下载解析",
                 source_labels.get(row.get("source_kind"), "粘贴链接"),
                 clip_type_labels.get(row.get("clip_type"), "未分类"),
@@ -3808,8 +3824,8 @@ class MediaWorkerApp(tk.Tk):
     def _open_media_tag_editor(self, title, record, on_save, parent=None, batch_count=1):
         dialog = tk.Toplevel(parent or self)
         dialog.title(title)
-        dialog.geometry("980x640")
-        dialog.minsize(820, 560)
+        dialog.geometry("1000x760")
+        dialog.minsize(860, 650)
         dialog.transient(parent or self)
         body = ttk.Frame(dialog, padding=14)
         body.pack(fill="both", expand=True)
@@ -3840,20 +3856,53 @@ class MediaWorkerApp(tk.Tk):
                 )
                 variables[label] = variable
             tag_vars[key] = variables
-        custom = tk.StringVar(value="，".join(normalize_tags(record.get("custom_tags"))))
+        selected_custom = normalize_tags(record.get("custom_tags"))
+        known_custom = normalize_tags([
+            tag
+            for item in (
+                list(self.selection_store.list_sources())
+                + list(self.selection_store.list_assets(active_only=False))
+            )
+            for tag in item.get("custom_tags") or []
+        ] + selected_custom)
         custom_frame = ttk.LabelFrame(body, text="自定义标签", padding=8)
         custom_frame.pack(fill="x", pady=5)
-        ttk.Label(custom_frame, text="例如：运动鞋、广州仓、40尺柜；用逗号分隔").pack(side="left")
-        ttk.Entry(custom_frame, textvariable=custom).pack(
-            side="left", fill="x", expand=True, padx=(12, 0),
+        ttk.Label(
+            custom_frame, text="已创建标签（可多选）",
+        ).grid(row=0, column=0, sticky="nw", padx=(0, 8))
+        custom_list = tk.Listbox(
+            custom_frame, selectmode="multiple", exportselection=False, height=4,
         )
+        custom_scroll = ttk.Scrollbar(
+            custom_frame, orient="vertical", command=custom_list.yview,
+        )
+        custom_list.configure(yscrollcommand=custom_scroll.set)
+        custom_list.grid(row=0, column=1, sticky="ew")
+        custom_scroll.grid(row=0, column=2, sticky="ns")
+        for index, label in enumerate(known_custom):
+            custom_list.insert("end", label)
+            if label in selected_custom:
+                custom_list.selection_set(index)
+        new_custom = tk.StringVar(value="")
+        ttk.Label(
+            custom_frame, text="新增标签",
+        ).grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(8, 0))
+        ttk.Entry(custom_frame, textvariable=new_custom).grid(
+            row=1, column=1, columnspan=2, sticky="ew", pady=(8, 0),
+        )
+        ttk.Label(
+            custom_frame, text="例如：运动鞋、广州仓、40尺柜；用逗号分隔",
+            foreground="#666",
+        ).grid(row=2, column=1, columnspan=2, sticky="w", pady=(4, 0))
+        custom_frame.columnconfigure(1, weight=1)
 
         def save():
             values = {
                 key: [label for label, variable in variables.items() if variable.get()]
                 for key, variables in tag_vars.items()
             }
-            values["custom_tags"] = normalize_tags(custom.get())
+            existing_custom = [known_custom[index] for index in custom_list.curselection()]
+            values["custom_tags"] = normalize_tags(existing_custom + normalize_tags(new_custom.get()))
             on_save(values)
             dialog.destroy()
 
@@ -3902,6 +3951,58 @@ class MediaWorkerApp(tk.Tk):
             )
 
         self._open_media_tag_editor("分镜素材标签", asset, save)
+
+    def delete_selected_library_assets(self):
+        selected = list(self.library_tree.selection())
+        if not selected:
+            messagebox.showerror(APP_TITLE, "请先选择要删除的分镜素材")
+            return
+        assets = [
+            asset for asset in (self.selection_store.get_asset(value) for value in selected)
+            if asset
+        ]
+        if not assets:
+            messagebox.showerror(APP_TITLE, "所选分镜素材已不存在")
+            return
+        names = "、".join(asset["name"] for asset in assets[:5])
+        if len(assets) > 5:
+            names += " 等 %s 条" % len(assets)
+        if not messagebox.askyesno(
+            APP_TITLE,
+            "确定永久删除以下分镜素材及其本地生成文件？\n%s\n\n"
+            "它们会同时从所有项目的成片时间线移除，原始素材不会删除。" % names,
+        ):
+            return
+        selected_ids = {asset["asset_uuid"] for asset in assets}
+        remaining_paths = {
+            str(Path(asset.get(field) or "").resolve())
+            for asset in self.selection_store.list_assets(active_only=False)
+            if asset["asset_uuid"] not in selected_ids
+            for field in ("file_path", "preview_path")
+            if asset.get(field)
+        }
+        deleted = self.selection_store.delete_assets(selected_ids)
+        failed_files = []
+        for asset in deleted:
+            source_path = str(Path(asset.get("source_path") or "").resolve()) if asset.get("source_path") else ""
+            for field in ("file_path", "preview_path"):
+                value = asset.get(field) or ""
+                if not value:
+                    continue
+                path = Path(value)
+                resolved = str(path.resolve())
+                if resolved == source_path or resolved in remaining_paths or not path.is_file():
+                    continue
+                try:
+                    path.unlink()
+                except OSError:
+                    failed_files.append(str(path))
+        self._refresh_selection_tree()
+        if failed_files:
+            messagebox.showwarning(
+                APP_TITLE,
+                "分镜记录已删除，但有 %s 个本地文件正在被占用，未能删除。" % len(failed_files),
+            )
 
     def edit_selected_clip(self):
         ids = self._selection_ids()
@@ -4482,16 +4583,20 @@ class MediaWorkerApp(tk.Tk):
     def delete_selected_videos(self):
         ids = self._selection_ids()
         if not ids:
-            messagebox.showerror(APP_TITLE, "请先选择要删除的记录")
+            messagebox.showerror(APP_TITLE, "请先选择要删除的原始素材")
             return
-        if not messagebox.askyesno(APP_TITLE, "确定删除所选 %s 条选片记录？" % len(ids)):
+        if not messagebox.askyesno(
+            APP_TITLE,
+            "确定永久删除所选 %s 条原始素材？\n\n"
+            "已下载的缓存文件会删除；您手工上传的原文件会保留。\n"
+            "已生成的分镜素材库成品不受影响。" % len(ids),
+        ):
             return
         rows = self.selection_store.get_many(ids)
         selected_ids = {row["id"] for row in rows}
-        task = self._active_selection_task()
         remaining_paths = {
             str(Path(row.get("local_path") or "").resolve())
-            for row in (self.selection_store.list(task["id"]) if task else [])
+            for row in self.selection_store.list_sources()
             if row["id"] not in selected_ids and row.get("local_path")
         }
         for row in rows:
@@ -4503,6 +4608,21 @@ class MediaWorkerApp(tk.Tk):
             ):
                 path.unlink()
         self.selection_store.delete(ids)
+        for task in self.selection_store.list_tasks():
+            queue_ids = [
+                int(value) for value in (task.get("production_queue_ids") or [])
+                if int(value) not in selected_ids
+            ]
+            if queue_ids != [int(value) for value in (task.get("production_queue_ids") or [])]:
+                updated = dict(task)
+                updated["production_queue_ids"] = queue_ids
+                self.selection_store.update_task(updated)
+                if int(task["id"]) in self.pending_selections:
+                    self.pending_selections[int(task["id"])] = updated
+        self.production_queue_ids = [
+            value for value in self.production_queue_ids if value not in selected_ids
+        ]
+        self._save_production_queue()
         self._refresh_selection_tree()
 
     def move_selected_videos(self, direction):

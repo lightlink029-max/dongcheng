@@ -888,6 +888,42 @@ class SelectionStore:
         if not cursor.rowcount:
             raise ValueError("本地分镜素材库中找不到该素材")
 
+    def delete_assets(self, asset_uuids):
+        values = sorted({str(value) for value in asset_uuids if str(value)})
+        if not values:
+            return []
+        placeholders = ",".join("?" for _value in values)
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        with self._connect() as connection:
+            deleted = connection.execute(
+                f"SELECT * FROM local_media_asset WHERE asset_uuid IN ({placeholders})",
+                values,
+            ).fetchall()
+            if not deleted:
+                return []
+            connection.execute(
+                f"DELETE FROM composition_item WHERE asset_uuid IN ({placeholders})",
+                values,
+            )
+            connection.execute(
+                f"""UPDATE storyboard_slot
+                       SET selected_asset_uuid = '', state = 'missing', updated_at = ?
+                     WHERE selected_asset_uuid IN ({placeholders})""",
+                (now, *values),
+            )
+            connection.execute(
+                f"""UPDATE selected_video
+                       SET library_asset_uuid = '', processed_path = '', processed_kind = '',
+                           processing_status = '', processing_error = '', voice_signature = ''
+                     WHERE library_asset_uuid IN ({placeholders})""",
+                values,
+            )
+            connection.execute(
+                f"DELETE FROM local_media_asset WHERE asset_uuid IN ({placeholders})",
+                values,
+            )
+        return [self._decode_asset(row) for row in deleted]
+
     def select_asset_for_composition(self, task_id, slot_key, asset_uuid):
         task_id, slot_key = int(task_id), str(slot_key or "")
         if not slot_key:

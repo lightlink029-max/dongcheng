@@ -1130,6 +1130,34 @@ class WorkerLeaseTests(unittest.TestCase):
             "ready",
         )
 
+    def test_deleting_library_asset_clears_every_project_reference(self):
+        folder = Path(self.work_dir.name)
+        store = SelectionStore(folder / "delete-asset.db")
+        for task_id in (81, 82):
+            store.save_task({"id": task_id, "name": "项目"})
+            store.sync_storyboard(task_id, [{
+                "slot_key": "opening", "sequence": 10, "name": "开场",
+                "purpose": "建立身份", "target_duration": 3,
+            }])
+        shot = folder / "opening.mp4"
+        shot.write_bytes(b"video")
+        asset_uuid = store.register_asset({
+            "name": "开场分镜", "file_path": str(shot), "clip_type": "no_face",
+        })
+        store.select_asset_for_composition(81, "opening", asset_uuid)
+        store.select_asset_for_composition(82, "opening", asset_uuid)
+
+        deleted = store.delete_assets([asset_uuid])
+
+        self.assertEqual([item["asset_uuid"] for item in deleted], [asset_uuid])
+        self.assertIsNone(store.get_asset(asset_uuid))
+        self.assertEqual(store.list_composition(81), [])
+        self.assertEqual(store.list_composition(82), [])
+        for task_id in (81, 82):
+            slot = store.list_storyboard(task_id)[0]
+            self.assertEqual(slot["selected_asset_uuid"], "")
+            self.assertEqual(slot["state"], "missing")
+
     def test_complete_uploads_final_manifest(self):
         folder = Path(self.work_dir.name)
         output = folder / "final.mp4"
