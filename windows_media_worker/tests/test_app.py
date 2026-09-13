@@ -100,6 +100,41 @@ class SelectionFolderTests(unittest.TestCase):
         self.assertLessEqual(len(lines[1]), 72)
         self.assertTrue(lines[1].endswith("…"))
 
+    def test_source_material_state_matches_the_visible_workflow(self):
+        self.assertEqual(
+            MediaWorkerApp._source_material_state({"status": "selected"})[0],
+            "pending_download",
+        )
+        self.assertEqual(
+            MediaWorkerApp._source_material_state({
+                "status": "downloaded", "subtitle_cleanup_policy": "clean",
+                "subtitle_cleanup_status": "pending",
+            })[0],
+            "pending_cleanup",
+        )
+        self.assertEqual(
+            MediaWorkerApp._source_material_state({
+                "status": "downloaded", "processing_status": "processing",
+            })[0],
+            "processing",
+        )
+        self.assertEqual(
+            MediaWorkerApp._source_material_state({
+                "status": "downloaded", "processing_status": "failed",
+            })[0],
+            "failed",
+        )
+        with TemporaryDirectory() as folder:
+            processed = Path(folder) / "shot.mp4"
+            processed.touch()
+            self.assertEqual(
+                MediaWorkerApp._source_material_state({
+                    "status": "downloaded", "processing_status": "ready",
+                    "processed_path": str(processed),
+                })[0],
+                "ready",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

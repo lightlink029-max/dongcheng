@@ -39,6 +39,15 @@ from worker import Worker, create_version_directory
 
 APP_NAME = "LightLinkMediaWorker"
 APP_TITLE = "LightLink 本地媒体生产工具"
+SOURCE_STATUS_FILTERS = {
+    "全部素材状态": "",
+    "待下载": "pending_download",
+    "已下载 / 待制作": "downloaded",
+    "待清理字幕": "pending_cleanup",
+    "处理中": "processing",
+    "可合成": "ready",
+    "失败": "failed",
+}
 
 
 def app_dir():
@@ -301,6 +310,10 @@ class MediaWorkerApp(tk.Tk):
             plan_navigation, textvariable=self.plan_detail_button_text,
             command=self.show_plan_details,
         ).pack(side="right")
+        ttk.Button(
+            plan_navigation, text="编辑整体方案",
+            command=lambda: self.edit_active_project("plan"),
+        ).pack(side="right", padx=(0, 6))
         ttk.Label(
             plan_navigation, text="先选分镜目标，再到下方制作或选片。",
             foreground="#666",
@@ -369,6 +382,7 @@ class MediaWorkerApp(tk.Tk):
             "role": tk.StringVar(value="全部经营角色"),
             "scene": tk.StringVar(value="全部业务场景"),
             "usage": tk.StringVar(value="全部分镜用途"),
+            "status": tk.StringVar(value="全部素材状态"),
             "keyword": tk.StringVar(value=""),
         }
         for index, (label, key, choices, width) in enumerate((
@@ -391,41 +405,57 @@ class MediaWorkerApp(tk.Tk):
         )
         source_keyword.grid(row=1, column=1, sticky="ew", padx=(0, 8), pady=1)
         source_keyword.bind("<Return>", lambda _event: self._refresh_selection_tree())
+        ttk.Label(source_filters, text="素材状态").grid(
+            row=1, column=2, sticky="e", padx=(4, 3), pady=1,
+        )
+        ttk.Combobox(
+            source_filters, textvariable=self.source_filter_vars["status"],
+            values=tuple(SOURCE_STATUS_FILTERS), state="readonly", width=16,
+        ).grid(row=1, column=3, sticky="ew", padx=(0, 8), pady=1)
+        source_filter_actions = ttk.Frame(source_filters)
+        source_filter_actions.grid(row=1, column=4, columnspan=2, sticky="e")
         ttk.Button(
-            source_filters, text="筛选", command=self._refresh_selection_tree,
-        ).grid(row=1, column=2, sticky="w", padx=3, pady=1)
+            source_filter_actions, text="筛选", command=self._refresh_selection_tree,
+        ).pack(side="left", padx=2)
         ttk.Button(
-            source_filters, text="清除筛选", command=self.clear_source_filters,
-        ).grid(row=1, column=3, sticky="w", padx=3, pady=1)
+            source_filter_actions, text="清除筛选", command=self.clear_source_filters,
+        ).pack(side="left", padx=2)
         ttk.Button(
-            source_filters, text="给所选素材打标签", command=self.edit_selected_source_tags,
-        ).grid(row=1, column=4, columnspan=2, sticky="e", padx=3, pady=1)
+            source_filter_actions, text="给所选素材打标签", command=self.edit_selected_source_tags,
+        ).pack(side="left", padx=2)
         for column in (1, 3, 5):
             source_filters.columnconfigure(column, weight=1)
 
         ttk.Style(self).configure("Media.Treeview", rowheight=78)
         selection_columns = (
-            "clip_name", "source_kind", "clip_type", "tags", "caption", "duration", "status", "trim",
-            "subtitle_cleanup", "final_source", "copyright", "url", "error",
+            "clip_name", "source_kind", "clip_type", "status", "tags", "duration",
+            "subtitle_cleanup", "final_source", "copyright", "caption", "trim", "url", "error",
         )
+        selection_table = ttk.Frame(source_page)
+        self.selection_table = selection_table
         self.selection_tree = ttk.Treeview(
-            source_page, columns=selection_columns, show="tree headings",
+            selection_table, columns=selection_columns, show="tree headings",
             selectmode="extended", style="Media.Treeview", height=5,
         )
         self.selection_tree.heading("#0", text="封面")
-        self.selection_tree.column("#0", width=100, minwidth=100, stretch=False, anchor="center")
+        self.selection_tree.column("#0", width=82, minwidth=72, stretch=False, anchor="center")
         titles = (
-            "素材/片段名称", "来源", "片段类型", "经营角色 / 场景 / 用途标签", "原视频文案", "时长", "处理状态", "入点-出点",
-            "原字幕处理", "最终使用", "版权", "分享链接", "错误",
+            "素材/片段名称", "来源", "片段类型", "素材状态", "经营角色 / 场景 / 用途标签", "时长",
+            "字幕处理", "成片来源", "版权", "原视频文案", "入点-出点", "分享链接", "错误",
         )
-        widths = (180, 95, 110, 260, 260, 75, 90, 100, 110, 125, 90, 240, 180)
+        widths = (160, 82, 96, 90, 235, 62, 92, 105, 72, 230, 88, 220, 170)
         for column, title, width in zip(selection_columns, titles, widths):
             self.selection_tree.heading(column, text=title)
             self.selection_tree.column(column, width=width, anchor="w")
         selection_scroll = ttk.Scrollbar(
-            source_page, orient="horizontal", command=self.selection_tree.xview,
+            selection_table, orient="horizontal", command=self.selection_tree.xview,
         )
-        self.selection_tree.configure(xscrollcommand=selection_scroll.set)
+        selection_vscroll = ttk.Scrollbar(
+            selection_table, orient="vertical", command=self.selection_tree.yview,
+        )
+        self.selection_tree.configure(
+            xscrollcommand=selection_scroll.set, yscrollcommand=selection_vscroll.set,
+        )
         self.selection_tree.bind("<<TreeviewSelect>>", lambda _event: self._refresh_selection_summary())
         self.selection_tree.bind("<Double-1>", lambda _event: self.preview_selected_video())
 
@@ -440,16 +470,16 @@ class MediaWorkerApp(tk.Tk):
         add_controls = ttk.LabelFrame(control_groups, text="A. 素材导入", padding=(4, 2))
         add_controls.grid(row=0, column=0, sticky="ew", padx=(0, 3), pady=(0, 2))
         ttk.Button(
-            add_controls, text="从剪贴板添加", command=self.add_selection_from_clipboard,
+            add_controls, text="粘贴板", command=self.add_selection_from_clipboard,
         ).pack(side="left", padx=2)
         ttk.Button(
-            add_controls, text="手工添加链接", command=self.add_selection_manually,
+            add_controls, text="链接", command=self.add_selection_manually,
         ).pack(side="left", padx=2)
         ttk.Button(
-            add_controls, text="添加本地视频", command=self.add_local_videos,
+            add_controls, text="本地视频", command=self.add_local_videos,
         ).pack(side="left", padx=2)
         ttk.Button(
-            add_controls, text="下载所选", command=self.redownload_selected_videos,
+            add_controls, text="下载", command=self.redownload_selected_videos,
         ).pack(side="left", padx=2)
 
         clip_controls = ttk.LabelFrame(control_groups, text="B. 人工初剪与分类", padding=(4, 2))
@@ -458,17 +488,22 @@ class MediaWorkerApp(tk.Tk):
             clip_controls, text="初剪 / 分类 / 字幕", command=self.edit_selected_clip,
         ).pack(side="left", padx=2)
         ttk.Button(
-            clip_controls, text="只选口播人脸", command=self.select_talking_face_clips,
+            clip_controls, text="口播人脸", command=self.select_talking_face_clips,
         ).pack(side="left", padx=2)
         ttk.Button(clip_controls, text="全选", command=self.select_all_videos).pack(side="left", padx=2)
 
         copy_controls = ttk.LabelFrame(control_groups, text="C. 文案、配音与口型", padding=(4, 2))
         copy_controls.grid(row=0, column=2, sticky="ew", padx=(3, 0), pady=(0, 2))
         ttk.Button(
-            copy_controls, text="文案 / 项目音色", command=self.edit_active_project,
+            copy_controls, text="文案 / 翻译",
+            command=lambda: self.edit_active_project("content"),
         ).pack(side="left", padx=2)
         ttk.Button(
-            copy_controls, text="生成所选分镜", command=self.process_selected_clip,
+            copy_controls, text="项目音色",
+            command=lambda: self.edit_active_project("voice"),
+        ).pack(side="left", padx=2)
+        ttk.Button(
+            copy_controls, text="生成分镜", command=self.process_selected_clip,
         ).pack(side="left", padx=2)
 
         self.selection_summary = tk.StringVar(value="0 条")
@@ -484,8 +519,10 @@ class MediaWorkerApp(tk.Tk):
             summary_row, text="进入第②步：从分镜库选择成片素材 →",
             command=lambda: selection_workflow.select(library_page),
         ).pack(side="right", padx=8)
+        selection_table.pack(fill="both", expand=True, pady=(0, 2))
         selection_scroll.pack(side="bottom", fill="x")
-        self.selection_tree.pack(fill="both", expand=True, pady=(0, 2))
+        selection_vscroll.pack(side="right", fill="y")
+        self.selection_tree.pack(side="left", fill="both", expand=True)
 
         assembly_header = ttk.Frame(assembly_page)
         assembly_header.pack(fill="x", pady=(0, 10))
@@ -508,7 +545,8 @@ class MediaWorkerApp(tk.Tk):
             assembly_actions, text="生成最终审核稿", command=self.mix_assembly_clips,
         ).pack(side="right", padx=3)
         ttk.Button(
-            assembly_actions, text="设置背景音乐 / 导出比例", command=self.edit_active_project,
+            assembly_actions, text="背景音乐 / 导出设置",
+            command=lambda: self.edit_active_project("output"),
         ).pack(side="right", padx=3)
         self.assembly_tree = ttk.Treeview(
             assembly_page,
@@ -1561,7 +1599,14 @@ class MediaWorkerApp(tk.Tk):
         cleanup_quality_choices = {"fast": "快速", "standard": "标准", "high": "高质量"}
         quick_method_choices = {"blur": "模糊", "crop": "裁切", "cover": "底色覆盖"}
         dialog = tk.Toplevel(self)
-        dialog.title("编辑视频项目" if task else "新建本地视频项目")
+        page_names = {
+            "plan": "视频方案", "content": "文案翻译",
+            "voice": "项目音色", "output": "合成导出",
+        }
+        dialog.title(
+            ("编辑视频项目 · %s" % page_names.get(initial_tab, "视频方案"))
+            if task else "新建本地视频项目"
+        )
         dialog.transient(self)
         dialog.update_idletasks()
         width = min(1180, max(900, dialog.winfo_screenwidth() - 100))
@@ -1576,16 +1621,19 @@ class MediaWorkerApp(tk.Tk):
         project_notebook.pack(fill="both", expand=True, padx=12, pady=12)
         source_form = ttk.Frame(project_notebook, padding=16)
         content_form = ttk.Frame(project_notebook, padding=16)
+        voice_form = ttk.Frame(project_notebook, padding=16)
         output_form = ttk.Frame(project_notebook, padding=16)
         cleanup_form = ttk.Frame(project_notebook, padding=16)
-        project_notebook.add(source_form, text="基础与素材")
-        project_notebook.add(content_form, text="文案翻译与校验")
-        project_notebook.add(output_form, text="剪辑、配音与导出")
-        if task:
-            project_notebook.select(content_form)
-        else:
-            project_notebook.select(source_form)
-        for page in (source_form, content_form, output_form, cleanup_form):
+        project_notebook.add(source_form, text="① 视频方案")
+        project_notebook.add(content_form, text="② 文案翻译")
+        project_notebook.add(voice_form, text="③ 项目音色")
+        project_notebook.add(output_form, text="④ 合成导出")
+        project_pages = {
+            "plan": source_form, "content": content_form,
+            "voice": voice_form, "output": output_form,
+        }
+        project_notebook.select(project_pages.get(initial_tab, source_form))
+        for page in (source_form, content_form, voice_form, output_form, cleanup_form):
             page.columnconfigure(1, weight=1)
 
         def voice_label(profile):
@@ -1645,6 +1693,7 @@ class MediaWorkerApp(tk.Tk):
             )),
         }
         local_files = list(existing.get("local_files") or [])
+        source_urls = list(existing.get("source_urls") or [])
 
         source_rows = (
             ("项目名称", "name", None), ("搜索关键词", "keywords", None),
@@ -1652,18 +1701,23 @@ class MediaWorkerApp(tk.Tk):
             ("目标语言", "target_language", None),
             ("参考时长（翻译模式跟随素材）", "duration_seconds", None),
         )
-        output_rows = (
-            ("画面比例", "aspect_ratio", ("9:16", "4:5", "1:1")),
-            ("导出预设", "export_preset", tuple(preset_choices.values())),
-            ("转场", "transition", ("无转场", "淡入淡出")),
+        voice_rows = (
             ("配音服务", "tts_provider", tuple(tts_choices.values())),
             ("音色名称/ID", "tts_voice", None),
             ("配音语速", "tts_speed", None),
             ("配音音量", "tts_volume", None),
+        )
+        output_rows = (
+            ("画面比例", "aspect_ratio", ("9:16", "4:5", "1:1")),
+            ("导出预设", "export_preset", tuple(preset_choices.values())),
+            ("转场", "transition", ("无转场", "淡入淡出")),
             ("背景音乐音量", "music_volume", None),
         )
         widgets = {}
-        for page, rows in ((source_form, source_rows), (output_form, output_rows)):
+        for page, rows in (
+            (source_form, source_rows), (voice_form, voice_rows),
+            (output_form, output_rows),
+        ):
             for row, (label, key, choices) in enumerate(rows):
                 ttk.Label(page, text=label, width=20).grid(row=row, column=0, sticky="w", pady=7)
                 if key == "tts_voice":
@@ -1862,26 +1916,41 @@ class MediaWorkerApp(tk.Tk):
             ) or values["source_image_path"].get()),
         ).grid(row=image_row, column=2, padx=(8, 0))
 
-        video_row = image_row + 1
-        ttk.Label(source_form, text="本地视频", width=20).grid(row=video_row, column=0, sticky="nw", pady=7)
-        local_label = tk.StringVar(value="已选择 %s 个文件" % len(local_files))
-        ttk.Label(source_form, textvariable=local_label).grid(row=video_row, column=1, sticky="w", pady=7)
-        def choose_videos():
-            selected = filedialog.askopenfilenames(
-                parent=dialog, filetypes=[("视频", "*.mp4 *.mov *.mkv *.webm *.avi"), ("所有文件", "*.*")],
-            )
-            for path in selected:
-                if path not in local_files:
-                    local_files.append(path)
-            local_label.set("已选择 %s 个文件" % len(local_files))
-        ttk.Button(source_form, text="添加视频", command=choose_videos).grid(row=video_row, column=2, padx=(8, 0))
-
-        url_row = video_row + 1
-        ttk.Label(source_form, text="抖音链接", width=20).grid(row=url_row, column=0, sticky="nw", pady=7)
-        urls = tk.Text(source_form, height=8, wrap="word")
-        urls.grid(row=url_row, column=1, columnspan=2, sticky="nsew", pady=5)
-        urls.insert("1.0", "\n".join(existing.get("source_urls") or []))
-        source_form.rowconfigure(url_row, weight=1)
+        source_note = ttk.LabelFrame(source_form, text="原始素材入口", padding=12)
+        source_note.grid(
+            row=image_row + 1, column=0, columnspan=3,
+            sticky="ew", pady=(16, 0),
+        )
+        ttk.Label(
+            source_note,
+            text=(
+                "抖音链接、本地视频和下载操作统一放在工作台第①步“原始素材制作分镜”。"
+                "这里仅维护整条视频方案，不再重复导入素材。"
+            ),
+            foreground="#555", wraplength=900, justify="left",
+        ).pack(anchor="w")
+        role = existing.get("business_role") or {}
+        track = existing.get("project_track") or {}
+        scope = existing.get("content_scope") or {}
+        plan_snapshot = ttk.LabelFrame(source_form, text="已确定的视频模板", padding=12)
+        plan_snapshot.grid(
+            row=image_row + 2, column=0, columnspan=3,
+            sticky="ew", pady=(12, 0),
+        )
+        ttk.Label(
+            plan_snapshot,
+            text="经营角色：%s　项目赛道：%s　内容模板：%s" % (
+                role.get("name") or "未指定",
+                track.get("name") or "未指定",
+                scope.get("name") or "未指定",
+            ),
+            font=("Microsoft YaHei UI", 10, "bold"),
+        ).pack(anchor="w")
+        ttk.Label(
+            plan_snapshot,
+            text=self._compact_plan_summary(existing.get("video_plan_summary")),
+            foreground="#555", wraplength=900, justify="left",
+        ).pack(anchor="w", pady=(6, 0))
 
         workflow_label = (
             "单条视频 · 原声识别/翻译" if len(task_rows) == 1 else
@@ -2021,23 +2090,25 @@ class MediaWorkerApp(tk.Tk):
             button.config(command=lambda s=source_editor, t=target_editor, k=source_key, b=button:
                           translate_text(s, t, k, b))
 
-        voice_bar = ttk.LabelFrame(content_form, text="本次生成音色", padding=8)
-        voice_bar.grid(row=6, column=0, columnspan=3, sticky="ew", pady=(8, 0))
-        ttk.Label(voice_bar, text="服务商").pack(side="left")
-        quick_provider = ttk.Combobox(
-            voice_bar, textvariable=values["tts_provider"],
-            values=tuple(tts_choices.values()), state="readonly", width=24,
+        voice_summary = ttk.LabelFrame(
+            voice_form, text="项目统一音色规则", padding=12,
         )
-        quick_provider.pack(side="left", padx=(6, 16))
-        ttk.Label(voice_bar, text="音色").pack(side="left")
-        quick_voice = ttk.Combobox(
-            voice_bar, textvariable=values["tts_voice"], width=36, state="readonly",
+        voice_summary.grid(
+            row=len(voice_rows), column=0, columnspan=3,
+            sticky="ew", pady=(16, 0),
         )
-        quick_voice.pack(side="left", padx=6)
-        voice_widgets.append(quick_voice)
-        quick_provider.bind("<<ComboboxSelected>>", load_provider_voices)
+        ttk.Label(
+            voice_summary,
+            text=(
+                "本项目所有需要配音的分镜统一使用这里的音色；修改后，"
+                "已生成片段会提示重新生成，避免同一成片混入不同声音。"
+            ),
+            foreground="#555", wraplength=900, justify="left",
+        ).pack(anchor="w")
         voice_hint = tk.StringVar()
-        ttk.Label(voice_bar, textvariable=voice_hint, foreground="#666").pack(side="left", padx=6)
+        ttk.Label(
+            voice_summary, textvariable=voice_hint, foreground="#6f3f64",
+        ).pack(anchor="w", pady=(8, 0))
 
         def update_voice_hint(*_args):
             selected_label = values["tts_voice"].get().strip()
@@ -2052,10 +2123,11 @@ class MediaWorkerApp(tk.Tk):
             )
             voice_hint.set(f"音色 ID：{profile['voice_id']}" if profile else "")
 
-        quick_voice.bind("<<ComboboxSelected>>", update_voice_hint)
         widgets["tts_voice"].bind("<<ComboboxSelected>>", update_voice_hint)
         values["tts_voice"].trace_add("write", update_voice_hint)
-        ttk.Button(voice_bar, text="管理/试听音色", command=self.open_voice_manager).pack(side="left", padx=12)
+        ttk.Button(
+            voice_summary, text="管理 / 试听音色", command=self.open_voice_manager,
+        ).pack(anchor="w", pady=(10, 0))
         load_provider_voices()
         update_voice_hint()
 
@@ -2130,7 +2202,7 @@ class MediaWorkerApp(tk.Tk):
                     "custom_script": custom_script.get("1.0", "end").strip(),
                     "custom_translation": custom_translation.get("1.0", "end").strip(),
                     "source_image_path": image_path,
-                    "source_urls": [line.strip() for line in urls.get("1.0", "end").splitlines() if line.strip()],
+                    "source_urls": source_urls,
                     "local_files": local_files,
                     **cleanup_task_values(),
                 })
@@ -2156,12 +2228,13 @@ class MediaWorkerApp(tk.Tk):
         actions = ttk.Frame(dialog, padding=(12, 0, 12, 12))
         actions.pack(side="bottom", fill="x")
         ttk.Button(
-            actions, text="保存文案与项目音色" if task else "创建项目", command=save_project,
+            actions, text="保存项目设置" if task else "创建项目", command=save_project,
         ).pack(side="left", padx=4)
-        ttk.Button(
-            actions, text="保存并打开抖音搜索" if task else "创建并打开抖音搜索",
-            command=lambda: save_project(True),
-        ).pack(side="left", padx=4)
+        if not task:
+            ttk.Button(
+                actions, text="创建并打开素材搜索",
+                command=lambda: save_project(True),
+            ).pack(side="left", padx=4)
         ttk.Button(actions, text="取消", command=dialog.destroy).pack(side="right", padx=4)
         dialog.grab_set()
         dialog.focus_force()
@@ -2384,12 +2457,12 @@ class MediaWorkerApp(tk.Tk):
     def create_local_project(self):
         self._new_local_project_dialog()
 
-    def edit_active_project(self):
+    def edit_active_project(self, initial_tab="plan"):
         task = self._active_selection_task()
         if not task:
             messagebox.showerror(APP_TITLE, "请先选择一个项目")
             return
-        self._project_dialog(task)
+        self._project_dialog(task, initial_tab=initial_tab)
 
     def open_subtitle_cleanup(self):
         self._project_dialog(self._active_selection_task(), initial_tab="cleanup")
@@ -2507,10 +2580,35 @@ class MediaWorkerApp(tk.Tk):
             compact.append(line if len(line) <= 72 else line[:71].rstrip() + "…")
         return "\n".join(compact)
 
+    @staticmethod
+    def _source_material_state(record):
+        """Return the workflow state shown in and used to filter the source list."""
+        source_status = str(record.get("status") or "selected")
+        cleanup_status = str(record.get("subtitle_cleanup_status") or "")
+        processing_status = str(record.get("processing_status") or "")
+        if "failed" in (source_status, cleanup_status, processing_status):
+            return "failed", "失败"
+        if source_status in ("downloading", "mixing") or "processing" in (
+            cleanup_status, processing_status,
+        ):
+            return "processing", "处理中"
+        processed = Path(record.get("processed_path") or "")
+        if processing_status == "ready" and processed.is_file():
+            return "ready", "可合成"
+        if (
+            record.get("subtitle_cleanup_policy") == "clean"
+            and cleanup_status != "ready"
+        ):
+            return "pending_cleanup", "待清理字幕"
+        if source_status == "selected":
+            return "pending_download", "待下载"
+        return "downloaded", "已下载 / 待制作"
+
     def clear_source_filters(self):
         for key, value in (
             ("role", "全部经营角色"), ("scene", "全部业务场景"),
-            ("usage", "全部分镜用途"), ("keyword", ""),
+            ("usage", "全部分镜用途"), ("status", "全部素材状态"),
+            ("keyword", ""),
         ):
             self.source_filter_vars[key].set(value)
         self._refresh_selection_tree()
@@ -2559,10 +2657,14 @@ class MediaWorkerApp(tk.Tk):
             usage=self._active_tag_filter(filters.get("usage").get()) if filters else "",
             keyword=filters.get("keyword").get() if filters else "",
         )
-        labels = {
-            "selected": "已选择", "downloading": "下载中", "downloaded": "已下载",
-            "mixing": "混剪中", "ready_review": "待审核", "done": "已完成", "failed": "失败",
-        }
+        status_filter = SOURCE_STATUS_FILTERS.get(
+            filters.get("status").get(), "",
+        ) if filters else ""
+        if status_filter:
+            rows = [
+                row for row in rows
+                if self._source_material_state(row)[0] == status_filter
+            ]
         cleanup_labels = {
             "inherit": "按项目默认", "skip": "无需清理", "clean": "需要清理",
         }
@@ -2590,27 +2692,23 @@ class MediaWorkerApp(tk.Tk):
                 }.get(cleanup_status, "待清理")
             processed = Path(row.get("processed_path") or "")
             processing_status = row.get("processing_status") or ""
-            status_label = labels.get(row["status"], row["status"])
+            _status_key, status_label = self._source_material_state(row)
             final_source = "尚未生成"
-            if processing_status == "processing":
-                status_label = "片段生成中"
-            elif processing_status == "failed":
-                status_label = "片段生成失败"
-            elif processing_status == "ready" and processed.is_file():
-                status_label = "可合成"
+            if processing_status == "ready" and processed.is_file():
                 final_source = row.get("processed_kind") or "已处理片段"
             self.selection_tree.insert("", "end", iid=str(row["id"]), image=cover, values=(
                 row.get("clip_name") or row["video_id"] or "待下载解析",
                 source_labels.get(row.get("source_kind"), "粘贴链接"),
                 clip_type_labels.get(row.get("clip_type"), "未分类"),
-                format_tags(row),
-                caption.replace("\n", " "),
-                self._format_duration(row.get("duration") or 0),
                 status_label,
-                "%s-%s" % (row.get("trim_start") or 0, row.get("trim_end") or "结束"),
+                format_tags(row),
+                self._format_duration(row.get("duration") or 0),
                 cleanup_label,
                 final_source,
-                row.get("copyright_status") or "unreviewed", row["url"],
+                row.get("copyright_status") or "unreviewed",
+                caption.replace("\n", " "),
+                "%s-%s" % (row.get("trim_start") or 0, row.get("trim_end") or "结束"),
+                row["url"],
                 row.get("processing_error") or row.get("subtitle_cleanup_error") or row["error"],
             ))
         available = set(self.selection_tree.get_children())
