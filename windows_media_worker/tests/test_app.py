@@ -90,6 +90,16 @@ class SelectionFolderTests(unittest.TestCase):
         })
         self.assertNotEqual(first, second)
 
+    def test_plan_summary_keeps_only_two_compact_lines(self):
+        summary = MediaWorkerApp._compact_plan_summary(
+            "第一行\n" + ("第二行内容" * 30) + "\n第三行完整画面证据"
+        )
+
+        lines = summary.splitlines()
+        self.assertEqual(len(lines), 2)
+        self.assertLessEqual(len(lines[1]), 72)
+        self.assertTrue(lines[1].endswith("…"))
+
 
 if __name__ == "__main__":
     unittest.main()

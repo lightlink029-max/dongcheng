@@ -258,7 +258,7 @@ class MediaWorkerApp(tk.Tk):
             foreground="#666",
         ).pack(side="right")
 
-        selection_header = ttk.Frame(selection_tab, padding=10)
+        selection_header = ttk.Frame(selection_tab, padding=(10, 6))
         selection_header.pack(fill="x")
         self.selection_title = tk.StringVar(value="请先启动工作节点并领取抖音选片任务")
         ttk.Label(selection_header, textvariable=self.selection_title, font=("Microsoft YaHei UI", 11, "bold")).pack(side="left")
@@ -268,14 +268,14 @@ class MediaWorkerApp(tk.Tk):
         self.selection_task_choice.bind("<<ComboboxSelected>>", self._on_selection_task_choice)
 
         plan_panel = ttk.LabelFrame(
-            selection_tab, text="视频整体方案（始终可见）", padding=(10, 6),
+            selection_tab, text="视频整体方案（摘要始终可见）", padding=(8, 4),
         )
-        plan_panel.pack(fill="x", padx=10, pady=(0, 8))
+        plan_panel.pack(fill="x", padx=10, pady=(0, 4))
         plan_summary_row = ttk.Frame(plan_panel)
         plan_summary_row.pack(fill="x")
         self.video_plan_summary = tk.StringVar(value="请选择项目；先确认整体视频方案，再逐个完成分镜。")
         ttk.Label(
-            plan_summary_row, textvariable=self.video_plan_summary, wraplength=950,
+            plan_summary_row, textvariable=self.video_plan_summary, wraplength=1050,
             justify="left", foreground="#333",
         ).pack(side="left", fill="x", expand=True)
         self.storyboard_progress = tk.StringVar(value="分镜进度：0/0")
@@ -285,7 +285,7 @@ class MediaWorkerApp(tk.Tk):
         ).pack(side="right", padx=(15, 0))
 
         plan_navigation = ttk.Frame(plan_panel)
-        plan_navigation.pack(fill="x", pady=(6, 0))
+        plan_navigation.pack(fill="x", pady=(3, 0))
         ttk.Label(plan_navigation, text="当前分镜").pack(side="left")
         self.storyboard_choice_var = tk.StringVar()
         self.storyboard_choice = ttk.Combobox(
@@ -325,7 +325,7 @@ class MediaWorkerApp(tk.Tk):
 
         selection_workflow = ttk.Notebook(selection_tab)
         selection_workflow.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-        source_page = ttk.Frame(selection_workflow, padding=10)
+        source_page = ttk.Frame(selection_workflow, padding=6)
         library_page = ttk.Frame(selection_workflow, padding=10)
         assembly_page = ttk.Frame(selection_workflow, padding=10)
         review_page = ttk.Frame(selection_workflow, padding=10)
@@ -340,7 +340,7 @@ class MediaWorkerApp(tk.Tk):
         self.selection_review_page = review_page
 
         source_header = ttk.Frame(source_page)
-        source_header.pack(fill="x", pady=(0, 8))
+        source_header.pack(fill="x", pady=(0, 4))
         self.clipboard_listening = tk.BooleanVar(value=True)
         ttk.Checkbutton(
             source_header, text="自动收集剪贴板中的抖音链接", variable=self.clipboard_listening,
@@ -348,13 +348,12 @@ class MediaWorkerApp(tk.Tk):
         ttk.Label(
             source_header,
             text=(
-                "全局原始素材库：素材不属于当前项目，可跨视频重复制作分镜；"
-                "完成后只存入全局分镜素材库，不会直接加入成片。"
+                "全局原始素材库（可跨项目复用；完成分镜后不会自动加入成片）"
             ),
         ).pack(side="left")
         self.production_shot_label = tk.StringVar(value="尚未选择本次要制作的分镜要求")
-        source_target = ttk.LabelFrame(source_page, text="当前制作目标（来自视频方案）", padding=7)
-        source_target.pack(fill="x", pady=(0, 8))
+        source_target = ttk.LabelFrame(source_page, text="当前制作目标（来自视频方案）", padding=4)
+        source_target.pack(fill="x", pady=(0, 4))
         ttk.Label(
             source_target, textvariable=self.production_shot_label,
             font=("Microsoft YaHei UI", 10, "bold"), foreground="#6f3f64",
@@ -364,8 +363,8 @@ class MediaWorkerApp(tk.Tk):
             command=self.show_plan_details,
         ).pack(side="right")
 
-        source_filters = ttk.LabelFrame(source_page, text="筛选与标记全局原始素材", padding=7)
-        source_filters.pack(fill="x", pady=(0, 8))
+        source_filters = ttk.LabelFrame(source_page, text="筛选与标记全局原始素材", padding=4)
+        source_filters.pack(fill="x", pady=(0, 4))
         self.source_filter_vars = {
             "role": tk.StringVar(value="全部经营角色"),
             "scene": tk.StringVar(value="全部业务场景"),
@@ -378,29 +377,29 @@ class MediaWorkerApp(tk.Tk):
             ("分镜用途", "usage", ("全部分镜用途", *USAGE_TAGS), 16),
         )):
             ttk.Label(source_filters, text=label).grid(
-                row=0, column=index * 2, sticky="e", padx=(4, 3), pady=3,
+                row=0, column=index * 2, sticky="e", padx=(4, 3), pady=1,
             )
             ttk.Combobox(
                 source_filters, textvariable=self.source_filter_vars[key], values=choices,
                 state="readonly", width=width,
-            ).grid(row=0, column=index * 2 + 1, sticky="ew", padx=(0, 8), pady=3)
+            ).grid(row=0, column=index * 2 + 1, sticky="ew", padx=(0, 8), pady=1)
         ttk.Label(source_filters, text="关键词").grid(
-            row=1, column=0, sticky="e", padx=(4, 3), pady=3,
+            row=1, column=0, sticky="e", padx=(4, 3), pady=1,
         )
         source_keyword = ttk.Entry(
             source_filters, textvariable=self.source_filter_vars["keyword"], width=16,
         )
-        source_keyword.grid(row=1, column=1, sticky="ew", padx=(0, 8), pady=3)
+        source_keyword.grid(row=1, column=1, sticky="ew", padx=(0, 8), pady=1)
         source_keyword.bind("<Return>", lambda _event: self._refresh_selection_tree())
         ttk.Button(
             source_filters, text="筛选", command=self._refresh_selection_tree,
-        ).grid(row=1, column=2, sticky="w", padx=3, pady=3)
+        ).grid(row=1, column=2, sticky="w", padx=3, pady=1)
         ttk.Button(
             source_filters, text="清除筛选", command=self.clear_source_filters,
-        ).grid(row=1, column=3, sticky="w", padx=3, pady=3)
+        ).grid(row=1, column=3, sticky="w", padx=3, pady=1)
         ttk.Button(
             source_filters, text="给所选素材打标签", command=self.edit_selected_source_tags,
-        ).grid(row=1, column=4, columnspan=2, sticky="e", padx=3, pady=3)
+        ).grid(row=1, column=4, columnspan=2, sticky="e", padx=3, pady=1)
         for column in (1, 3, 5):
             source_filters.columnconfigure(column, weight=1)
 
@@ -430,50 +429,51 @@ class MediaWorkerApp(tk.Tk):
         self.selection_tree.bind("<<TreeviewSelect>>", lambda _event: self._refresh_selection_summary())
         self.selection_tree.bind("<Double-1>", lambda _event: self.preview_selected_video())
 
-        selection_controls = ttk.LabelFrame(source_page, text="视频素材操作（按流程）", padding=8)
-        selection_controls.pack(fill="x", pady=(0, 8))
+        selection_controls = ttk.LabelFrame(source_page, text="视频素材操作（按流程）", padding=4)
+        selection_controls.pack(side="bottom", fill="x", pady=(4, 0))
+        self.selection_controls = selection_controls
         control_groups = ttk.Frame(selection_controls)
         control_groups.pack(fill="x")
         for column in range(3):
             control_groups.columnconfigure(column, weight=1)
 
-        add_controls = ttk.LabelFrame(control_groups, text="A. 素材导入", padding=(7, 5))
-        add_controls.grid(row=0, column=0, sticky="ew", padx=(0, 5), pady=(0, 5))
+        add_controls = ttk.LabelFrame(control_groups, text="A. 素材导入", padding=(4, 2))
+        add_controls.grid(row=0, column=0, sticky="ew", padx=(0, 3), pady=(0, 2))
         ttk.Button(
             add_controls, text="从剪贴板添加", command=self.add_selection_from_clipboard,
-        ).pack(side="left", padx=3)
+        ).pack(side="left", padx=2)
         ttk.Button(
             add_controls, text="手工添加链接", command=self.add_selection_manually,
-        ).pack(side="left", padx=3)
+        ).pack(side="left", padx=2)
         ttk.Button(
             add_controls, text="添加本地视频", command=self.add_local_videos,
-        ).pack(side="left", padx=3)
+        ).pack(side="left", padx=2)
         ttk.Button(
             add_controls, text="下载所选", command=self.redownload_selected_videos,
-        ).pack(side="left", padx=3)
+        ).pack(side="left", padx=2)
 
-        clip_controls = ttk.LabelFrame(control_groups, text="B. 人工初剪与分类", padding=(7, 5))
-        clip_controls.grid(row=0, column=1, sticky="ew", padx=5, pady=(0, 5))
+        clip_controls = ttk.LabelFrame(control_groups, text="B. 人工初剪与分类", padding=(4, 2))
+        clip_controls.grid(row=0, column=1, sticky="ew", padx=3, pady=(0, 2))
         ttk.Button(
-            clip_controls, text="打开初剪 / 分类 / 字幕", command=self.edit_selected_clip,
-        ).pack(side="left", padx=3)
+            clip_controls, text="初剪 / 分类 / 字幕", command=self.edit_selected_clip,
+        ).pack(side="left", padx=2)
         ttk.Button(
             clip_controls, text="只选口播人脸", command=self.select_talking_face_clips,
-        ).pack(side="left", padx=3)
-        ttk.Button(clip_controls, text="全选", command=self.select_all_videos).pack(side="left", padx=3)
+        ).pack(side="left", padx=2)
+        ttk.Button(clip_controls, text="全选", command=self.select_all_videos).pack(side="left", padx=2)
 
-        copy_controls = ttk.LabelFrame(control_groups, text="C. 文案翻译、配音与口型", padding=(7, 5))
-        copy_controls.grid(row=0, column=2, sticky="ew", padx=(5, 0), pady=(0, 5))
+        copy_controls = ttk.LabelFrame(control_groups, text="C. 文案、配音与口型", padding=(4, 2))
+        copy_controls.grid(row=0, column=2, sticky="ew", padx=(3, 0), pady=(0, 2))
         ttk.Button(
-            copy_controls, text="确认文案与项目音色", command=self.edit_active_project,
-        ).pack(side="left", padx=3)
+            copy_controls, text="文案 / 项目音色", command=self.edit_active_project,
+        ).pack(side="left", padx=2)
         ttk.Button(
-            copy_controls, text="生成所选片段", command=self.process_selected_clip,
-        ).pack(side="left", padx=3)
+            copy_controls, text="生成所选分镜", command=self.process_selected_clip,
+        ).pack(side="left", padx=2)
 
         self.selection_summary = tk.StringVar(value="0 条")
         summary_row = ttk.Frame(selection_controls)
-        summary_row.pack(fill="x", pady=(6, 0))
+        summary_row.pack(fill="x", pady=(2, 0))
         ttk.Label(
             summary_row, textvariable=self.selection_summary, foreground="#555",
         ).pack(side="left")
@@ -484,8 +484,8 @@ class MediaWorkerApp(tk.Tk):
             summary_row, text="进入第②步：从分镜库选择成片素材 →",
             command=lambda: selection_workflow.select(library_page),
         ).pack(side="right", padx=8)
-        selection_scroll.pack(side="bottom", fill="x", pady=(0, 8))
-        self.selection_tree.pack(fill="both", expand=True, pady=(0, 10))
+        selection_scroll.pack(side="bottom", fill="x")
+        self.selection_tree.pack(fill="both", expand=True, pady=(0, 2))
 
         assembly_header = ttk.Frame(assembly_page)
         assembly_header.pack(fill="x", pady=(0, 10))
@@ -2496,6 +2496,17 @@ class MediaWorkerApp(tk.Tk):
         value = str(value or "").strip()
         return "" if not value or value.startswith("全部") else value
 
+    @staticmethod
+    def _compact_plan_summary(value):
+        """Keep the persistent plan readable without starving the work table."""
+        lines = [line.strip() for line in str(value or "").splitlines() if line.strip()]
+        if not lines:
+            return "本地项目：请先明确整条视频方案和各分镜用途。"
+        compact = []
+        for line in lines[:2]:
+            compact.append(line if len(line) <= 72 else line[:71].rstrip() + "…")
+        return "\n".join(compact)
+
     def clear_source_filters(self):
         for key, value in (
             ("role", "全部经营角色"), ("scene", "全部业务场景"),
@@ -2623,9 +2634,9 @@ class MediaWorkerApp(tk.Tk):
             self.storyboard_tree.delete(item)
         if not task:
             return
-        self.video_plan_summary.set(
-            (task.get("video_plan_summary") or "本地项目：请先明确整条视频方案和各分镜用途。")[:500]
-        )
+        self.video_plan_summary.set(self._compact_plan_summary(
+            task.get("video_plan_summary")
+        ))
         state_labels = {
             "missing": "缺少素材", "producing": "制作中", "ready": "已有候选",
             "selected": "已关联",
