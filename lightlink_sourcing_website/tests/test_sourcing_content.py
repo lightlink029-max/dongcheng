@@ -14,7 +14,10 @@ class TestSourcingContent(TransactionCase):
         service = self.env.ref(
             "lightlink_sourcing_website.offering_product_photography_video"
         )
-        self.assertEqual(service.name, "Product Photography & Video")
+        self.assertEqual(
+            service.with_context(lang="en_US").name,
+            "Product Photography & Video",
+        )
         if chinese:
             self.assertIn("zh_CN", website.language_ids.mapped("code"))
             self.assertEqual(
