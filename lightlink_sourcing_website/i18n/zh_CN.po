@@ -10,760 +10,949 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services_grid
 msgid "Explore this service"
 msgstr "了解这项服务"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_solutions_grid
 msgid "View the operating model"
 msgstr "查看运营方案"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_process
 msgid "Share the brief"
 msgstr "提交采购需求"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_process
 msgid "Tell us the product, quantity, market, target and timeline."
 msgstr "说明产品、数量、市场、目标和时间要求。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_process
 msgid "Validate options"
 msgstr "核实并比较方案"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_process
 msgid "Compare suppliers, specifications, commercial terms and evidence."
 msgstr "比较供应商、规格、商务条件和实际证据。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_process
 msgid "Sample & confirm"
 msgstr "打样与确认"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_process
 msgid "Review samples, packaging and quality checkpoints before production."
 msgstr "生产前审核样品、包装和质量检查点。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_process
 msgid "Produce & deliver"
 msgstr "生产与交付"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_process
 msgid "Track production, inspection, consolidation and shipping milestones."
 msgstr "跟踪生产、验货、集货和运输节点。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_cta
 msgid "Start with clarity"
 msgstr "先把需求说清楚"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_cta
 msgid "Have a product or sourcing challenge?"
 msgstr "有产品或采购问题需要解决？"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_cta
 msgid "Send the brief first. We will organize the next questions around your actual purchasing scenario."
 msgstr "先提交需求，我们会根据你的实际采购场景整理下一步问题。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_cta
 msgid "Start a sourcing request"
 msgstr "提交采购需求"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "China Sourcing Services"
 msgstr "中国采购服务"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Source from China with a clear plan and accountable execution."
 msgstr "用清晰方案和可追责执行完成中国采购。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Get a sourcing plan"
 msgstr "获取采购方案"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Explore services"
 msgstr "查看采购服务"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Structured requirements"
 msgstr "结构化需求"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Evidence-based decisions"
 msgstr "依据证据决策"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "One accountable workflow"
 msgstr "统一责任流程"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Multi-category"
 msgstr "多品类"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Product sourcing"
 msgstr "产品采购"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "One workflow"
 msgstr "统一流程"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "From brief to delivery"
 msgstr "从需求到交付"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Traceable"
 msgstr "全程可追溯"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Suppliers, samples and issues"
 msgstr "供应商、样品与问题记录"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Multilingual"
 msgstr "多语言"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Buyer-facing communication"
 msgstr "面向买家的沟通"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Start from your current situation"
 msgstr "从当前采购情况开始"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Find a new supplier or bring your own supplier"
 msgstr "寻找新供应商，或管理你已有的供应商"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "The entry point changes, but requirements, evidence, approvals and delivery milestones stay in one workflow."
 msgstr "入口可以不同，但需求、证据、审批和交付节点都保留在同一流程中。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Find new suppliers"
 msgstr "寻找新供应商"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Share the product, quantity, target market and reference information. We will structure the requirement before comparing options."
 msgstr "提供产品、数量、目标市场和参考资料，我们会先整理需求，再比较可行方案。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Start a supplier search"
 msgstr "开始寻找供应商"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Manage existing suppliers"
 msgstr "管理已有供应商"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Keep your current factories while adding local follow-up, quality evidence, consolidation and delivery coordination."
 msgstr "保留当前工厂，同时增加本地跟进、质量证据、集货和交付协调。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Set up supplier management"
 msgstr "建立供应商管理"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Built for practical buyers"
 msgstr "面向真实采购业务"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "A sourcing workflow that fits your business model"
 msgstr "适合不同商业模式的采购流程"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Choose the support you need without rebuilding the process for every product."
 msgstr "按需选择服务，不必为每个产品重新建立一套流程。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Core capabilities"
 msgstr "核心能力"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "One connected purchasing record from sourcing to delivery"
 msgstr "从寻找供应商到交付，使用一套关联采购记录"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Every service produces information your team can reuse in CRM, quotations, purchasing and future orders."
 msgstr "每项服务产生的信息都可以在 CRM、报价、采购和后续订单中重复使用。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "See how each service works"
 msgstr "查看各项服务如何运作"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Value-added support"
 msgstr "增值服务"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Complete the work around the product"
 msgstr "完成产品周边所需工作"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Use only the additional services required by the current product, channel and delivery plan."
 msgstr "只选择当前产品、渠道和交付方案真正需要的附加服务。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Product coverage"
 msgstr "产品范围"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Start with a category or show us a reference image"
 msgstr "从产品品类开始，也可以直接提供参考图片"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "The category helps us route the request; the specification and evidence determine the real supplier fit."
 msgstr "品类帮助我们分配需求，具体规格和证据决定供应商是否真正匹配。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Home & Kitchen"
 msgstr "家居与厨房"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Electronics"
 msgstr "电子产品"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Apparel & Accessories"
 msgstr "服装与配饰"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Beauty & Care"
 msgstr "美容与护理"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Sports & Outdoor"
 msgstr "运动与户外"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Pet Supplies"
 msgstr "宠物用品"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Tools & Hardware"
 msgstr "工具与五金"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Industrial Products"
 msgstr "工业产品"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Already have a product photo?"
 msgstr "已经有产品图片？"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Use visual search to find similar items in the current Odoo product catalog."
 msgstr "使用图片搜索，在当前 Odoo 产品目录中查找相似产品。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Open product catalog"
 msgstr "打开产品目录"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Working method"
 msgstr "工作方法"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "A four-stage process with clear decisions"
 msgstr "四阶段流程，每一步都有明确决策"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Automation organizes information; people still approve suppliers, samples, quality outcomes and commercial commitments."
 msgstr "自动化负责整理信息，供应商、样品、质量结果和商务承诺仍由人工确认。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Current catalog"
 msgstr "当前产品目录"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Product starting points"
 msgstr "可作为起点的产品"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "Use an existing item as a reference or submit a new sourcing brief."
 msgstr "可以使用现有产品作为参考，也可以提交新的采购需求。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
 msgid "View sourcing details"
 msgstr "查看采购详情"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
 msgid "Sourcing Services"
 msgstr "采购服务"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
 msgid "Services"
 msgstr "服务"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
 msgid "Use the whole workflow or the part that removes your current bottleneck."
 msgstr "可以使用完整流程，也可以只选择解决当前瓶颈的服务。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
 msgid "Each service is connected to the same customer requirement, product and supplier records inside Odoo."
 msgstr "每项服务都关联到 Odoo 中同一套客户需求、产品和供应商记录。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
 msgid "What stays standard"
 msgstr "继续使用标准功能"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
 msgid "No parallel business system"
 msgstr "不建立平行业务系统"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
 msgid "CRM manages the opportunity, Sales manages quotations, Purchase manages suppliers, Inventory manages stock and Website manages public content."
 msgstr "CRM 管理商机，销售管理报价，采购管理供应商，库存管理货物，网站管理公开内容。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
 msgid "One customer and inquiry history"
 msgstr "统一的客户与询盘历史"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
 msgid "Products reusable across projects"
 msgstr "产品可跨项目复用"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
 msgid "Supplier and quotation records remain in Odoo"
 msgstr "供应商与报价记录保留在 Odoo 中"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
 msgid "Files, activities and decisions stay traceable"
 msgstr "文件、活动与决策保持可追溯"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
 msgid "Website language switching remains native"
 msgstr "继续使用 Odoo 原生网站语言切换"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_solutions
 msgid "Solutions by Buyer Type"
 msgstr "按买家类型提供解决方案"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_solutions
 msgid "Solutions"
 msgstr "解决方案"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_solutions
 msgid "Different buyers need different controls—not a different system."
 msgstr "不同买家需要不同控制方式，但不需要另一套系统。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_solutions
 msgid "Select a working pattern based on how you buy, sell and manage risk."
 msgstr "根据你的采购、销售和风险管理方式选择工作方案。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_offering
 msgid "Discuss this requirement"
 msgstr "沟通这项需求"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_offering
 msgid "What this covers"
 msgstr "服务范围"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_offering
 msgid "Clear outputs for the next decision"
 msgstr "为下一步决策提供明确结果"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_offering
 msgid "Working steps"
 msgstr "工作步骤"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_offering
 msgid "A visible, repeatable process"
 msgstr "可见、可重复的流程"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_pricing
 msgid "Sourcing Service Plans"
 msgstr "采购服务方案"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_pricing
 msgid "Service plans"
 msgstr "服务方案"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_pricing
 msgid "Choose the operating support that fits how you buy."
 msgstr "选择适合你采购方式的运营支持。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_pricing
 msgid "Pricing is confirmed against the actual product, supplier situation, quality scope and delivery requirement—before work starts."
 msgstr "开始工作前，根据实际产品、供应商情况、质量范围和交付要求确认报价。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_pricing
 msgid "Request a scoped plan"
 msgstr "申请工作范围报价"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_pricing
 msgid "Supplier prices, freight, duties, testing and third-party inspection costs are confirmed separately from the service scope. No unverified fixed saving or delivery promise is published."
 msgstr "供应商价格、运费、税费、检测和第三方验货费用与服务范围分别确认；网站不发布未经核实的固定节省金额或交期承诺。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "About Our Sourcing Method"
 msgstr "关于我们的采购方法"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "About"
 msgstr "关于我们"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "A practical bridge between buyer intent and supplier execution."
 msgstr "连接买家需求与供应商执行的务实桥梁。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "We organize sourcing around clear requirements, verifiable evidence and visible next actions."
 msgstr "我们围绕清晰需求、可核实证据和明确下一步组织采购工作。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "The system supports judgment; it does not replace it."
 msgstr "系统辅助判断，但不代替人工决策。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "AI can structure requests, translate working content and surface candidates. Supplier approval, claims, samples, prices, contracts and quality decisions remain human-controlled."
 msgstr "AI 可以整理需求、翻译工作内容并发现候选项；供应商确认、宣传点、样品、价格、合同和质量决策仍由人工控制。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "That principle keeps the website, CRM, purchasing workflow and content operation connected without turning unverified information into customer promises."
 msgstr "这个原则让网站、CRM、采购流程和内容运营保持关联，同时避免把未经核实的信息变成客户承诺。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "Evidence first"
 msgstr "证据优先"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "Real product and supplier facts"
 msgstr "真实产品与供应商事实"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "One record"
 msgstr "统一记录"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "Inquiry to purchasing history"
 msgstr "从询盘到采购历史"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "Human approval"
 msgstr "人工确认"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "At every commercial commitment"
 msgstr "控制每一项商务承诺"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "Process"
 msgstr "流程"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "How a request becomes a controlled project"
 msgstr "采购需求如何变成受控项目"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
 msgid "A simple public experience backed by structured operational records."
 msgstr "对客户保持简单，后台使用结构化运营记录。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Request a Sourcing Plan"
 msgstr "提交采购需求"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Structured inquiry"
 msgstr "结构化询盘"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Tell us what you need to source."
 msgstr "告诉我们你需要采购什么。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Share enough detail for a useful first review. You can refine specifications, samples and commercial terms with the team later."
 msgstr "请提供足够信息用于第一次审核，之后可以与团队继续完善规格、样品和商务条件。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Helpful information"
 msgstr "建议提供的信息"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Product and intended use"
 msgstr "产品及使用场景"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Quantity and target market"
 msgstr "数量与目标市场"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Reference photos or links"
 msgstr "参考图片或链接"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Customization and packaging"
 msgstr "定制与包装要求"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Required certifications"
 msgstr "所需认证或合规要求"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Target date and delivery location"
 msgstr "目标日期和交货地点"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Please complete your name, a valid email, service type and requirement details."
 msgstr "请填写姓名、有效邮箱、服务类型和详细需求。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Too many requests were submitted from this connection. Please wait a few minutes and try again."
 msgstr "当前连接提交次数过多，请等待几分钟后重试。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Selected product"
 msgstr "已选择产品"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "1. What support do you need?"
 msgstr "1. 你需要哪项服务？"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Service type *"
 msgstr "服务类型 *"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Choose a service"
 msgstr "选择服务"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Find suitable suppliers"
 msgstr "寻找合适供应商"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Develop a product"
 msgstr "开发产品"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Private label / customization"
 msgstr "自有品牌 / 产品定制"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Quality inspection"
 msgstr "验货与质量管理"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Consolidation / shipping"
 msgstr "集货 / 国际物流"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Dropshipping"
 msgstr "一件代发"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Product / packaging design"
 msgstr "产品 / 包装设计"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Product photography / video"
 msgstr "产品摄影 / 视频"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Warehousing / repacking / kitting"
 msgstr "仓储 / 换标 / 组合包装"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Factory / supplier audit"
 msgstr "工厂 / 供应商审核"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Marketplace / FBA preparation"
 msgstr "电商平台 / FBA 备货"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Product category *"
 msgstr "产品品类 *"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "e.g. kitchen storage products"
 msgstr "例如：厨房收纳产品"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Current business stage"
 msgstr "当前业务阶段"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Choose a stage"
 msgstr "选择阶段"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "I only have a product idea"
 msgstr "目前只有产品想法"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "I am sampling / testing"
 msgstr "正在打样 / 测试"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "I already purchase this product"
 msgstr "已经在采购这款产品"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "I am scaling existing purchases"
 msgstr "正在扩大现有采购"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Estimated quantity"
 msgstr "预计数量"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Requirements *"
 msgstr "详细需求 *"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Describe the product, specifications, intended use and anything that must not change."
 msgstr "说明产品、规格、用途以及不能改变的要求。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Target unit price"
 msgstr "目标单价"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Reference product URL"
 msgstr "参考产品链接"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Reference files"
 msgstr "参考文件"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Up to 5 files, 8 MB each."
 msgstr "最多上传 5 个文件，每个不超过 8 MB。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "2. Customization and delivery"
 msgstr "2. 定制与交付"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Customization"
 msgstr "定制要求"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Logo, material, size, color or functionality"
 msgstr "Logo、材料、尺寸、颜色或功能"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Packaging"
 msgstr "包装要求"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Retail box, labels, barcodes or carton requirements"
 msgstr "零售盒、标签、条码或外箱要求"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Certifications / compliance"
 msgstr "认证 / 合规要求"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "e.g. CE, FDA, CPSIA"
 msgstr "例如：CE、FDA、CPSIA"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Destination country"
 msgstr "目的国家"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Choose a country"
 msgstr "选择国家"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Port / delivery location"
 msgstr "港口 / 交货地点"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Sample required"
 msgstr "需要样品"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "3. Your contact details"
 msgstr "3. 联系信息"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Name *"
 msgstr "姓名 *"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Business email *"
 msgstr "商务邮箱 *"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Company"
 msgstr "公司"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Phone / WhatsApp"
 msgstr "电话 / WhatsApp"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Organization type"
 msgstr "机构类型"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Importer, wholesaler, brand or online seller"
 msgstr "进口商、批发商、品牌方或电商卖家"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Your role"
 msgstr "你的职位"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Owner, purchasing manager, product manager"
 msgstr "负责人、采购经理或产品经理"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "I authorize the use of this information and the uploaded files only to evaluate and respond to this sourcing request."
 msgstr "我授权仅将这些信息和上传文件用于评估并回复本次采购需求。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Submit sourcing request"
 msgstr "提交采购需求"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Your request becomes a CRM opportunity and, when a sourcing project is configured, a structured purchasing requirement."
 msgstr "提交后将在 CRM 中形成商机；配置采购项目后，还会形成结构化采购需求。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
 msgid "Prefer direct contact?"
 msgstr "希望直接联系？"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_thank_you
 msgid "Request Received"
 msgstr "需求已收到"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_thank_you
 msgid "Request received"
 msgstr "需求已收到"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_thank_you
 msgid "Thank you. Your sourcing brief is now in our review queue."
 msgstr "谢谢，你的采购需求已进入审核队列。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_thank_you
 msgid "We will review the product, quantity, target and supporting files before responding with the next questions or recommended path."
 msgstr "我们会先审核产品、数量、目标和附件，再回复需要补充的问题或建议路径。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_thank_you
 msgid "Return to sourcing home"
 msgstr "返回采购服务首页"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_thank_you
 msgid "Browse products"
 msgstr "浏览产品"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.product_sourcing_inquiry_cta
 msgid "Sourcing item"
 msgstr "采购产品"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.product_sourcing_inquiry_cta
 msgid "Need this product or a customized version?"
 msgstr "需要这款产品或定制版本？"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.product_sourcing_inquiry_cta
 msgid "Send your quantity, target market and customization requirements for a structured sourcing review."
 msgstr "提交数量、目标市场和定制要求，进入结构化采购审核。"
 
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.product_sourcing_inquiry_cta
 msgid "Request sourcing support"
 msgstr "申请采购支持"
