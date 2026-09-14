@@ -168,7 +168,9 @@ class LightLinkSourcingWebsite(http.Controller):
         Category = request.env["product.public.category"].sudo()
         catalog_domain = website.sale_product_domain()
         assigned_categories = Product.search(catalog_domain).mapped("public_categ_ids")
-        root_categories = Category
+        root_categories = Category.search([
+            ("website_id", "=", website.id), ("parent_id", "=", False),
+        ])
         for category in assigned_categories:
             root = category
             while root.parent_id:
@@ -181,14 +183,13 @@ class LightLinkSourcingWebsite(http.Controller):
                 "public_categ_ids", "child_of", category.id
             )
             count = Product.search_count(category_domain)
-            if count:
-                result.append({
-                    "record": category,
-                    "count": count,
-                    "image_product": Product.search(
-                        category_domain, limit=1, order="website_sequence, id desc"
-                    ),
-                })
+            result.append({
+                "record": category,
+                "count": count,
+                "image_product": Product.search(
+                    category_domain, limit=1, order="website_sequence, id desc"
+                ),
+            })
         return result
 
     @http.route("/sourcing", type="http", auth="public", website=True, sitemap=True)

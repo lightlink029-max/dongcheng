@@ -310,6 +310,30 @@ FOOTER_LINK_CHINESE = {
 }
 
 
+PRODUCT_CATEGORY_CHINESE = {
+    "product_category_apparel": "服装",
+    "product_category_furniture": "家具",
+    "product_category_bags_cases": "箱包",
+    "product_category_beauty": "美容与个护",
+    "product_category_toys": "玩具与游戏",
+    "product_category_sports": "运动与健身",
+    "product_category_home": "家居与厨房",
+    "product_category_garden_tools": "园艺与工具",
+    "product_category_electronics": "消费电子",
+    "product_category_pet": "宠物用品",
+    "product_category_mother_kids": "母婴与儿童",
+    "product_category_hardware": "五金",
+    "product_category_office": "办公与文具",
+    "product_category_automotive": "汽车用品",
+    "product_category_industrial": "工业产品",
+    "product_category_packaging": "包装",
+    "product_category_outdoors": "户外用品",
+    "product_category_jewelry": "珠宝与配饰",
+    "product_category_lighting": "照明",
+    "product_category_other": "其他产品分类",
+}
+
+
 MENU_CHINESE = {
     "menu_sourcing_home": "首页",
     "menu_sourcing_services": "服务",
@@ -378,6 +402,10 @@ def apply_sourcing_translations(env):
         if record:
             record.with_context(lang="zh_CN").write({"name": name})
     for xmlid, name in FOOTER_LINK_CHINESE.items():
+        record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
+        if record:
+            record.with_context(lang="zh_CN").write({"name": name})
+    for xmlid, name in PRODUCT_CATEGORY_CHINESE.items():
         record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
         if record:
             record.with_context(lang="zh_CN").write({"name": name})

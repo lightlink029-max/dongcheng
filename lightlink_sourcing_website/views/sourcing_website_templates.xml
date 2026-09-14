@@ -264,6 +264,7 @@
                     <div t-if="product_categories" class="ll-product-category-grid">
                         <a t-foreach="product_categories" t-as="category_info" t-att-href="'/sourcing/products?category=%s' % category_info.record.id" t-attf-class="ll-product-category-card #{selected_category and selected_category.id == category_info.record.id and 'is-active' or ''}">
                             <img t-if="category_info.image_product" t-att-src="'/web/image/product.template/%s/image_512' % category_info.image_product.id" t-att-alt="category_info.record.name" loading="lazy"/>
+                            <div t-else="" class="ll-product-category-placeholder"><i class="fa fa-cubes"/></div>
                             <span><strong t-field="category_info.record.name"/><small><t t-out="category_info.count"/> products</small></span>
                         </a>
                     </div>

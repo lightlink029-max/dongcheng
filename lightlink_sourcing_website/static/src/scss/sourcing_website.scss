@@ -307,6 +307,16 @@ $ll-amber: #efaa42;
     }
 }
 
+.ll-product-category-placeholder {
+    display: grid;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    place-items: center;
+    color: $ll-teal;
+    background: linear-gradient(145deg, $ll-mint, #f7faf8);
+    font-size: 2rem;
+}
+
 .ll-text-link {
     color: $ll-teal;
     font-weight: 750;

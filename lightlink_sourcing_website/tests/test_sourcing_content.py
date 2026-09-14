@@ -41,6 +41,10 @@ class TestSourcingContent(TransactionCase):
             "Importing from China: Working Guide",
         )
         self.assertEqual(len(guide.chapter_ids.filtered("published")), 10)
+        categories = self.env["product.public.category"].search([
+            ("website_id", "=", website.id), ("parent_id", "=", False),
+        ])
+        self.assertGreaterEqual(len(categories), 20)
         if chinese:
             self.assertEqual(
                 guide.with_context(lang="zh_CN").name,
