@@ -1150,7 +1150,8 @@ $ll-amber: #efaa42;
 }
 
 .ll-catalog-search {
-    width: min(100%, 460px);
+    width: 100%;
+    max-width: 460px;
 
     label {
         margin-bottom: .45rem;
