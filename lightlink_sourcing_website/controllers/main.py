@@ -79,8 +79,19 @@ class LightLinkSourcingWebsite(http.Controller):
             return True
 
     @staticmethod
+    def _sourcing_website():
+        """Use the dedicated site even before its standalone domain is assigned."""
+        if request.website.sourcing_enabled:
+            return request.website
+        website = request.env.ref(
+            "lightlink_sourcing_website.website_global_sourcing",
+            raise_if_not_found=False,
+        )
+        return website.sudo() if website else request.website
+
+    @staticmethod
     def _active_project():
-        website = request.website
+        website = LightLinkSourcingWebsite._sourcing_website()
         Project = request.env["psc.publishing.project"].sudo()
         domain = [
             ("website_inquiry_enabled", "=", True),
@@ -93,14 +104,16 @@ class LightLinkSourcingWebsite(http.Controller):
 
     @staticmethod
     def _base_values(**extra):
+        website = LightLinkSourcingWebsite._sourcing_website()
         project = LightLinkSourcingWebsite._active_project()
         assets = request.env["ll.sourcing.asset"].sudo().search([
-            ("website_id", "=", request.website.id), ("active", "=", True),
+            ("website_id", "=", website.id), ("active", "=", True),
         ])
         offerings = request.env["ll.sourcing.offering"].sudo().search([
-            ("website_id", "=", request.website.id), ("active", "=", True),
+            ("website_id", "=", website.id), ("active", "=", True),
         ], order="kind, sequence, id")
         values = {
+            "sourcing_website": website,
             "sourcing_project": project,
             "countries": request.env["res.country"].sudo().search([], order="name"),
             "sourcing_assets": {asset.key: asset for asset in assets},
@@ -118,11 +131,11 @@ class LightLinkSourcingWebsite(http.Controller):
             ),
             "sourcing_service_email": (
                 project.website_service_email if project and project.website_service_email
-                else request.website.sourcing_service_email
+                else website.sourcing_service_email
             ),
             "sourcing_whatsapp_url": (
                 project.website_whatsapp_url if project and project.website_whatsapp_url
-                else request.website.sourcing_whatsapp_url
+                else website.sourcing_whatsapp_url
             ),
         }
         values.update(extra)
@@ -130,8 +143,9 @@ class LightLinkSourcingWebsite(http.Controller):
 
     @http.route("/sourcing", type="http", auth="public", website=True, sitemap=True)
     def sourcing_home(self, **kwargs):
+        website = self._sourcing_website()
         products = request.env["product.template"].sudo().search(
-            request.website.sale_product_domain(), limit=8, order="website_sequence, id desc"
+            website.sale_product_domain(), limit=8, order="website_sequence, id desc"
         )
         return request.render(
             "lightlink_sourcing_website.sourcing_home",
@@ -155,8 +169,9 @@ class LightLinkSourcingWebsite(http.Controller):
         offering_kind = _OFFERING_KINDS.get(kind)
         if not offering_kind:
             return request.not_found()
+        website = self._sourcing_website()
         offering = request.env["ll.sourcing.offering"].sudo().search([
-            ("website_id", "=", request.website.id),
+            ("website_id", "=", website.id),
             ("kind", "=", offering_kind),
             ("slug", "=", self._clean(slug, 120)),
             ("active", "=", True),
@@ -188,12 +203,13 @@ class LightLinkSourcingWebsite(http.Controller):
 
     @http.route("/sourcing/request", type="http", auth="public", website=True, sitemap=True)
     def sourcing_request(self, product_id=None, error=None, **kwargs):
+        website = self._sourcing_website()
         product = request.env["product.template"]
         if product_id and str(product_id).isdigit():
             candidate = request.env["product.template"].sudo().browse(int(product_id)).exists()
             if candidate:
                 product = request.env["product.template"].sudo().search(
-                    Domain("id", "=", candidate.id) & request.website.sale_product_domain(),
+                    Domain("id", "=", candidate.id) & website.sale_product_domain(),
                     limit=1,
                 )
         return request.render(
@@ -243,8 +259,9 @@ class LightLinkSourcingWebsite(http.Controller):
         product_id = int(post["product_id"]) if str(post.get("product_id", "")).isdigit() else False
         product = request.env["product.template"]
         if product_id:
+            website = self._sourcing_website()
             product = request.env["product.template"].sudo().search(
-                Domain("id", "=", product_id) & request.website.sale_product_domain(),
+                Domain("id", "=", product_id) & website.sale_product_domain(),
                 limit=1,
             )
 
