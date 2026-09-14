@@ -157,6 +157,40 @@ class Website(models.Model):
             project.write({"website_inquiry_enabled": True, "website_id": website.id})
         return True
 
+    @api.model
+    def _cleanup_lightlink_sourcing_bootstrap_menus(self):
+        """Remove menus copied by Odoo when the dedicated website is created."""
+        website = self.env.ref(
+            "lightlink_sourcing_website.website_global_sourcing", raise_if_not_found=False,
+        )
+        if not website or not website.menu_id:
+            return 0
+
+        managed_menus = self.env["website.menu"]
+        for xmlid in (
+            "menu_sourcing_home",
+            "menu_sourcing_services",
+            "menu_sourcing_solutions",
+            "menu_sourcing_pricing",
+            "menu_sourcing_products",
+            "menu_sourcing_insights",
+            "menu_sourcing_about",
+            "menu_sourcing_quote",
+        ):
+            menu = self.env.ref(
+                "lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False,
+            )
+            if menu:
+                managed_menus |= menu
+
+        bootstrap_menus = self.env["website.menu"].search([
+            ("website_id", "=", website.id),
+            ("id", "not in", (website.menu_id | managed_menus).ids),
+        ])
+        count = len(bootstrap_menus)
+        bootstrap_menus.unlink()
+        return count
+
 
 class SourcingAsset(models.Model):
     _name = "ll.sourcing.asset"
