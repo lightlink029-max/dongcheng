@@ -132,8 +132,8 @@
         <section class="ll-cta-section">
             <div class="container">
                 <div class="ll-cta-panel">
-                    <div><span class="ll-kicker">Start with clarity</span><h2>Have a product or sourcing challenge?</h2><p>Send the brief first. We will organize the next questions around your actual purchasing scenario.</p></div>
-                    <a href="/sourcing/request" class="btn btn-light btn-lg">Start a sourcing request <i class="fa fa-arrow-right ms-2"/></a>
+                    <div><span class="ll-kicker">Start with a clear brief</span><h2>Have a product or sourcing challenge?</h2><p>Send the brief first. We will organize the next questions around your actual purchasing scenario.</p></div>
+                    <a href="/sourcing/request" class="btn btn-light btn-lg">Send your sourcing brief <i class="fa fa-arrow-right ms-2"/></a>
                 </div>
             </div>
         </section>
@@ -322,11 +322,11 @@
                 <section class="ll-category-hero">
                     <div class="container"><div class="row align-items-center g-5">
                         <div class="col-lg-7 ll-category-hero-copy">
-                            <span class="ll-kicker">Product category</span>
+                            <span class="ll-kicker">Sourcing category</span>
                             <h1 t-field="category.name"/>
                             <p t-if="category.sourcing_hero_subtitle" t-field="category.sourcing_hero_subtitle"/>
                             <div t-elif="category.website_description" class="ll-category-intro" t-field="category.website_description"/>
-                            <a href="#category-inquiry" class="btn btn-primary btn-lg">Get a sourcing plan <i class="fa fa-arrow-right ms-2"/></a>
+                            <a href="#category-inquiry" class="btn btn-primary btn-lg">Get your sourcing plan <i class="fa fa-arrow-right ms-2"/></a>
                         </div>
                         <div class="col-lg-5">
                             <div class="ll-category-hero-image">
@@ -360,10 +360,10 @@
                                 <div t-else="" class="ll-category-image-placeholder"><i class="fa fa-cube"/></div>
                             </div>
                             <div class="ll-category-offering-copy">
-                                <small><t t-out="category_info['count']"/> products in Odoo</small>
+                                <small><t t-out="category_info['count']"/> product records available</small>
                                 <h2 t-field="category_info['record'].name"/>
                                 <div t-if="category_info['record'].website_description" t-field="category_info['record'].website_description"/>
-                                <a t-att-href="'/sourcing/request?request_type=find_supplier&amp;product_category=%s' % category_info['record'].name" class="ll-text-link">Request a quote <i class="fa fa-arrow-right"/></a>
+                                <a t-att-href="'/sourcing/request?request_type=find_supplier&amp;product_category=%s' % category_info['record'].name" class="ll-text-link">Request sourcing details <i class="fa fa-arrow-right"/></a>
                             </div>
                         </article>
                     </div>
@@ -378,7 +378,7 @@
                 <section id="category-inquiry" class="ll-section ll-section-muted"><div class="container">
                     <div class="ll-category-inline-form"><div class="row g-5">
                         <div class="col-lg-5">
-                            <span class="ll-kicker">Start a sourcing request</span>
+                            <span class="ll-kicker">Start your sourcing request</span>
                             <h2 t-out="category.sourcing_inquiry_heading or 'Tell us what you want to source'"/>
                             <p>Share the product, quantity, specifications, target market and destination. The inquiry will be saved in Odoo for structured follow-up.</p>
                             <ul class="ll-check-list"><li>One requirement record</li><li>Supplier and quotation follow-up</li><li>Sample and quality checkpoints</li><li>Traceable communication</li></ul>
@@ -393,10 +393,10 @@
                                     <div class="col-md-6"><label class="form-label" for="category_contact_name">Name *</label><input id="category_contact_name" name="contact_name" class="form-control" required="required"/></div>
                                     <div class="col-md-6"><label class="form-label" for="category_email">Business email *</label><input id="category_email" name="email" type="email" class="form-control" required="required"/></div>
                                     <div class="col-md-6"><label class="form-label" for="category_phone">Phone / WhatsApp</label><input id="category_phone" name="phone" class="form-control"/></div>
-                                    <div class="col-md-6"><label class="form-label" for="category_country">Country</label><select id="category_country" name="country_id" class="form-select"><option value="">Choose a country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-field="country.name"/></select></div>
+                                    <div class="col-md-6"><label class="form-label" for="category_country">Country</label><select id="category_country" name="country_id" class="form-select"><option value="">Select your country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-field="country.name"/></select></div>
                                     <div class="col-12"><label class="form-label" for="category_requirements">Product requirements *</label><textarea id="category_requirements" name="requirement_details" class="form-control" rows="6" required="required" placeholder="Product type, dimensions, materials, functions, customization, quantity and delivery destination."></textarea></div>
                                     <div class="col-12"><div class="form-check"><input id="category_privacy" name="privacy_consent" type="checkbox" class="form-check-input" required="required"/><label class="form-check-label" for="category_privacy">I authorize the use of this information to evaluate and respond to my sourcing request.</label></div></div>
-                                    <div class="col-12"><button class="btn btn-primary btn-lg" type="submit">Submit sourcing request <i class="fa fa-arrow-right ms-2"/></button></div>
+                                    <div class="col-12"><button class="btn btn-primary btn-lg" type="submit">Send sourcing request <i class="fa fa-arrow-right ms-2"/></button></div>
                                 </div>
                             </form>
                         </div>
@@ -434,10 +434,10 @@
             <div id="wrap" class="oe_structure ll-sourcing-site ll-yiwu-page">
                 <section class="ll-yiwu-hero"><div class="container"><div class="row align-items-center g-5">
                     <div class="col-lg-6"><span class="ll-kicker" t-field="content_page.kicker"/><h1 t-field="content_page.name"/><p t-field="content_page.summary"/><div class="ll-rich-content" t-field="content_page.body_html"/></div>
-                    <div class="col-lg-6"><div class="ll-yiwu-quick-form"><h2>Tell us your Yiwu sourcing plan</h2><form action="/sourcing/request/submit" method="post"><input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/><input type="text" name="website" class="d-none" tabindex="-1" autocomplete="off"/><input type="hidden" name="request_type" value="find_supplier"/><input type="hidden" name="product_category" value="Yiwu market visit"/><div class="row g-3"><div class="col-md-6"><label class="form-label">Name *</label><input name="contact_name" class="form-control" required="required"/></div><div class="col-md-6"><label class="form-label">Business email *</label><input name="email" type="email" class="form-control" required="required"/></div><div class="col-md-6"><label class="form-label">Phone / WhatsApp</label><input name="phone" class="form-control"/></div><div class="col-md-6"><label class="form-label">Country</label><select name="country_id" class="form-select"><option value="">Choose a country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-field="country.name"/></select></div><div class="col-12"><label class="form-label">Visit and sourcing requirements *</label><textarea name="requirement_details" class="form-control" rows="4" required="required"></textarea></div><div class="col-12"><div class="form-check"><input id="yiwu_privacy" name="privacy_consent" type="checkbox" class="form-check-input" required="required"/><label class="form-check-label" for="yiwu_privacy">I authorize the use of this information to evaluate and respond to my sourcing request.</label></div></div><div class="col-12"><button type="submit" class="btn btn-primary btn-lg">Submit plan <i class="fa fa-arrow-right ms-2"/></button></div></div></form></div></div>
+                    <div class="col-lg-6"><div class="ll-yiwu-quick-form"><h2>Tell us your Yiwu sourcing plan</h2><form action="/sourcing/request/submit" method="post"><input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/><input type="text" name="website" class="d-none" tabindex="-1" autocomplete="off"/><input type="hidden" name="request_type" value="find_supplier"/><input type="hidden" name="product_category" value="Yiwu market visit"/><div class="row g-3"><div class="col-md-6"><label class="form-label">Name *</label><input name="contact_name" class="form-control" required="required"/></div><div class="col-md-6"><label class="form-label">Business email *</label><input name="email" type="email" class="form-control" required="required"/></div><div class="col-md-6"><label class="form-label">Phone / WhatsApp</label><input name="phone" class="form-control"/></div><div class="col-md-6"><label class="form-label">Country</label><select name="country_id" class="form-select"><option value="">Select your country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-field="country.name"/></select></div><div class="col-12"><label class="form-label">Visit and sourcing requirements *</label><textarea name="requirement_details" class="form-control" rows="4" required="required"></textarea></div><div class="col-12"><div class="form-check"><input id="yiwu_privacy" name="privacy_consent" type="checkbox" class="form-check-input" required="required"/><label class="form-check-label" for="yiwu_privacy">I authorize the use of this information to evaluate and respond to my sourcing request.</label></div></div><div class="col-12"><button type="submit" class="btn btn-primary btn-lg">Send visit plan <i class="fa fa-arrow-right ms-2"/></button></div></div></form></div></div>
                 </div></div></section>
                 <nav class="ll-yiwu-section-nav" aria-label="Visit Yiwu topics"><div class="container"><a t-foreach="yiwu_sections" t-as="page" t-att-href="'#' + page.code" t-field="page.name"/></div></nav>
-                <section class="ll-section"><div class="container"><t t-call="lightlink_sourcing_website.sourcing_section_heading"><t t-set="kicker">Plan every part of the visit</t><t t-set="title">Yiwu sourcing and travel information in one place</t><t t-set="subtitle">Each section is a separate Odoo-managed page, so your team can update text and images without changing code.</t></t><div class="ll-yiwu-card-grid"><article t-foreach="yiwu_sections" t-as="page" t-att-id="page.code" class="ll-yiwu-card"><img t-if="page.image_asset_id" t-att-src="'/web/image/ll.sourcing.asset/%s/image' % page.image_asset_id.id" t-att-alt="page.image_asset_id.alt_text" loading="lazy"/><div><span class="ll-kicker" t-field="page.kicker"/><h2 t-field="page.name"/><p t-field="page.summary"/><a t-att-href="'/sourcing/yiwu-china/%s' % page.code[5:]" class="ll-text-link">Open guide <i class="fa fa-arrow-right"/></a></div></article></div></div></section>
+                <section class="ll-section"><div class="container"><t t-call="lightlink_sourcing_website.sourcing_section_heading"><t t-set="kicker">Plan every part of the visit</t><t t-set="title">Yiwu sourcing and travel information in one place</t><t t-set="subtitle">Each section is a separate Odoo-managed page, so your team can update text and images without changing code.</t></t><div class="ll-yiwu-card-grid"><article t-foreach="yiwu_sections" t-as="page" t-att-id="page.code" class="ll-yiwu-card"><img t-if="page.image_asset_id" t-att-src="'/web/image/ll.sourcing.asset/%s/image' % page.image_asset_id.id" t-att-alt="page.image_asset_id.alt_text" loading="lazy"/><div><span class="ll-kicker" t-field="page.kicker"/><h2 t-field="page.name"/><p t-field="page.summary"/><a t-att-href="'/sourcing/yiwu-china/%s' % page.code[5:]" class="ll-text-link">Read this guide <i class="fa fa-arrow-right"/></a></div></article></div></div></section>
                 <t t-call="lightlink_sourcing_website.sourcing_cta"/>
             </div>
         </t>

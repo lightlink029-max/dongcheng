@@ -1345,6 +1345,62 @@ msgid "Request a quote"
 msgstr "申请报价"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_cta
+msgid "Start with a clear brief"
+msgstr "先明确采购需求"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_cta
+msgid "Send your sourcing brief"
+msgstr "提交采购需求"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+msgid "Sourcing category"
+msgstr "采购产品分类"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+msgid "Get your sourcing plan"
+msgstr "获取采购方案"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+msgid "product records available"
+msgstr "个可选产品记录"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+msgid "Request sourcing details"
+msgstr "提交采购需求"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+msgid "Start your sourcing request"
+msgstr "开始填写采购需求"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
+msgid "Select your country"
+msgstr "选择国家"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+msgid "Send sourcing request"
+msgstr "提交采购需求"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
+msgid "Send visit plan"
+msgstr "提交义乌行程计划"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
+msgid "Read this guide"
+msgstr "查看指南"
+
+#. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "products in Odoo"
 msgstr "个 Odoo 产品"
