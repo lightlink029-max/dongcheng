@@ -375,6 +375,84 @@
         <field name="arch" type="xml"><form string="采购网站页脚栏目"><sheet><group><group><field name="name"/><field name="column_type"/><field name="website_id" options="{'no_create': True}"/></group><group><field name="sequence"/><field name="published"/><field name="active"/></group></group><group string="文本内容" invisible="column_type != 'content'"><field name="body_html" widget="html" nolabel="1"/></group><group string="链接列表" invisible="column_type != 'links'"><field name="link_ids" context="{'default_column_id': id}"><list editable="bottom"><field name="sequence" widget="handle"/><field name="name"/><field name="url"/><field name="active"/></list></field></group></sheet></form></field>
     </record>
 
+    <record id="view_ll_sourcing_product_category_list" model="ir.ui.view">
+        <field name="name">ll.sourcing.product.category.list</field>
+        <field name="model">product.public.category</field>
+        <field name="arch" type="xml">
+            <list string="产品分类落地页">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="parent_id"/>
+                <field name="sourcing_hero_subtitle" optional="show"/>
+                <field name="website_id"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_ll_sourcing_product_category_form" model="ir.ui.view">
+        <field name="name">ll.sourcing.product.category.form</field>
+        <field name="model">product.public.category</field>
+        <field name="arch" type="xml">
+            <form string="产品分类落地页">
+                <sheet>
+                    <div class="oe_button_box" name="button_box"/>
+                    <widget name="web_ribbon" title="子分类" bg_color="text-bg-info" invisible="not parent_id"/>
+                    <field name="image_1920" widget="image" class="oe_avatar" options="{'preview_image': 'image_128'}"/>
+                    <div class="oe_title"><h1><field name="name" placeholder="产品分类名称"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="website_id" options="{'no_create': True}"/>
+                            <field name="parent_id" domain="[('website_id', '=', website_id)]"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group string="落地页主视觉">
+                            <field name="sourcing_hero_subtitle"/>
+                            <field name="sourcing_inquiry_heading"/>
+                        </group>
+                    </group>
+                    <group string="三项分类亮点" invisible="parent_id">
+                        <field name="sourcing_highlight_1"/>
+                        <field name="sourcing_highlight_2"/>
+                        <field name="sourcing_highlight_3"/>
+                    </group>
+                    <notebook>
+                        <page string="分类介绍"><field name="website_description" widget="html" nolabel="1"/></page>
+                        <page string="子分类" invisible="parent_id"><field name="child_id" context="{'default_website_id': website_id}"><list><field name="sequence" widget="handle"/><field name="name"/><field name="sourcing_hero_subtitle" optional="show"/><field name="website_id" optional="hide"/></list></field></page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ll_sourcing_website_menu_list" model="ir.ui.view">
+        <field name="name">ll.sourcing.website.menu.list</field>
+        <field name="model">website.menu</field>
+        <field name="arch" type="xml">
+            <list string="网站头部导航">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="parent_id"/>
+                <field name="url"/>
+                <field name="new_window"/>
+                <field name="is_visible"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_ll_sourcing_website_menu_form" model="ir.ui.view">
+        <field name="name">ll.sourcing.website.menu.form</field>
+        <field name="model">website.menu</field>
+        <field name="arch" type="xml">
+            <form string="网站头部导航">
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group><field name="url"/><field name="parent_id" domain="[('website_id', '=', website_id)]"/><field name="sequence"/></group>
+                        <group><field name="website_id" options="{'no_create': True}"/><field name="new_window"/><field name="is_visible" readonly="1"/></group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
     <record id="action_ll_sourcing_websites" model="ir.actions.act_window">
         <field name="name">独立采购网站</field>
         <field name="res_model">website</field>
@@ -397,12 +475,30 @@
     <record id="action_ll_sourcing_testimonials" model="ir.actions.act_window"><field name="name">客户评价</field><field name="res_model">ll.sourcing.testimonial</field><field name="view_mode">list,form</field></record>
     <record id="action_ll_sourcing_payment_methods" model="ir.actions.act_window"><field name="name">付款方式</field><field name="res_model">ll.sourcing.payment.method</field><field name="view_mode">list,form</field></record>
     <record id="action_ll_sourcing_footer_columns" model="ir.actions.act_window"><field name="name">网站页脚</field><field name="res_model">ll.sourcing.footer.column</field><field name="view_mode">list,form</field></record>
+    <record id="action_ll_sourcing_product_categories" model="ir.actions.act_window">
+        <field name="name">产品分类落地页</field>
+        <field name="res_model">product.public.category</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain" eval="[('website_id', '=', ref('website_global_sourcing'))]"/>
+        <field name="context" eval="{'default_website_id': ref('website_global_sourcing')}"/>
+        <field name="views" eval="[(ref('view_ll_sourcing_product_category_list'), 'list'), (ref('view_ll_sourcing_product_category_form'), 'form')]"/>
+    </record>
+    <record id="action_ll_sourcing_website_menus" model="ir.actions.act_window">
+        <field name="name">网站头部导航</field>
+        <field name="res_model">website.menu</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain" eval="[('website_id', '=', ref('website_global_sourcing')), ('parent_id', '!=', False)]"/>
+        <field name="context" eval="{'default_website_id': ref('website_global_sourcing')}"/>
+        <field name="views" eval="[(ref('view_ll_sourcing_website_menu_list'), 'list'), (ref('view_ll_sourcing_website_menu_form'), 'form')]"/>
+    </record>
 
     <menuitem id="menu_ll_sourcing_root" name="采购服务项目" parent="product_social_content_bridge.menu_psc_category_web_marketing" sequence="5"/>
     <menuitem id="menu_ll_sourcing_websites" name="独立网站设置" parent="menu_ll_sourcing_root" action="action_ll_sourcing_websites" sequence="10"/>
     <menuitem id="menu_ll_sourcing_offerings" name="服务与解决方案" parent="menu_ll_sourcing_root" action="action_ll_sourcing_offerings" sequence="20"/>
-    <menuitem id="menu_ll_sourcing_content_pages" name="网站页面与指南" parent="menu_ll_sourcing_root" action="action_ll_sourcing_content_pages" sequence="30"/>
-    <menuitem id="menu_ll_sourcing_assets" name="网站图片资产" parent="menu_ll_sourcing_root" action="action_ll_sourcing_assets" sequence="40"/>
+    <menuitem id="menu_ll_sourcing_product_categories" name="产品分类落地页" parent="menu_ll_sourcing_root" action="action_ll_sourcing_product_categories" sequence="25"/>
+    <menuitem id="menu_ll_sourcing_website_menus" name="网站头部导航" parent="menu_ll_sourcing_root" action="action_ll_sourcing_website_menus" sequence="30"/>
+    <menuitem id="menu_ll_sourcing_content_pages" name="网站页面与指南" parent="menu_ll_sourcing_root" action="action_ll_sourcing_content_pages" sequence="40"/>
+    <menuitem id="menu_ll_sourcing_assets" name="网站图片资产" parent="menu_ll_sourcing_root" action="action_ll_sourcing_assets" sequence="45"/>
     <menuitem id="menu_ll_sourcing_metrics" name="可信经营数据" parent="menu_ll_sourcing_root" action="action_ll_sourcing_metrics" sequence="50"/>
     <menuitem id="menu_ll_sourcing_testimonials" name="客户评价" parent="menu_ll_sourcing_root" action="action_ll_sourcing_testimonials" sequence="60"/>
     <menuitem id="menu_ll_sourcing_payment_methods" name="付款方式" parent="menu_ll_sourcing_root" action="action_ll_sourcing_payment_methods" sequence="70"/>

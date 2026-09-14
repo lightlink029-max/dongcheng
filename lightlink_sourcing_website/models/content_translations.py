@@ -232,6 +232,38 @@ OFFERING_CHINESE = {
 
 
 PAGE_CHINESE = {
+    "page_visit_yiwu": {
+        "name": "访问义乌", "kicker": "规划高效采购行程", "summary": "通过采购支持、本地商务服务、交通、住宿和实用城市信息，准备义乌市场采购行程。",
+        "body_html": "<h2>让行程服务于采购决策</h2><p>先明确产品分类、规格、目标数量以及需要在义乌完成的决定，再据此安排市场走访、供应商会谈、样品检查和后续工作。</p>",
+    },
+    "page_yiwu_markets": {
+        "name": "义乌市场", "kicker": "找到正确的市场区域", "summary": "按产品分类、需要收集的证据和后续供应商安排市场走访。",
+        "body_html": "<h2>进入市场前先准备</h2><p>列出产品分类、目标规格、数量范围、定制需求和目的地要求，避免把大型市场走访变成无结构浏览。</p><h2>收集可比较的供应商信息</h2><p>用统一格式记录商位、产品、材料、起订量、样品条件、参考交期和下一步核实事项。</p><h2>把合格选项放回项目</h2><p>市场沟通只是起点，采购决定前仍需核实供应商主体、能力、报价范围和样品。</p>",
+    },
+    "page_yiwu_business_services": {
+        "name": "义乌商务服务", "kicker": "支持实际工作行程", "summary": "协调采购协助、翻译、供应商会谈、样品和离开义乌后的跟进。",
+        "body_html": "<h2>采购协调</h2><p>把买家需求转成走访计划，安排相关供应商沟通，并让每项发现关联到采购需求。</p><h2>商务翻译</h2><p>翻译应覆盖技术和商务细节，并以书面方式确认术语、数字和承诺。</p><h2>样品与后续工作</h2><p>标记样品并关联供应商、规格和报价，使项目在行程结束后继续推进。</p>",
+    },
+    "page_yiwu_trade_fairs": {
+        "name": "义乌展会", "kicker": "把展会与供应商工作结合", "summary": "选择相关展会、核对当前日程，并规划会后如何筛选供应商线索。",
+        "body_html": "<h2>向主办方核实日期</h2><p>展会时间和入场要求可能变化，预订行程前应以官方信息为准。</p><h2>建立聚焦的会谈清单</h2><p>按产品匹配度、目标市场和下一步决策所需证据确定优先级。</p><h2>统一跟进</h2><p>及时记录联系人、产品、待确认问题、样品和报价截止时间。</p>",
+    },
+    "page_yiwu_transportation": {
+        "name": "前往义乌的交通", "kicker": "规划路线与本地接驳", "summary": "比较经主要门户城市转乘铁路、航空和公路的当前方案，并预留接驳时间。",
+        "body_html": "<h2>选择门户城市</h2><p>比较总行程时间、到达时间和转乘风险，再选择前往义乌的路线。</p><h2>核对实时班次</h2><p>车次、航班和道路信息会变化，请使用官方渠道核实当前时刻和乘车规则。</p><h2>规划本地移动</h2><p>按地理位置组合市场区域和供应商会谈，并在预约之间留出机动时间。</p>",
+    },
+    "page_yiwu_hotels": {
+        "name": "义乌住宿", "kicker": "住在靠近工作的地方", "summary": "根据市场、会谈地点、交通和团队所需服务选择住宿。",
+        "body_html": "<h2>位置优先</h2><p>根据实际行程选择能减少市场、供应商和交通枢纽之间移动的住宿地点。</p><h2>确认商务必需条件</h2><p>直接向酒店确认入住政策、网络、早餐、会议空间、发票和晚到安排。</p><h2>保留调整空间</h2><p>供应商日程未固定时，优先选择可变更的预订方案。</p>",
+    },
+    "page_yiwu_entertainment": {
+        "name": "义乌餐饮与休闲", "kicker": "合理安排个人时间", "summary": "在不影响采购计划的前提下，安排便利的餐饮、购物和休闲选择。",
+        "body_html": "<h2>围绕行程安排</h2><p>优先选择靠近当天最后一个会谈地点或酒店的餐饮和休闲地点。</p><h2>核实当前信息</h2><p>营业时间和预约条件会变化，出发前请确认并使用可靠交通方式。</p><h2>保持采购判断独立</h2><p>将供应商接待与产品评估、报价比较和审批决定分开。</p>",
+    },
+    "page_yiwu_muslim_culture": {
+        "name": "义乌穆斯林友好指南", "kicker": "实用文化行程准备", "summary": "把清真餐饮、礼拜和合适的文化安排纳入商务行程。",
+        "body_html": "<h2>抵达前确认需求</h2><p>提前告知当地协调人饮食、礼拜和日程要求，以便核实合适选择。</p><h2>核实当前场所</h2><p>餐厅状态、认证、营业时间和进入条件可能变化，使用前请直接确认。</p><h2>尊重文化与时间安排</h2><p>为宗教活动留出合适时间，并在安排集体用餐时清楚沟通饮食要求。</p>",
+    },
     "page_about_us": {
         "name": "我们的采购方法",
         "kicker": "关于 LightLink",
@@ -331,23 +363,99 @@ PRODUCT_CATEGORY_CHINESE = {
     "product_category_jewelry": "珠宝与配饰",
     "product_category_lighting": "照明",
     "product_category_other": "其他产品分类",
+    "product_category_bags_handbags": "手提包",
+    "product_category_bags_backpacks": "双肩包",
+    "product_category_bags_toiletry": "洗漱包",
+    "product_category_bags_travel": "旅行包",
+    "product_category_bags_pouches": "收纳袋",
+    "product_category_bags_special": "特殊用途包袋",
+}
+
+
+PRODUCT_CATEGORY_DETAIL_ENGLISH = {
+    "product_category_bags_cases": {
+        "sourcing_hero_subtitle": "Source and develop bags with a clear product brief, supplier comparison and quality checkpoints.",
+        "sourcing_highlight_1": "Multiple bag types and materials",
+        "sourcing_highlight_2": "Customization and packaging support",
+        "sourcing_highlight_3": "Supplier, sample and quality coordination",
+        "sourcing_inquiry_heading": "Tell us what bag product you want to source",
+        "website_description": "Choose a product direction below, then share dimensions, materials, functions, branding, quantity and destination so the sourcing work starts from a precise brief.",
+    },
+}
+
+
+PRODUCT_CATEGORY_DETAIL_CHINESE = {
+    "product_category_bags_cases": {
+        "sourcing_hero_subtitle": "以清晰的产品需求、供应商比较和质量检查点采购并开发箱包产品。",
+        "sourcing_highlight_1": "覆盖多种包型与材料",
+        "sourcing_highlight_2": "支持定制与包装开发",
+        "sourcing_highlight_3": "协调供应商、样品与质量",
+        "sourcing_inquiry_heading": "告诉我们您要采购的箱包产品",
+        "website_description": "先选择下方产品方向，再提供尺寸、材料、功能、品牌、数量与目的地，让采购工作从准确需求开始。",
+    },
+    "product_category_bags_handbags": {"website_description": "根据材料、结构、五金、表面效果、包装和目标市场明确手提包采购要求。"},
+    "product_category_bags_backpacks": {"website_description": "比较供应商前，先明确容量、分区、面料、加固、舒适性、品牌和测试要求。"},
+    "product_category_bags_toiletry": {"website_description": "以明确的尺寸、内衬、闭合方式、防水、标签和包装要求采购洗漱及化妆收纳包。"},
+    "product_category_bags_travel": {"website_description": "围绕使用场景、负载、尺寸、材料、配件、运输测试和零售展示规划旅行包采购。"},
+    "product_category_bags_pouches": {"website_description": "通过受控的尺寸、印刷、闭合方式、内件与包装开发产品袋、礼品袋或收纳袋。"},
+    "product_category_bags_special": {"website_description": "技术、促销或特殊用途包袋应使用结构化需求，明确功能、安全和测试标准。"},
+}
+
+
+MENU_ENGLISH = {
+    "menu_sourcing_home": {"name": "Home", "url": "/sourcing", "sequence": 10},
+    "menu_sourcing_services": {"name": "Our Services", "url": "#", "sequence": 20},
+    "menu_sourcing_service_procurement": {"name": "Sourcing & Purchasing", "url": "/sourcing/services/sourcing-purchasing", "sequence": 10},
+    "menu_sourcing_service_dropshipping": {"name": "Dropshipping Service", "url": "/sourcing/services/dropshipping-fulfillment", "sequence": 20},
+    "menu_sourcing_service_photo_design": {"name": "Photos & Designs", "url": "/sourcing/services/packaging-graphic-design", "sequence": 30},
+    "menu_sourcing_pricing": {"name": "Extra Service", "url": "/sourcing/services", "sequence": 40},
+    "menu_sourcing_solutions": {"name": "Solutions", "url": "#", "sequence": 30},
+    "menu_sourcing_solution_private_label": {"name": "Private Label", "url": "/sourcing/services/private-label-customization", "sequence": 10},
+    "menu_sourcing_solution_product_development": {"name": "Product Development", "url": "/sourcing/services/product-development", "sequence": 20},
+    "menu_sourcing_solution_shipping": {"name": "Shipping Solution", "url": "/sourcing/services/consolidation-shipping", "sequence": 30},
+    "menu_sourcing_solution_fba": {"name": "Amazon FBA", "url": "/sourcing/services/marketplace-fba-preparation", "sequence": 40},
+    "menu_sourcing_solution_quality": {"name": "Quality Control", "url": "/sourcing/services/quality-inspection", "sequence": 50},
+    "menu_sourcing_solution_credit": {"name": "Credit Payment Terms", "url": "/sourcing/payment", "sequence": 60},
+    "menu_sourcing_solution_affiliate": {"name": "Affiliate Program", "url": "/sourcing/request", "sequence": 70},
+    "menu_sourcing_products": {"name": "Products", "url": "/sourcing/products", "sequence": 40},
+    "menu_sourcing_about": {"name": "About", "url": "/sourcing/about", "sequence": 50},
+    "menu_sourcing_insights": {"name": "Resources", "url": "/sourcing/resources", "sequence": 60},
+    "menu_sourcing_blog": {"name": "Our Blog", "url": "/blog", "sequence": 10},
+    "menu_sourcing_import_guide": {"name": "Import from China Tutorial", "url": "/sourcing/resources/importing-from-china", "sequence": 20},
+    "menu_sourcing_agent_guide": {"name": "Sourcing Agent Guide", "url": "/sourcing/resources/sourcing-agent-guide", "sequence": 30},
+    "menu_sourcing_yiwu": {"name": "Visit Yiwu", "url": "/sourcing/yiwu-china", "sequence": 40},
+    "menu_sourcing_payment": {"name": "Payment Information", "url": "/sourcing/payment", "sequence": 10},
+    "menu_sourcing_about_us": {"name": "About Us", "url": "/sourcing/about", "sequence": 20},
+    "menu_sourcing_founder": {"name": "About Founder", "url": "/sourcing/founder", "sequence": 30},
+    "menu_sourcing_quote": {"name": "Get a Quote", "url": "/sourcing/request", "sequence": 70},
 }
 
 
 MENU_CHINESE = {
     "menu_sourcing_home": "首页",
-    "menu_sourcing_services": "服务",
+    "menu_sourcing_services": "我们的服务",
+    "menu_sourcing_service_procurement": "采购与供应",
+    "menu_sourcing_service_dropshipping": "代发货服务",
+    "menu_sourcing_service_photo_design": "照片与设计",
     "menu_sourcing_solutions": "解决方案",
+    "menu_sourcing_solution_private_label": "自有品牌",
+    "menu_sourcing_solution_product_development": "产品开发",
+    "menu_sourcing_solution_shipping": "运输解决方案",
+    "menu_sourcing_solution_fba": "亚马逊 FBA",
+    "menu_sourcing_solution_quality": "质量控制",
+    "menu_sourcing_solution_credit": "信用付款条款",
+    "menu_sourcing_solution_affiliate": "联盟计划",
     "menu_sourcing_products": "产品",
-    "menu_sourcing_pricing": "服务方案",
-    "menu_sourcing_insights": "采购知识",
-    "menu_sourcing_blog": "博客",
-    "menu_sourcing_import_guide": "从中国进口指南",
+    "menu_sourcing_pricing": "额外服务",
+    "menu_sourcing_insights": "资源",
+    "menu_sourcing_blog": "我们的博客",
+    "menu_sourcing_import_guide": "从中国进口教程",
     "menu_sourcing_agent_guide": "采购代理指南",
-    "menu_sourcing_about": "关于我们",
+    "menu_sourcing_yiwu": "访问义乌",
+    "menu_sourcing_about": "关于",
     "menu_sourcing_payment": "付款信息",
     "menu_sourcing_about_us": "关于我们",
-    "menu_sourcing_founder": "创始人与管理团队",
+    "menu_sourcing_founder": "关于创始人",
     "menu_sourcing_quote": "提交采购需求",
 }
 
@@ -363,6 +471,14 @@ def apply_sourcing_translations(env):
         website.write({"language_ids": [(6, 0, (english | chinese).ids)]})
 
     for xmlid, values in ASSET_ENGLISH.items():
+        record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
+        if record:
+            record.with_context(lang="en_US").write(values)
+    for xmlid, values in PRODUCT_CATEGORY_DETAIL_ENGLISH.items():
+        record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
+        if record:
+            record.with_context(lang="en_US").write(values)
+    for xmlid, values in MENU_ENGLISH.items():
         record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
         if record:
             record.with_context(lang="en_US").write(values)
@@ -409,6 +525,10 @@ def apply_sourcing_translations(env):
         record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
         if record:
             record.with_context(lang="zh_CN").write({"name": name})
+    for xmlid, values in PRODUCT_CATEGORY_DETAIL_CHINESE.items():
+        record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
+        if record:
+            record.with_context(lang="zh_CN").write(values)
     for xmlid, name in MENU_CHINESE.items():
         record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
         if record:

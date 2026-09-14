@@ -1174,3 +1174,119 @@ msgstr "打开章节"
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_content_page
 msgid "Payment details are issued for the approved project."
 msgstr "付款信息按已批准项目单独发出。"
+
+#. module: lightlink_sourcing_website
+msgid "Product category"
+msgstr "产品分类"
+
+#. module: lightlink_sourcing_website
+msgid "Product options"
+msgstr "产品方向"
+
+#. module: lightlink_sourcing_website
+msgid "Product directions ready for your sourcing brief"
+msgstr "可按采购需求展开的产品方向"
+
+#. module: lightlink_sourcing_website
+msgid "Each category and its content can be maintained in Odoo. Product facts are confirmed against your exact requirement."
+msgstr "每个分类及其内容都可在 Odoo 中维护；产品事实将依据您的实际需求确认。"
+
+#. module: lightlink_sourcing_website
+msgid "This category is ready for content."
+msgstr "此分类已可维护内容。"
+
+#. module: lightlink_sourcing_website
+msgid "Add child categories, descriptions, images or public products in Odoo. The page updates from those records."
+msgstr "在 Odoo 中添加子分类、介绍、图片或公开产品，页面会随记录更新。"
+
+#. module: lightlink_sourcing_website
+msgid "Tell us what you want to source"
+msgstr "告诉我们您要采购什么"
+
+#. module: lightlink_sourcing_website
+msgid "Share the product, quantity, specifications, target market and destination. The inquiry will be saved in Odoo for structured follow-up."
+msgstr "请提供产品、数量、规格、目标市场和目的地；询盘将保存到 Odoo 中进行结构化跟进。"
+
+#. module: lightlink_sourcing_website
+msgid "One requirement record"
+msgstr "一条统一需求记录"
+
+#. module: lightlink_sourcing_website
+msgid "Supplier and quotation follow-up"
+msgstr "供应商与报价跟进"
+
+#. module: lightlink_sourcing_website
+msgid "Sample and quality checkpoints"
+msgstr "样品与质量检查点"
+
+#. module: lightlink_sourcing_website
+msgid "Traceable communication"
+msgstr "可追溯沟通记录"
+
+#. module: lightlink_sourcing_website
+msgid "Product requirements *"
+msgstr "产品需求 *"
+
+#. module: lightlink_sourcing_website
+msgid "Tell us your Yiwu sourcing plan"
+msgstr "告诉我们您的义乌采购计划"
+
+#. module: lightlink_sourcing_website
+msgid "Visit and sourcing requirements *"
+msgstr "行程与采购需求 *"
+
+#. module: lightlink_sourcing_website
+msgid "Submit plan"
+msgstr "提交计划"
+
+#. module: lightlink_sourcing_website
+msgid "Plan every part of the visit"
+msgstr "规划行程的每个部分"
+
+#. module: lightlink_sourcing_website
+msgid "Yiwu sourcing and travel information in one place"
+msgstr "在一个页面查看义乌采购与行程信息"
+
+#. module: lightlink_sourcing_website
+msgid "Each section is a separate Odoo-managed page, so your team can update text and images without changing code."
+msgstr "每个板块都是由 Odoo 管理的独立页面，团队无需修改代码即可更新文字和图片。"
+
+#. module: lightlink_sourcing_website
+msgid "Open guide"
+msgstr "打开指南"
+
+#. module: lightlink_sourcing_website
+msgid "Visit Yiwu guides"
+msgstr "访问义乌指南"
+
+#. module: lightlink_sourcing_website
+msgid "Discuss your Yiwu visit"
+msgstr "沟通您的义乌行程"
+
+#. module: lightlink_sourcing_website
+msgid "Clear product specifications"
+msgstr "明确产品规格"
+
+#. module: lightlink_sourcing_website
+msgid "Customization and packaging support"
+msgstr "定制与包装支持"
+
+#. module: lightlink_sourcing_website
+msgid "Supplier and quality coordination"
+msgstr "供应商与质量协调"
+
+#. module: lightlink_sourcing_website
+msgid "Visit Yiwu"
+msgstr "访问义乌"
+
+#. module: lightlink_sourcing_website
+msgid "Plan the visit"
+msgstr "规划行程"
+
+#. module: lightlink_sourcing_website
+msgid "Plan market visits, local business support, fairs, transport, hotels and practical city arrangements."
+msgstr "规划市场走访、本地商务支持、展会、交通、住宿和实用城市安排。"
+
+#. module: lightlink_sourcing_website
+msgid "I authorize the use of this information to evaluate and respond to my sourcing request."
+msgstr "我授权仅使用这些信息评估并回复我的采购需求。"

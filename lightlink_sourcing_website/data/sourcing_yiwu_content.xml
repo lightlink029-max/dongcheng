@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="page_visit_yiwu" model="ll.sourcing.content.page">
+        <field name="name">Visit Yiwu</field><field name="code">visit-yiwu</field><field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Plan a productive sourcing trip</field>
+        <field name="summary">Prepare your Yiwu market visit with sourcing support, local business services, transport, accommodation and practical city information.</field>
+        <field name="body_html"><![CDATA[<h2>Make the visit serve the purchasing decision</h2><p>Start with the product categories, specifications, target quantity and decisions you need to complete in Yiwu. The plan can then connect market visits, supplier meetings, sample review and follow-up work.</p>]]></field>
+        <field name="image_asset_id" ref="asset_sourcing_hero"/><field name="published" eval="True"/><field name="sequence">70</field>
+    </record>
+    <record id="page_yiwu_markets" model="ll.sourcing.content.page">
+        <field name="name">Yiwu Markets</field><field name="code">yiwu-markets</field><field name="website_id" ref="website_global_sourcing"/><field name="kicker">Find the right market area</field>
+        <field name="summary">Organize market visits by product category, evidence to collect and the suppliers that deserve follow-up.</field>
+        <field name="body_html"><![CDATA[<h2>Prepare before entering the market</h2><p>List product categories, target specifications, quantity range, customization needs and destination requirements. This prevents a large market from becoming an unstructured browsing trip.</p><h2>Capture comparable supplier information</h2><p>Record booth identity, product references, materials, minimum quantities, sample terms, indicative lead time and the next verification step in one format.</p><h2>Move qualified options into the project</h2><p>Market conversations are starting points. Supplier identity, capability, quotation scope and samples still need to be verified before a purchasing decision.</p>]]></field>
+        <field name="image_asset_id" ref="asset_product_development"/><field name="published" eval="True"/><field name="sequence">71</field>
+    </record>
+    <record id="page_yiwu_business_services" model="ll.sourcing.content.page">
+        <field name="name">Business Services in Yiwu</field><field name="code">yiwu-business-services</field><field name="website_id" ref="website_global_sourcing"/><field name="kicker">Local support for the working visit</field>
+        <field name="summary">Coordinate sourcing assistance, interpretation, supplier meetings, samples and post-visit follow-up.</field>
+        <field name="body_html"><![CDATA[<h2>Sourcing coordination</h2><p>Translate the buyer brief into a visit plan, schedule relevant supplier conversations and keep each finding connected to the requirement.</p><h2>Interpretation</h2><p>Use interpretation for technical and commercial details, not only basic introductions. Confirm terminology, numbers and commitments in writing.</p><h2>Samples and follow-up</h2><p>Label samples and connect them to supplier, specification and quotation records so the work continues after the visit.</p>]]></field>
+        <field name="image_asset_id" ref="asset_factory_audit"/><field name="published" eval="True"/><field name="sequence">72</field>
+    </record>
+    <record id="page_yiwu_trade_fairs" model="ll.sourcing.content.page">
+        <field name="name">Yiwu Trade Fairs</field><field name="code">yiwu-trade-fairs</field><field name="website_id" ref="website_global_sourcing"/><field name="kicker">Combine fairs with supplier work</field>
+        <field name="summary">Choose relevant fairs, check current schedules and plan how leads will be qualified after each meeting.</field>
+        <field name="body_html"><![CDATA[<h2>Verify dates with the organizer</h2><p>Event schedules and admission requirements change. Confirm them with the official organizer before booking travel.</p><h2>Build a focused meeting list</h2><p>Prioritize exhibitors by product fit, target market and the evidence needed for the next decision.</p><h2>Follow up consistently</h2><p>Record contacts, products, open questions, samples and quotation deadlines while the conversation is still fresh.</p>]]></field>
+        <field name="image_asset_id" ref="asset_product_development"/><field name="published" eval="True"/><field name="sequence">73</field>
+    </record>
+    <record id="page_yiwu_transportation" model="ll.sourcing.content.page">
+        <field name="name">Transportation to Yiwu</field><field name="code">yiwu-transportation</field><field name="website_id" ref="website_global_sourcing"/><field name="kicker">Plan the route and local transfers</field>
+        <field name="summary">Compare current rail, air and road connections through major gateway cities and leave time for local transfers.</field>
+        <field name="body_html"><![CDATA[<h2>Choose the gateway city</h2><p>International visitors commonly connect through major Chinese cities before continuing to Yiwu. Compare total travel time, arrival hour and transfer risk.</p><h2>Check live schedules</h2><p>Train, flight and road information changes. Use official transport sources for current schedules, identity requirements and ticket rules.</p><h2>Plan local movement</h2><p>Group market areas and supplier meetings geographically, and keep contingency time between appointments.</p>]]></field>
+        <field name="image_asset_id" ref="asset_shipping_consolidation"/><field name="published" eval="True"/><field name="sequence">74</field>
+    </record>
+    <record id="page_yiwu_hotels" model="ll.sourcing.content.page">
+        <field name="name">Hotels in Yiwu</field><field name="code">yiwu-hotels</field><field name="website_id" ref="website_global_sourcing"/><field name="kicker">Stay close to the work</field>
+        <field name="summary">Select accommodation by market access, meeting locations, transport and the services your team needs.</field>
+        <field name="body_html"><![CDATA[<h2>Location first</h2><p>Choose a base that reduces travel between the market districts, supplier meetings and transport hubs in your actual itinerary.</p><h2>Confirm business essentials</h2><p>Check current guest policies, internet access, breakfast times, meeting space, invoice support and late-arrival arrangements directly with the hotel.</p><h2>Keep options flexible</h2><p>Use refundable or changeable arrangements when supplier schedules are not yet fixed.</p>]]></field>
+        <field name="image_asset_id" ref="asset_warehousing_kitting"/><field name="published" eval="True"/><field name="sequence">75</field>
+    </record>
+    <record id="page_yiwu_entertainment" model="ll.sourcing.content.page">
+        <field name="name">Food and Leisure in Yiwu</field><field name="code">yiwu-entertainment</field><field name="website_id" ref="website_global_sourcing"/><field name="kicker">Use personal time well</field>
+        <field name="summary">Add practical dining, shopping and leisure options around the sourcing itinerary without disrupting the work plan.</field>
+        <field name="body_html"><![CDATA[<h2>Plan around the itinerary</h2><p>Choose dining and leisure locations near the day’s final meeting or your hotel to avoid unnecessary transfers.</p><h2>Confirm current information</h2><p>Opening hours, reservations and local conditions change. Check before traveling and use reputable transport arrangements.</p><h2>Respect the working objective</h2><p>Keep supplier entertainment separate from product evaluation, quotation comparison and approval decisions.</p>]]></field>
+        <field name="image_asset_id" ref="asset_product_photography"/><field name="published" eval="True"/><field name="sequence">76</field>
+    </record>
+    <record id="page_yiwu_muslim_culture" model="ll.sourcing.content.page">
+        <field name="name">Muslim-Friendly Yiwu</field><field name="code">yiwu-muslim-culture</field><field name="website_id" ref="website_global_sourcing"/><field name="kicker">Practical cultural planning</field>
+        <field name="summary">Prepare halal dining, prayer and culturally appropriate arrangements as part of the business itinerary.</field>
+        <field name="body_html"><![CDATA[<h2>Confirm needs before arrival</h2><p>Tell the local coordinator about dietary, prayer and scheduling requirements so suitable options can be checked in advance.</p><h2>Verify current venues</h2><p>Restaurant status, certification, opening hours and access can change. Confirm directly before relying on a listing.</p><h2>Build respectful meeting plans</h2><p>Allow appropriate time for religious observance and communicate dietary requirements clearly when arranging group meals.</p>]]></field>
+        <field name="image_asset_id" ref="asset_packaging_design"/><field name="published" eval="True"/><field name="sequence">77</field>
+    </record>
+</odoo>

@@ -88,7 +88,6 @@ class Website(models.Model):
             "menu_sourcing_home",
             "menu_sourcing_services",
             "menu_sourcing_solutions",
-            "menu_sourcing_pricing",
             "menu_sourcing_products",
             "menu_sourcing_insights",
             "menu_sourcing_about",
@@ -106,6 +105,49 @@ class Website(models.Model):
             })
         for menu in managed_menus:
             menu.write({"website_id": website.id, "parent_id": root_menu.id})
+
+        child_menu_map = {
+            "menu_sourcing_services": (
+                "menu_sourcing_service_procurement",
+                "menu_sourcing_service_dropshipping",
+                "menu_sourcing_service_photo_design",
+                "menu_sourcing_pricing",
+            ),
+            "menu_sourcing_solutions": (
+                "menu_sourcing_solution_private_label",
+                "menu_sourcing_solution_product_development",
+                "menu_sourcing_solution_shipping",
+                "menu_sourcing_solution_fba",
+                "menu_sourcing_solution_quality",
+                "menu_sourcing_solution_credit",
+                "menu_sourcing_solution_affiliate",
+            ),
+            "menu_sourcing_insights": (
+                "menu_sourcing_blog",
+                "menu_sourcing_import_guide",
+                "menu_sourcing_agent_guide",
+                "menu_sourcing_yiwu",
+            ),
+            "menu_sourcing_about": (
+                "menu_sourcing_payment",
+                "menu_sourcing_about_us",
+                "menu_sourcing_founder",
+            ),
+        }
+        for parent_xmlid, child_xmlids in child_menu_map.items():
+            parent = self.env.ref(
+                "lightlink_sourcing_website.%s" % parent_xmlid,
+                raise_if_not_found=False,
+            )
+            if not parent:
+                continue
+            for child_xmlid in child_xmlids:
+                child = self.env.ref(
+                    "lightlink_sourcing_website.%s" % child_xmlid,
+                    raise_if_not_found=False,
+                )
+                if child:
+                    child.write({"website_id": website.id, "parent_id": parent.id})
 
         product_line = self.env["psc.product.line"].search([
             ("code", "=", "lightlink_global_sourcing"),
@@ -189,13 +231,24 @@ class Website(models.Model):
         for xmlid in (
             "menu_sourcing_home",
             "menu_sourcing_services",
+            "menu_sourcing_service_procurement",
+            "menu_sourcing_service_dropshipping",
+            "menu_sourcing_service_photo_design",
             "menu_sourcing_solutions",
+            "menu_sourcing_solution_private_label",
+            "menu_sourcing_solution_product_development",
+            "menu_sourcing_solution_shipping",
+            "menu_sourcing_solution_fba",
+            "menu_sourcing_solution_quality",
+            "menu_sourcing_solution_credit",
+            "menu_sourcing_solution_affiliate",
             "menu_sourcing_pricing",
             "menu_sourcing_products",
             "menu_sourcing_insights",
             "menu_sourcing_blog",
             "menu_sourcing_import_guide",
             "menu_sourcing_agent_guide",
+            "menu_sourcing_yiwu",
             "menu_sourcing_about",
             "menu_sourcing_payment",
             "menu_sourcing_about_us",
@@ -208,13 +261,33 @@ class Website(models.Model):
             if menu:
                 managed_menus |= menu
 
-        bootstrap_menus = self.env["website.menu"].search([
+        unmanaged_menus = self.env["website.menu"].search([
             ("website_id", "=", website.id),
             ("id", "not in", (website.menu_id | managed_menus).ids),
         ])
+        bootstrap_urls = {"/", "/shop", "/contactus", "/event", "/jobs"}
+        bootstrap_menus = unmanaged_menus.filtered(
+            lambda menu: menu.url in bootstrap_urls
+        )
         count = len(bootstrap_menus)
         bootstrap_menus.unlink()
         return count
+
+
+class ProductPublicCategory(models.Model):
+    _inherit = "product.public.category"
+
+    sourcing_hero_subtitle = fields.Char(
+        string="分类页副标题",
+        translate=True,
+        help="显示在采购产品分类落地页主标题下方。",
+    )
+    sourcing_highlight_1 = fields.Char(string="分类亮点 1", translate=True)
+    sourcing_highlight_2 = fields.Char(string="分类亮点 2", translate=True)
+    sourcing_highlight_3 = fields.Char(string="分类亮点 3", translate=True)
+    sourcing_inquiry_heading = fields.Char(
+        string="询盘表单标题", translate=True,
+    )
 
 
 class SourcingAsset(models.Model):

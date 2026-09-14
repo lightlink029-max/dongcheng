@@ -66,6 +66,39 @@ class TestSourcingContent(TransactionCase):
         self.assertGreaterEqual(len(payment_drafts), 3)
         self.assertFalse(payment_drafts.filtered("published"))
 
+    def test_navigation_and_product_category_landing_content(self):
+        website = self.env.ref("lightlink_sourcing_website.website_global_sourcing")
+        self.env["website"].initialize_lightlink_sourcing_site()
+        services = self.env.ref("lightlink_sourcing_website.menu_sourcing_services")
+        solutions = self.env.ref("lightlink_sourcing_website.menu_sourcing_solutions")
+        self.assertEqual(services.parent_id, website.menu_id)
+        self.assertEqual(len(services.child_id), 4)
+        self.assertEqual(len(solutions.child_id), 7)
+
+        bags = self.env.ref("lightlink_sourcing_website.product_category_bags_cases")
+        self.assertEqual(bags.website_id, website)
+        self.assertEqual(len(bags.child_id), 6)
+        self.assertTrue(bags.sourcing_hero_subtitle)
+        self.assertTrue(bags.sourcing_inquiry_heading)
+
+        visit_yiwu = self.env.ref("lightlink_sourcing_website.page_visit_yiwu")
+        yiwu_pages = self.env["ll.sourcing.content.page"].search([
+            ("website_id", "=", website.id),
+            ("code", "like", "yiwu-%"),
+            ("published", "=", True),
+        ])
+        self.assertTrue(visit_yiwu.published)
+        self.assertEqual(len(yiwu_pages), 7)
+
+        custom_menu = self.env["website.menu"].create({
+            "name": "Custom maintained link",
+            "url": "/custom-maintained-link",
+            "website_id": website.id,
+            "parent_id": website.menu_id.id,
+        })
+        self.env["website"]._cleanup_lightlink_sourcing_bootstrap_menus()
+        self.assertTrue(custom_menu.exists())
+
     def test_unverified_claims_cannot_be_published(self):
         website = self.env.ref("lightlink_sourcing_website.website_global_sourcing")
         with self.assertRaises(ValidationError):

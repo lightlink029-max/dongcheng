@@ -183,9 +183,13 @@ class LightLinkSourcingWebsite(http.Controller):
                 "public_categ_ids", "child_of", category.id
             )
             count = Product.search_count(category_domain)
+            image_category = category if category.image_512 else category.child_id.filtered(
+                lambda item: bool(item.image_512)
+            )[:1]
             result.append({
                 "record": category,
                 "count": count,
+                "image_category": image_category,
                 "image_product": Product.search(
                     category_domain, limit=1, order="website_sequence, id desc"
                 ),
@@ -262,6 +266,53 @@ class LightLinkSourcingWebsite(http.Controller):
             ),
         )
 
+    @http.route(
+        "/sourcing/products/category/<int:category_id>",
+        type="http",
+        auth="public",
+        website=True,
+        sitemap=True,
+    )
+    def sourcing_product_category(self, category_id, **kwargs):
+        website = self._sourcing_website()
+        Category = request.env["product.public.category"].sudo()
+        Product = request.env["product.template"].sudo()
+        category = Category.browse(category_id).exists()
+        if not category or category.website_id.id != website.id:
+            return request.not_found()
+
+        catalog_domain = website.sale_product_domain() & Domain(
+            "public_categ_ids", "child_of", category.id
+        )
+        children = Category.search([
+            ("parent_id", "=", category.id),
+            ("website_id", "=", website.id),
+        ], order="sequence, name, id")
+        child_values = []
+        for child in children:
+            child_domain = website.sale_product_domain() & Domain(
+                "public_categ_ids", "child_of", child.id
+            )
+            child_values.append({
+                "record": child,
+                "count": Product.search_count(child_domain),
+                "image_product": Product.search(
+                    child_domain, limit=1, order="website_sequence, id desc"
+                ),
+            })
+
+        return request.render(
+            "lightlink_sourcing_website.sourcing_product_category",
+            self._base_values(
+                category=category,
+                category_children=child_values,
+                category_products=Product.search(
+                    catalog_domain, limit=12, order="website_sequence, id desc"
+                ),
+                category_product_total=Product.search_count(catalog_domain),
+            ),
+        )
+
     @http.route("/sourcing/services", type="http", auth="public", website=True, sitemap=True)
     def sourcing_services(self, **kwargs):
         return request.render(
@@ -325,12 +376,24 @@ class LightLinkSourcingWebsite(http.Controller):
         chapters = content_page.chapter_ids.filtered(
             lambda item: item.active and item.published
         ).sorted(lambda item: (item.sequence, item.id))
+        yiwu_sections = request.env["ll.sourcing.content.page"].sudo().search([
+            ("website_id", "=", website.id),
+            ("code", "like", "yiwu-%"),
+            ("active", "=", True),
+            ("published", "=", True),
+        ], order="sequence, id")
+        template = "lightlink_sourcing_website.sourcing_content_page"
+        if code == "visit-yiwu":
+            template = "lightlink_sourcing_website.sourcing_yiwu"
+        elif code.startswith("yiwu-"):
+            template = "lightlink_sourcing_website.sourcing_yiwu_detail"
         return request.render(
-            "lightlink_sourcing_website.sourcing_content_page",
+            template,
             self._base_values(
                 content_page=content_page,
                 payment_methods=payments,
                 guide_chapters=chapters,
+                yiwu_sections=yiwu_sections,
             ),
         )
 
@@ -363,6 +426,23 @@ class LightLinkSourcingWebsite(http.Controller):
     )
     def sourcing_agent_guide(self, **kwargs):
         return self._render_content_page("sourcing-agent-guide")
+
+    @http.route("/sourcing/yiwu-china", type="http", auth="public", website=True, sitemap=True)
+    def sourcing_visit_yiwu(self, **kwargs):
+        return self._render_content_page("visit-yiwu")
+
+    @http.route(
+        "/sourcing/yiwu-china/<string:slug>",
+        type="http", auth="public", website=True, sitemap=True,
+    )
+    def sourcing_yiwu_detail(self, slug, **kwargs):
+        clean_slug = self._clean(slug, 100)
+        if clean_slug not in {
+            "markets", "business-services", "trade-fairs", "transportation",
+            "hotels", "entertainment", "muslim-culture",
+        }:
+            return request.not_found()
+        return self._render_content_page("yiwu-%s" % clean_slug)
 
     @http.route("/sourcing/request", type="http", auth="public", website=True, sitemap=True)
     def sourcing_request(self, product_id=None, error=None, **kwargs):

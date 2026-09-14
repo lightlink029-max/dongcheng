@@ -9,6 +9,9 @@
     </template>
 
     <template id="sourcing_subnav" name="Sourcing Website Navigation">
+        <t t-set="sourcing_navigation" t-value="sourcing_website.menu_id.child_id.filtered('is_visible').sorted('sequence')"/>
+        <t t-set="sourcing_home_menu" t-value="request.env.ref('lightlink_sourcing_website.menu_sourcing_home').sudo()"/>
+        <t t-set="sourcing_cta_menu" t-value="request.env.ref('lightlink_sourcing_website.menu_sourcing_quote').sudo()"/>
         <nav class="navbar navbar-expand-lg ll-sourcing-nav" aria-label="Sourcing website navigation">
             <div class="container">
                 <a class="navbar-brand ll-sourcing-brand" href="/sourcing" t-field="sourcing_website.sourcing_brand_name"/>
@@ -17,33 +20,40 @@
                 </button>
                 <div class="collapse navbar-collapse ll-sourcing-links" id="llSourcingNavigation">
                     <div class="ll-sourcing-menu">
-                        <a class="nav-link" href="/sourcing/services">Services</a>
-                        <a class="nav-link" href="/sourcing/solutions">Solutions</a>
-                        <a class="nav-link" href="/sourcing/products">Products</a>
-                        <div class="nav-item dropdown">
-                            <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Resources</button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="/blog">Our Blog</a></li>
-                                <li><a class="dropdown-item" href="/sourcing/resources/importing-from-china">Importing from China Guide</a></li>
-                                <li><a class="dropdown-item" href="/sourcing/resources/sourcing-agent-guide">Sourcing Agent Guide</a></li>
-                            </ul>
-                        </div>
-                        <div class="nav-item dropdown">
-                            <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">About</button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="/sourcing/payment">Payment Information</a></li>
-                                <li><a class="dropdown-item" href="/sourcing/about">About Us</a></li>
-                                <li><a class="dropdown-item" href="/sourcing/founder">Founder &amp; Leadership</a></li>
-                            </ul>
-                        </div>
+                        <t t-foreach="sourcing_navigation" t-as="nav_item">
+                            <t t-if="nav_item.id not in (sourcing_home_menu.id, sourcing_cta_menu.id)">
+                                <t t-set="visible_children" t-value="nav_item.child_id.filtered('is_visible').sorted('sequence')"/>
+                                <div t-if="visible_children" class="nav-item dropdown">
+                                    <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" t-field="nav_item.name"/>
+                                    <ul class="dropdown-menu">
+                                        <li t-foreach="visible_children" t-as="child_menu">
+                                            <a class="dropdown-item" t-att-href="child_menu.url or '#'" t-att-target="'_blank' if child_menu.new_window else None" t-field="child_menu.name"/>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <a t-else="" class="nav-link" t-att-href="nav_item.url or '#'" t-att-target="'_blank' if nav_item.new_window else None" t-field="nav_item.name"/>
+                            </t>
+                        </t>
                     </div>
                     <div class="ll-sourcing-actions">
                         <t t-call="portal.language_selector" _div_classes="'dropdown ll-sourcing-language'" _btn_class="'btn ll-sourcing-language-toggle'"/>
-                        <a href="/sourcing/request" class="btn btn-primary ll-sourcing-nav-cta">Get a Quote</a>
+                        <a t-att-href="sourcing_cta_menu.url or '/sourcing/request'" class="btn btn-primary ll-sourcing-nav-cta" t-field="sourcing_cta_menu.name"/>
                     </div>
                 </div>
             </div>
         </nav>
+    </template>
+
+    <template id="sourcing_blog_navigation" inherit_id="website.layout" name="Sourcing Navigation on Blog">
+        <xpath expr="//header" position="attributes">
+            <attribute name="t-if">not no_header and not request.httprequest.path.startswith('/blog')</attribute>
+        </xpath>
+        <xpath expr="//main" position="before">
+            <t t-if="request.httprequest.path.startswith('/blog')">
+                <t t-set="sourcing_website" t-value="request.env.ref('lightlink_sourcing_website.website_global_sourcing').sudo()"/>
+                <t t-call="lightlink_sourcing_website.sourcing_subnav"/>
+            </t>
+        </xpath>
     </template>
 
     <template id="sourcing_footer" name="Sourcing Website Footer">
@@ -271,8 +281,9 @@
                 <section id="product-categories" class="ll-section"><div class="container">
                     <t t-call="lightlink_sourcing_website.sourcing_section_heading"><t t-set="kicker">Product categories</t><t t-set="title">Browse the categories already maintained in Odoo</t><t t-set="subtitle">Adding or reclassifying products in Odoo updates this page automatically.</t></t>
                     <div t-if="product_categories" class="ll-product-category-grid">
-                        <a t-foreach="product_categories" t-as="category_info" t-att-href="'/sourcing/products?category=%s' % category_info['record'].id" t-attf-class="ll-product-category-card #{selected_category and selected_category.id == category_info['record'].id and 'is-active' or ''}">
-                            <img t-if="category_info['image_product']" t-att-src="'/web/image/product.template/%s/image_512' % category_info['image_product'].id" t-att-alt="category_info['record'].name" loading="lazy"/>
+                        <a t-foreach="product_categories" t-as="category_info" t-att-href="'/sourcing/products/category/%s' % category_info['record'].id" t-attf-class="ll-product-category-card #{selected_category and selected_category.id == category_info['record'].id and 'is-active' or ''}">
+                            <img t-if="category_info['image_category']" t-att-src="'/web/image/product.public.category/%s/image_512' % category_info['image_category'].id" t-att-alt="category_info['record'].name" loading="lazy"/>
+                            <img t-elif="category_info['image_product']" t-att-src="'/web/image/product.template/%s/image_512' % category_info['image_product'].id" t-att-alt="category_info['record'].name" loading="lazy"/>
                             <div t-else="" class="ll-product-category-placeholder"><i class="fa fa-cubes"/></div>
                             <span><strong t-field="category_info['record'].name"/><small><t t-out="category_info['count']"/> products</small></span>
                         </a>
@@ -304,6 +315,96 @@
         </t>
     </template>
 
+    <template id="sourcing_product_category" name="Sourcing Product Category">
+        <t t-call="lightlink_sourcing_website.sourcing_layout">
+            <t t-set="additional_title" t-value="category.name"/>
+            <div id="wrap" class="oe_structure ll-sourcing-site ll-category-page">
+                <section class="ll-category-hero">
+                    <div class="container"><div class="row align-items-center g-5">
+                        <div class="col-lg-7 ll-category-hero-copy">
+                            <span class="ll-kicker">Product category</span>
+                            <h1 t-field="category.name"/>
+                            <p t-if="category.sourcing_hero_subtitle" t-field="category.sourcing_hero_subtitle"/>
+                            <div t-elif="category.website_description" class="ll-category-intro" t-field="category.website_description"/>
+                            <a href="#category-inquiry" class="btn btn-primary btn-lg">Get a sourcing plan <i class="fa fa-arrow-right ms-2"/></a>
+                        </div>
+                        <div class="col-lg-5">
+                            <div class="ll-category-hero-image">
+                                <img t-if="category.image_1920" t-att-src="'/web/image/product.public.category/%s/image_1920' % category.id" t-att-alt="category.name"/>
+                                <img t-elif="category_children and category_children[0]['record'].image_1920" t-att-src="'/web/image/product.public.category/%s/image_1920' % category_children[0]['record'].id" t-att-alt="category.name"/>
+                                <div t-else="" class="ll-category-image-placeholder"><i class="fa fa-cubes"/></div>
+                            </div>
+                        </div>
+                    </div></div>
+                </section>
+
+                <section class="ll-category-highlights"><div class="container"><div class="row g-0">
+                    <div class="col-md-4"><i class="fa fa-th-large"/><strong t-out="category.sourcing_highlight_1 or 'Clear product specifications'"/></div>
+                    <div class="col-md-4"><i class="fa fa-object-group"/><strong t-out="category.sourcing_highlight_2 or 'Customization and packaging support'"/></div>
+                    <div class="col-md-4"><i class="fa fa-check-square-o"/><strong t-out="category.sourcing_highlight_3 or 'Supplier and quality coordination'"/></div>
+                </div></div></section>
+
+                <section class="ll-section ll-category-offerings"><div class="container">
+                    <t t-call="lightlink_sourcing_website.sourcing_section_heading">
+                        <t t-set="kicker">Product options</t>
+                        <t t-set="title">Product directions ready for your sourcing brief</t>
+                        <t t-set="subtitle">Each category and its content can be maintained in Odoo. Product facts are confirmed against your exact requirement.</t>
+                    </t>
+                    <div t-if="category.website_description" class="ll-category-description" t-field="category.website_description"/>
+                    <div t-if="category_children" class="ll-category-offering-grid">
+                        <article t-foreach="category_children" t-as="category_info" class="ll-category-offering">
+                            <div class="ll-category-offering-image">
+                                <img t-if="category_info['record'].image_512" t-att-src="'/web/image/product.public.category/%s/image_512' % category_info['record'].id" t-att-alt="category_info['record'].name" loading="lazy"/>
+                                <img t-elif="category_info['image_product']" t-att-src="'/web/image/product.template/%s/image_512' % category_info['image_product'].id" t-att-alt="category_info['record'].name" loading="lazy"/>
+                                <div t-else="" class="ll-category-image-placeholder"><i class="fa fa-cube"/></div>
+                            </div>
+                            <div class="ll-category-offering-copy">
+                                <small><t t-out="category_info['count']"/> products in Odoo</small>
+                                <h2 t-field="category_info['record'].name"/>
+                                <div t-if="category_info['record'].website_description" t-field="category_info['record'].website_description"/>
+                                <a t-att-href="'/sourcing/request?request_type=find_supplier&amp;product_category=%s' % category_info['record'].name" class="ll-text-link">Request a quote <i class="fa fa-arrow-right"/></a>
+                            </div>
+                        </article>
+                    </div>
+                    <div t-elif="category_products" class="row g-4">
+                        <div t-foreach="category_products" t-as="item" class="col-6 col-md-4 col-xl-3">
+                            <article class="ll-catalog-product h-100"><a t-att-href="item.website_url" class="ll-catalog-product-image"><img t-att-src="'/web/image/product.template/%s/image_512' % item.id" t-att-alt="item.name" loading="lazy"/></a><div><h3><a t-att-href="item.website_url" t-field="item.name"/></h3><div class="ll-product-actions"><a t-att-href="item.website_url">View details</a><a t-att-href="'/sourcing/request?product_id=%s' % item.id" class="btn btn-sm btn-primary">Request quote</a></div></div></article>
+                        </div>
+                    </div>
+                    <div t-else="" class="ll-empty-state"><h3>This category is ready for content.</h3><p>Add child categories, descriptions, images or public products in Odoo. The page updates from those records.</p></div>
+                </div></section>
+
+                <section id="category-inquiry" class="ll-section ll-section-muted"><div class="container">
+                    <div class="ll-category-inline-form"><div class="row g-5">
+                        <div class="col-lg-5">
+                            <span class="ll-kicker">Start a sourcing request</span>
+                            <h2 t-out="category.sourcing_inquiry_heading or 'Tell us what you want to source'"/>
+                            <p>Share the product, quantity, specifications, target market and destination. The inquiry will be saved in Odoo for structured follow-up.</p>
+                            <ul class="ll-check-list"><li>One requirement record</li><li>Supplier and quotation follow-up</li><li>Sample and quality checkpoints</li><li>Traceable communication</li></ul>
+                        </div>
+                        <div class="col-lg-7">
+                            <form action="/sourcing/request/submit" method="post" class="ll-request-form">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input type="text" name="website" class="d-none" tabindex="-1" autocomplete="off"/>
+                                <input type="hidden" name="request_type" value="find_supplier"/>
+                                <input type="hidden" name="product_category" t-att-value="category.name"/>
+                                <div class="row g-3">
+                                    <div class="col-md-6"><label class="form-label" for="category_contact_name">Name *</label><input id="category_contact_name" name="contact_name" class="form-control" required="required"/></div>
+                                    <div class="col-md-6"><label class="form-label" for="category_email">Business email *</label><input id="category_email" name="email" type="email" class="form-control" required="required"/></div>
+                                    <div class="col-md-6"><label class="form-label" for="category_phone">Phone / WhatsApp</label><input id="category_phone" name="phone" class="form-control"/></div>
+                                    <div class="col-md-6"><label class="form-label" for="category_country">Country</label><select id="category_country" name="country_id" class="form-select"><option value="">Choose a country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-field="country.name"/></select></div>
+                                    <div class="col-12"><label class="form-label" for="category_requirements">Product requirements *</label><textarea id="category_requirements" name="requirement_details" class="form-control" rows="6" required="required" placeholder="Product type, dimensions, materials, functions, customization, quantity and delivery destination."></textarea></div>
+                                    <div class="col-12"><div class="form-check"><input id="category_privacy" name="privacy_consent" type="checkbox" class="form-check-input" required="required"/><label class="form-check-label" for="category_privacy">I authorize the use of this information to evaluate and respond to my sourcing request.</label></div></div>
+                                    <div class="col-12"><button class="btn btn-primary btn-lg" type="submit">Submit sourcing request <i class="fa fa-arrow-right ms-2"/></button></div>
+                                </div>
+                            </form>
+                        </div>
+                    </div></div></div>
+                </section>
+            </div>
+        </t>
+    </template>
+
     <template id="sourcing_content_page" name="Sourcing Content Page">
         <t t-call="lightlink_sourcing_website.sourcing_layout">
             <t t-set="additional_title" t-value="content_page.name"/>
@@ -312,14 +413,41 @@
                 <section class="ll-section"><div class="container"><div class="ll-rich-content" t-field="content_page.body_html"/></div></section>
 
                 <section t-if="content_page.code == 'resources'" class="ll-section ll-section-muted"><div class="container"><div class="row g-4">
-                    <div class="col-lg-4"><a href="/blog" class="ll-resource-card"><i class="fa fa-newspaper-o"/><h2>Our Blog</h2><p>Publish ongoing product, supplier and procurement insights through Odoo Blog.</p><small>Browse articles <i class="fa fa-arrow-right"/></small></a></div>
-                    <div class="col-lg-4"><a href="/sourcing/resources/importing-from-china" class="ll-resource-card"><i class="fa fa-map-signs"/><h2>Importing from China Guide</h2><p>Follow a structured learning path from budget and product brief to inspection and shipping.</p><small>Open the guide <i class="fa fa-arrow-right"/></small></a></div>
-                    <div class="col-lg-4"><a href="/sourcing/resources/sourcing-agent-guide" class="ll-resource-card"><i class="fa fa-users"/><h2>Sourcing Agent Guide</h2><p>Understand scope, services, fees, fit and partner selection before handing over a project.</p><small>Open the guide <i class="fa fa-arrow-right"/></small></a></div>
+                    <div class="col-md-6 col-xl-3"><a href="/blog" class="ll-resource-card"><i class="fa fa-newspaper-o"/><h2>Our Blog</h2><p>Publish ongoing product, supplier and procurement insights through Odoo Blog.</p><small>Browse articles <i class="fa fa-arrow-right"/></small></a></div>
+                    <div class="col-md-6 col-xl-3"><a href="/sourcing/resources/importing-from-china" class="ll-resource-card"><i class="fa fa-map-signs"/><h2>Importing from China Guide</h2><p>Follow a structured learning path from budget and product brief to inspection and shipping.</p><small>Open the guide <i class="fa fa-arrow-right"/></small></a></div>
+                    <div class="col-md-6 col-xl-3"><a href="/sourcing/resources/sourcing-agent-guide" class="ll-resource-card"><i class="fa fa-users"/><h2>Sourcing Agent Guide</h2><p>Understand scope, services, fees, fit and partner selection before handing over a project.</p><small>Open the guide <i class="fa fa-arrow-right"/></small></a></div>
+                    <div class="col-md-6 col-xl-3"><a href="/sourcing/yiwu-china" class="ll-resource-card"><i class="fa fa-map-marker"/><h2>Visit Yiwu</h2><p>Plan market visits, local business support, fairs, transport, hotels and practical city arrangements.</p><small>Plan the visit <i class="fa fa-arrow-right"/></small></a></div>
                 </div></div></section>
 
                 <section t-if="guide_chapters" class="ll-section ll-section-muted"><div class="container"><t t-call="lightlink_sourcing_website.sourcing_section_heading"><t t-set="kicker">Guide chapters</t><t t-set="title">Follow the sourcing decision in order</t><t t-set="subtitle">Each chapter can be maintained and linked to an Odoo article, knowledge page or approved video.</t></t><div class="ll-guide-list"><article t-foreach="guide_chapters" t-as="chapter" class="ll-guide-chapter"><span t-out="'%02d' % (chapter_index + 1)"/><div><h2 t-field="chapter.name"/><p t-field="chapter.summary"/><small><span t-if="chapter.video_time" t-field="chapter.video_time"/><t t-if="chapter.video_time and chapter.reading_time"> · </t><span t-if="chapter.reading_time" t-field="chapter.reading_time"/></small></div><a t-if="chapter.target_url" t-att-href="chapter.target_url" class="btn btn-outline-dark">Open chapter</a></article></div></div></section>
 
                 <section t-if="content_page.code == 'payment-information'" class="ll-section ll-section-muted"><div class="container"><div t-if="payment_methods" class="row g-4"><div t-foreach="payment_methods" t-as="method" class="col-lg-4"><article class="ll-payment-card h-100"><h2 t-field="method.name"/><p t-field="method.summary"/><div t-field="method.instructions"/><strong t-if="method.fee_note" t-field="method.fee_note"/><div class="alert alert-warning mt-3" t-field="method.verification_notice"/></article></div></div><div t-else="" class="ll-payment-safe-note"><i class="fa fa-shield"/><div><h2>Payment details are issued for the approved project.</h2><p>No public payment account is published until finance verifies the beneficiary, currency, fees and confirmation process. Use only the approved quotation or invoice and confirm unexpected changes through a second channel.</p></div></div></div></section>
+                <t t-call="lightlink_sourcing_website.sourcing_cta"/>
+            </div>
+        </t>
+    </template>
+
+    <template id="sourcing_yiwu" name="Visit Yiwu">
+        <t t-call="lightlink_sourcing_website.sourcing_layout">
+            <t t-set="additional_title" t-value="content_page.name"/>
+            <div id="wrap" class="oe_structure ll-sourcing-site ll-yiwu-page">
+                <section class="ll-yiwu-hero"><div class="container"><div class="row align-items-center g-5">
+                    <div class="col-lg-6"><span class="ll-kicker" t-field="content_page.kicker"/><h1 t-field="content_page.name"/><p t-field="content_page.summary"/><div class="ll-rich-content" t-field="content_page.body_html"/></div>
+                    <div class="col-lg-6"><div class="ll-yiwu-quick-form"><h2>Tell us your Yiwu sourcing plan</h2><form action="/sourcing/request/submit" method="post"><input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/><input type="text" name="website" class="d-none" tabindex="-1" autocomplete="off"/><input type="hidden" name="request_type" value="find_supplier"/><input type="hidden" name="product_category" value="Yiwu market visit"/><div class="row g-3"><div class="col-md-6"><label class="form-label">Name *</label><input name="contact_name" class="form-control" required="required"/></div><div class="col-md-6"><label class="form-label">Business email *</label><input name="email" type="email" class="form-control" required="required"/></div><div class="col-md-6"><label class="form-label">Phone / WhatsApp</label><input name="phone" class="form-control"/></div><div class="col-md-6"><label class="form-label">Country</label><select name="country_id" class="form-select"><option value="">Choose a country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-field="country.name"/></select></div><div class="col-12"><label class="form-label">Visit and sourcing requirements *</label><textarea name="requirement_details" class="form-control" rows="4" required="required"></textarea></div><div class="col-12"><div class="form-check"><input id="yiwu_privacy" name="privacy_consent" type="checkbox" class="form-check-input" required="required"/><label class="form-check-label" for="yiwu_privacy">I authorize the use of this information to evaluate and respond to my sourcing request.</label></div></div><div class="col-12"><button type="submit" class="btn btn-primary btn-lg">Submit plan <i class="fa fa-arrow-right ms-2"/></button></div></div></form></div></div>
+                </div></div></section>
+                <nav class="ll-yiwu-section-nav" aria-label="Visit Yiwu topics"><div class="container"><a t-foreach="yiwu_sections" t-as="page" t-att-href="'#' + page.code" t-field="page.name"/></div></nav>
+                <section class="ll-section"><div class="container"><t t-call="lightlink_sourcing_website.sourcing_section_heading"><t t-set="kicker">Plan every part of the visit</t><t t-set="title">Yiwu sourcing and travel information in one place</t><t t-set="subtitle">Each section is a separate Odoo-managed page, so your team can update text and images without changing code.</t></t><div class="ll-yiwu-card-grid"><article t-foreach="yiwu_sections" t-as="page" t-att-id="page.code" class="ll-yiwu-card"><img t-if="page.image_asset_id" t-att-src="'/web/image/ll.sourcing.asset/%s/image' % page.image_asset_id.id" t-att-alt="page.image_asset_id.alt_text" loading="lazy"/><div><span class="ll-kicker" t-field="page.kicker"/><h2 t-field="page.name"/><p t-field="page.summary"/><a t-att-href="'/sourcing/yiwu-china/%s' % page.code[5:]" class="ll-text-link">Open guide <i class="fa fa-arrow-right"/></a></div></article></div></div></section>
+                <t t-call="lightlink_sourcing_website.sourcing_cta"/>
+            </div>
+        </t>
+    </template>
+
+    <template id="sourcing_yiwu_detail" name="Visit Yiwu Detail">
+        <t t-call="lightlink_sourcing_website.sourcing_layout">
+            <t t-set="additional_title" t-value="content_page.name"/>
+            <div id="wrap" class="oe_structure ll-sourcing-site ll-yiwu-detail-page">
+                <section class="ll-content-hero"><div class="container"><div class="row align-items-center g-5"><div class="col-lg-7"><a href="/sourcing/yiwu-china" class="ll-back-link"><i class="fa fa-arrow-left"/> Visit Yiwu</a><span class="ll-kicker" t-field="content_page.kicker"/><h1 t-field="content_page.name"/><p t-field="content_page.summary"/></div><div class="col-lg-5" t-if="content_page.image_asset_id"><img class="ll-yiwu-detail-image" t-att-src="'/web/image/ll.sourcing.asset/%s/image' % content_page.image_asset_id.id" t-att-alt="content_page.image_asset_id.alt_text"/></div></div></div></section>
+                <section class="ll-section"><div class="container"><div class="row g-5"><div class="col-lg-8"><article class="ll-rich-content ll-yiwu-article" t-field="content_page.body_html"/><a href="/sourcing/request?request_type=find_supplier" class="btn btn-primary btn-lg">Discuss your Yiwu visit</a></div><aside class="col-lg-4"><div class="ll-yiwu-sidebar"><h2>Visit Yiwu guides</h2><a t-foreach="yiwu_sections" t-as="page" t-att-href="'/sourcing/yiwu-china/%s' % page.code[5:]" t-attf-class="#{page.id == content_page.id and 'is-active' or ''}" t-field="page.name"/></div></aside></div></div></section>
                 <t t-call="lightlink_sourcing_website.sourcing_cta"/>
             </div>
         </t>
@@ -413,7 +541,7 @@
                     <div t-if="form_error == 'missing'" class="alert alert-danger">Please complete your name, a valid email, service type and requirement details.</div>
                     <div t-if="form_error == 'rate'" class="alert alert-warning">Too many requests were submitted from this connection. Please wait a few minutes and try again.</div>
                     <div t-if="product" class="ll-selected-product"><img t-att-src="'/web/image/product.template/%s/image_128' % product.id" t-att-alt="product.name"/><span><small>Selected product</small><strong t-field="product.name"/></span></div>
-                    <h2>1. What support do you need?</h2><div class="row g-3"><div class="col-md-6"><label class="form-label">Service type *</label><select name="request_type" class="form-select" required="required"><option value="">Choose a service</option><option value="find_supplier" t-att-selected="request.params.get('request_type') == 'find_supplier' and 'selected' or None">Find suitable suppliers</option><option value="manage_supplier" t-att-selected="request.params.get('request_type') == 'manage_supplier' and 'selected' or None">Manage existing suppliers</option><option value="product_development" t-att-selected="request.params.get('request_type') == 'product_development' and 'selected' or None">Develop a product</option><option value="private_label" t-att-selected="request.params.get('request_type') == 'private_label' and 'selected' or None">Private label / customization</option><option value="quality_inspection" t-att-selected="request.params.get('request_type') == 'quality_inspection' and 'selected' or None">Quality inspection</option><option value="shipping_consolidation" t-att-selected="request.params.get('request_type') == 'shipping_consolidation' and 'selected' or None">Consolidation / shipping</option><option value="dropshipping" t-att-selected="request.params.get('request_type') == 'dropshipping' and 'selected' or None">Dropshipping</option><option value="design_customization" t-att-selected="request.params.get('request_type') == 'design_customization' and 'selected' or None">Product / packaging design</option><option value="photography_video" t-att-selected="request.params.get('request_type') == 'photography_video' and 'selected' or None">Product photography / video</option><option value="warehousing_kitting" t-att-selected="request.params.get('request_type') == 'warehousing_kitting' and 'selected' or None">Warehousing / repacking / kitting</option><option value="supplier_audit" t-att-selected="request.params.get('request_type') == 'supplier_audit' and 'selected' or None">Factory / supplier audit</option><option value="marketplace_prep" t-att-selected="request.params.get('request_type') == 'marketplace_prep' and 'selected' or None">Marketplace / FBA preparation</option></select></div><div class="col-md-6"><label class="form-label">Product category *</label><input name="product_category" class="form-control" required="required" t-att-value="product.name if product else ''" placeholder="e.g. kitchen storage products"/></div><div class="col-md-6"><label class="form-label">Current business stage</label><select name="business_stage" class="form-select"><option value="">Choose a stage</option><option value="idea">I only have a product idea</option><option value="testing">I am sampling / testing</option><option value="buying">I already purchase this product</option><option value="scaling">I am scaling existing purchases</option></select></div><div class="col-md-6"><label class="form-label">Estimated quantity</label><input name="quantity" type="number" min="0" step="any" class="form-control"/></div><div class="col-12"><label class="form-label">Requirements *</label><textarea name="requirement_details" class="form-control" rows="5" required="required" placeholder="Describe the product, specifications, intended use and anything that must not change."></textarea></div><div class="col-md-6"><label class="form-label">Target unit price</label><input name="target_unit_price" type="number" min="0" step="any" class="form-control"/></div><div class="col-md-6"><label class="form-label">Reference product URL</label><input name="reference_url" type="url" class="form-control" placeholder="https://"/></div><div class="col-12"><label class="form-label">Reference files</label><input name="attachments" type="file" class="form-control" multiple="multiple" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx"/><small class="form-text">Up to 5 files, 8 MB each.</small></div></div>
+                    <h2>1. What support do you need?</h2><div class="row g-3"><div class="col-md-6"><label class="form-label">Service type *</label><select name="request_type" class="form-select" required="required"><option value="">Choose a service</option><option value="find_supplier" t-att-selected="request.params.get('request_type') == 'find_supplier' and 'selected' or None">Find suitable suppliers</option><option value="manage_supplier" t-att-selected="request.params.get('request_type') == 'manage_supplier' and 'selected' or None">Manage existing suppliers</option><option value="product_development" t-att-selected="request.params.get('request_type') == 'product_development' and 'selected' or None">Develop a product</option><option value="private_label" t-att-selected="request.params.get('request_type') == 'private_label' and 'selected' or None">Private label / customization</option><option value="quality_inspection" t-att-selected="request.params.get('request_type') == 'quality_inspection' and 'selected' or None">Quality inspection</option><option value="shipping_consolidation" t-att-selected="request.params.get('request_type') == 'shipping_consolidation' and 'selected' or None">Consolidation / shipping</option><option value="dropshipping" t-att-selected="request.params.get('request_type') == 'dropshipping' and 'selected' or None">Dropshipping</option><option value="design_customization" t-att-selected="request.params.get('request_type') == 'design_customization' and 'selected' or None">Product / packaging design</option><option value="photography_video" t-att-selected="request.params.get('request_type') == 'photography_video' and 'selected' or None">Product photography / video</option><option value="warehousing_kitting" t-att-selected="request.params.get('request_type') == 'warehousing_kitting' and 'selected' or None">Warehousing / repacking / kitting</option><option value="supplier_audit" t-att-selected="request.params.get('request_type') == 'supplier_audit' and 'selected' or None">Factory / supplier audit</option><option value="marketplace_prep" t-att-selected="request.params.get('request_type') == 'marketplace_prep' and 'selected' or None">Marketplace / FBA preparation</option></select></div><div class="col-md-6"><label class="form-label">Product category *</label><input name="product_category" class="form-control" required="required" t-att-value="product.name if product else request.params.get('product_category', '')" placeholder="e.g. kitchen storage products"/></div><div class="col-md-6"><label class="form-label">Current business stage</label><select name="business_stage" class="form-select"><option value="">Choose a stage</option><option value="idea">I only have a product idea</option><option value="testing">I am sampling / testing</option><option value="buying">I already purchase this product</option><option value="scaling">I am scaling existing purchases</option></select></div><div class="col-md-6"><label class="form-label">Estimated quantity</label><input name="quantity" type="number" min="0" step="any" class="form-control"/></div><div class="col-12"><label class="form-label">Requirements *</label><textarea name="requirement_details" class="form-control" rows="5" required="required" placeholder="Describe the product, specifications, intended use and anything that must not change."></textarea></div><div class="col-md-6"><label class="form-label">Target unit price</label><input name="target_unit_price" type="number" min="0" step="any" class="form-control"/></div><div class="col-md-6"><label class="form-label">Reference product URL</label><input name="reference_url" type="url" class="form-control" placeholder="https://"/></div><div class="col-12"><label class="form-label">Reference files</label><input name="attachments" type="file" class="form-control" multiple="multiple" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx"/><small class="form-text">Up to 5 files, 8 MB each.</small></div></div>
                     <h2>2. Customization and delivery</h2><div class="row g-3"><div class="col-md-6"><label class="form-label">Customization</label><textarea name="customization_requirements" class="form-control" rows="3" placeholder="Logo, material, size, color or functionality"></textarea></div><div class="col-md-6"><label class="form-label">Packaging</label><textarea name="packaging_requirements" class="form-control" rows="3" placeholder="Retail box, labels, barcodes or carton requirements"></textarea></div><div class="col-md-6"><label class="form-label">Certifications / compliance</label><input name="certification_requirements" class="form-control" placeholder="e.g. CE, FDA, CPSIA"/></div><div class="col-md-6"><label class="form-label">Destination country</label><select name="country_id" class="form-select"><option value="">Choose a country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-out="country.name"/></select></div><div class="col-md-6"><label class="form-label">Port / delivery location</label><input name="delivery_port" class="form-control"/></div><div class="col-md-3"><label class="form-label">Incoterm</label><input name="incoterm" class="form-control" placeholder="FOB / DDP"/></div><div class="col-md-3 d-flex align-items-end"><div class="form-check mb-2"><input name="sample_required" type="checkbox" class="form-check-input" id="sample_required"/><label class="form-check-label" for="sample_required">Sample required</label></div></div></div>
                     <h2>3. Your contact details</h2><div class="row g-3"><div class="col-md-6"><label class="form-label">Name *</label><input name="contact_name" class="form-control" required="required"/></div><div class="col-md-6"><label class="form-label">Business email *</label><input name="email" type="email" class="form-control" required="required"/></div><div class="col-md-6"><label class="form-label">Company</label><input name="company_name" class="form-control"/></div><div class="col-md-6"><label class="form-label">Phone / WhatsApp</label><input name="phone" class="form-control"/></div><div class="col-md-6"><label class="form-label">Organization type</label><input name="organization_type" class="form-control" placeholder="Importer, wholesaler, brand or online seller"/></div><div class="col-md-6"><label class="form-label">Your role</label><input name="contact_role" class="form-control" placeholder="Owner, purchasing manager, product manager"/></div></div>
                     <div class="form-check mt-4"><input name="privacy_consent" type="checkbox" class="form-check-input" id="privacy_consent" required="required"/><label class="form-check-label" for="privacy_consent">I authorize the use of this information and the uploaded files only to evaluate and respond to this sourcing request.</label></div>

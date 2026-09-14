@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo>
+<odoo noupdate="1">
     <record id="menu_sourcing_home" model="website.menu">
         <field name="name">Home</field>
         <field name="url">/sourcing</field>
@@ -8,18 +8,60 @@
         <field name="sequence">10</field>
     </record>
     <record id="menu_sourcing_services" model="website.menu">
-        <field name="name">Services</field>
-        <field name="url">/sourcing/services</field>
+        <field name="name">Our Services</field>
+        <field name="url">#</field>
         <field name="website_id" ref="website_global_sourcing"/>
         <field name="parent_id" eval="False"/>
         <field name="sequence">20</field>
     </record>
+    <record id="menu_sourcing_service_procurement" model="website.menu">
+        <field name="name">Sourcing &amp; Purchasing</field>
+        <field name="url">/sourcing/services/sourcing-purchasing</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="parent_id" ref="menu_sourcing_services"/>
+        <field name="sequence">10</field>
+    </record>
+    <record id="menu_sourcing_service_dropshipping" model="website.menu">
+        <field name="name">Dropshipping Service</field>
+        <field name="url">/sourcing/services/dropshipping-fulfillment</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="parent_id" ref="menu_sourcing_services"/>
+        <field name="sequence">20</field>
+    </record>
+    <record id="menu_sourcing_service_photo_design" model="website.menu">
+        <field name="name">Photos &amp; Designs</field>
+        <field name="url">/sourcing/services/packaging-graphic-design</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="parent_id" ref="menu_sourcing_services"/>
+        <field name="sequence">30</field>
+    </record>
     <record id="menu_sourcing_solutions" model="website.menu">
         <field name="name">Solutions</field>
-        <field name="url">/sourcing/solutions</field>
+        <field name="url">#</field>
         <field name="website_id" ref="website_global_sourcing"/>
         <field name="parent_id" eval="False"/>
         <field name="sequence">30</field>
+    </record>
+    <record id="menu_sourcing_solution_private_label" model="website.menu">
+        <field name="name">Private Label</field><field name="url">/sourcing/services/private-label-customization</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="menu_sourcing_solutions"/><field name="sequence">10</field>
+    </record>
+    <record id="menu_sourcing_solution_product_development" model="website.menu">
+        <field name="name">Product Development</field><field name="url">/sourcing/services/product-development</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="menu_sourcing_solutions"/><field name="sequence">20</field>
+    </record>
+    <record id="menu_sourcing_solution_shipping" model="website.menu">
+        <field name="name">Shipping Solution</field><field name="url">/sourcing/services/consolidation-shipping</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="menu_sourcing_solutions"/><field name="sequence">30</field>
+    </record>
+    <record id="menu_sourcing_solution_fba" model="website.menu">
+        <field name="name">Amazon FBA</field><field name="url">/sourcing/services/marketplace-fba-preparation</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="menu_sourcing_solutions"/><field name="sequence">40</field>
+    </record>
+    <record id="menu_sourcing_solution_quality" model="website.menu">
+        <field name="name">Quality Control</field><field name="url">/sourcing/services/quality-inspection</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="menu_sourcing_solutions"/><field name="sequence">50</field>
+    </record>
+    <record id="menu_sourcing_solution_credit" model="website.menu">
+        <field name="name">Credit Payment Terms</field><field name="url">/sourcing/payment</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="menu_sourcing_solutions"/><field name="sequence">60</field>
+    </record>
+    <record id="menu_sourcing_solution_affiliate" model="website.menu">
+        <field name="name">Affiliate Program</field><field name="url">/sourcing/request</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="menu_sourcing_solutions"/><field name="sequence">70</field>
     </record>
     <record id="menu_sourcing_products" model="website.menu">
         <field name="name">Products</field>
@@ -29,18 +71,18 @@
         <field name="sequence">40</field>
     </record>
     <record id="menu_sourcing_pricing" model="website.menu">
-        <field name="name">Pricing</field>
-        <field name="url">/sourcing/pricing</field>
+        <field name="name">Extra Service</field>
+        <field name="url">/sourcing/services</field>
         <field name="website_id" ref="website_global_sourcing"/>
-        <field name="parent_id" eval="False"/>
-        <field name="sequence">45</field>
+        <field name="parent_id" ref="menu_sourcing_services"/>
+        <field name="sequence">40</field>
     </record>
     <record id="menu_sourcing_insights" model="website.menu">
         <field name="name">Resources</field>
         <field name="url">/sourcing/resources</field>
         <field name="website_id" ref="website_global_sourcing"/>
         <field name="parent_id" eval="False"/>
-        <field name="sequence">50</field>
+        <field name="sequence">60</field>
     </record>
     <record id="menu_sourcing_blog" model="website.menu">
         <field name="name">Our Blog</field>
@@ -63,12 +105,19 @@
         <field name="parent_id" ref="menu_sourcing_insights"/>
         <field name="sequence">30</field>
     </record>
+    <record id="menu_sourcing_yiwu" model="website.menu">
+        <field name="name">Visit Yiwu</field>
+        <field name="url">/sourcing/yiwu-china</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="parent_id" ref="menu_sourcing_insights"/>
+        <field name="sequence">40</field>
+    </record>
     <record id="menu_sourcing_about" model="website.menu">
         <field name="name">About</field>
         <field name="url">/sourcing/about</field>
         <field name="website_id" ref="website_global_sourcing"/>
         <field name="parent_id" eval="False"/>
-        <field name="sequence">60</field>
+        <field name="sequence">50</field>
     </record>
     <record id="menu_sourcing_payment" model="website.menu">
         <field name="name">Payment Information</field>
