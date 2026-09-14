@@ -9,30 +9,38 @@
     </template>
 
     <template id="sourcing_subnav" name="Sourcing Website Navigation">
-        <nav class="ll-sourcing-nav" aria-label="Sourcing website navigation">
+        <nav class="navbar navbar-expand-lg ll-sourcing-nav" aria-label="Sourcing website navigation">
             <div class="container">
-                <a class="ll-sourcing-brand" href="/sourcing" t-field="sourcing_website.sourcing_brand_name"/>
-                <div class="ll-sourcing-links">
-                    <a href="/sourcing/services">Services</a>
-                    <a href="/sourcing/solutions">Solutions</a>
-                    <a href="/sourcing/products">Products</a>
-                    <div class="dropdown">
-                        <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Resources</button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/blog">Our Blog</a></li>
-                            <li><a class="dropdown-item" href="/sourcing/resources/importing-from-china">Importing from China Guide</a></li>
-                            <li><a class="dropdown-item" href="/sourcing/resources/sourcing-agent-guide">Sourcing Agent Guide</a></li>
-                        </ul>
+                <a class="navbar-brand ll-sourcing-brand" href="/sourcing" t-field="sourcing_website.sourcing_brand_name"/>
+                <button class="navbar-toggler ll-sourcing-nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#llSourcingNavigation" aria-controls="llSourcingNavigation" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"/>
+                </button>
+                <div class="collapse navbar-collapse ll-sourcing-links" id="llSourcingNavigation">
+                    <div class="ll-sourcing-menu">
+                        <a class="nav-link" href="/sourcing/services">Services</a>
+                        <a class="nav-link" href="/sourcing/solutions">Solutions</a>
+                        <a class="nav-link" href="/sourcing/products">Products</a>
+                        <div class="nav-item dropdown">
+                            <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Resources</button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/blog">Our Blog</a></li>
+                                <li><a class="dropdown-item" href="/sourcing/resources/importing-from-china">Importing from China Guide</a></li>
+                                <li><a class="dropdown-item" href="/sourcing/resources/sourcing-agent-guide">Sourcing Agent Guide</a></li>
+                            </ul>
+                        </div>
+                        <div class="nav-item dropdown">
+                            <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">About</button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/sourcing/payment">Payment Information</a></li>
+                                <li><a class="dropdown-item" href="/sourcing/about">About Us</a></li>
+                                <li><a class="dropdown-item" href="/sourcing/founder">Founder &amp; Leadership</a></li>
+                            </ul>
+                        </div>
                     </div>
-                    <div class="dropdown">
-                        <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">About</button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/sourcing/payment">Payment Information</a></li>
-                            <li><a class="dropdown-item" href="/sourcing/about">About Us</a></li>
-                            <li><a class="dropdown-item" href="/sourcing/founder">Founder &amp; Leadership</a></li>
-                        </ul>
+                    <div class="ll-sourcing-actions">
+                        <t t-call="portal.language_selector" _div_classes="'dropdown ll-sourcing-language'" _btn_class="'btn ll-sourcing-language-toggle'"/>
+                        <a href="/sourcing/request" class="btn btn-primary ll-sourcing-nav-cta">Get a Quote</a>
                     </div>
-                    <a href="/sourcing/request" class="btn btn-primary ll-sourcing-nav-cta">Get a Quote</a>
                 </div>
             </div>
         </nav>
@@ -62,6 +70,7 @@
 
     <template id="sourcing_layout" name="Sourcing Website Layout">
         <t t-call="website.layout">
+            <t t-set="no_header" t-value="True"/>
             <t t-set="no_footer" t-value="True"/>
             <t t-call="lightlink_sourcing_website.sourcing_subnav"/>
             <t t-out="0"/>

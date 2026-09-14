@@ -364,6 +364,7 @@ msgstr "采购服务"
 
 #. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_services
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_subnav
 msgid "Services"
 msgstr "服务"
 
@@ -424,6 +425,7 @@ msgstr "按买家类型提供解决方案"
 
 #. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_solutions
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_subnav
 msgid "Solutions"
 msgstr "解决方案"
 
@@ -499,6 +501,7 @@ msgstr "关于我们的采购方法"
 
 #. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_about
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_subnav
 msgid "About"
 msgstr "关于我们"
 
