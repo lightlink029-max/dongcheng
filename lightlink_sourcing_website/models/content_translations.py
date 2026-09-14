@@ -231,6 +231,85 @@ OFFERING_CHINESE = {
 }
 
 
+PAGE_CHINESE = {
+    "page_about_us": {
+        "name": "我们的采购方法",
+        "kicker": "关于 LightLink",
+        "summary": "在买家需求与可追责的供应商执行之间建立务实连接。",
+        "body_html": "<h2>先明确需求，再讨论供应商承诺</h2><p>LightLink 围绕产品、用途、目标市场、数量、质量标准和交付要求组织采购需求，让买家与供应商使用同一份工作依据。</p><h2>证据始终关联项目</h2><p>供应商方案、报价、样品、验货结果、审批和交付节点保留在 Odoo 中。AI 可以整理和翻译信息，商业与质量决定仍由人员确认。</p><h2>为重复采购而设计</h2><p>已确认的产品事实、供应商历史和运营决定可在复购与扩品时继续使用。</p>",
+    },
+    "page_payment_information": {
+        "name": "付款信息",
+        "kicker": "安全的商务交接",
+        "summary": "依据已批准的报价单或发票，确认范围、收款主体、币种、费用和付款节点。",
+        "body_html": "<h2>只使用已批准项目发出的付款信息</h2><p>付款方式取决于服务范围、供应商安排、目的地和交易金额。付款前，项目负责人会提供正式报价单或发票。</p><h2>汇款前核实任何变更</h2><p>不要依赖公开网页、转发消息或异常邮件中的账户信息。收款人或银行信息变化时，请通过第二个已验证渠道确认。</p><h2>保留完整付款记录</h2><p>关联报价单、发票、项目和付款节点，便于财务与运营在 Odoo 中核对。</p>",
+    },
+    "page_founder": {
+        "name": "创始人与管理团队",
+        "kicker": "责任始于明确的负责人",
+        "summary": "身份、履历和媒体资料核实后，可在这里维护创始人介绍、运营原则与已授权内容。",
+        "body_html": "<h2>公司为什么存在</h2><p>在这里说明创始人真正要解决的业务问题、与服务相关的经验，以及困难采购决策采用的原则。</p><h2>客户可以要求我们承担什么责任</h2><p>只发布团队确实能交付的责任：清晰需求、可见检查点、基于证据的建议和未解决风险的及时升级。</p><h2>个人资料发布前</h2><p>请在 Odoo 中添加已核实的姓名、履历、获准使用的肖像和公开职业链接。</p>",
+    },
+    "page_resources": {
+        "name": "中国采购资源",
+        "kicker": "实用学习资料库",
+        "summary": "通过指南和项目经验，学习准备需求、比较供应商并控制采购风险。",
+        "body_html": "<h2>按照采购流程的顺序学习</h2><p>从产品和市场需求开始，再学习寻找供应商、比较报价、打样、质量控制、商务条款和交付计划。</p><p>单篇文章继续使用 Odoo 博客发布；结构化指南负责把文章组织成可重复的学习路径。</p>",
+    },
+    "page_importing_from_china": {
+        "name": "从中国进口：实操指南",
+        "kicker": "从需求到交付",
+        "summary": "围绕产品定义、供应验证、质量批准和交付计划组织的学习路径。",
+        "body_html": "<h2>1. 明确商业目标</h2><p>明确目标客户、产品用途、采购数量、利润要求、目的市场和上市时间。</p><h2>2. 把想法转成可报价需求</h2><p>记录尺寸、材料、功能、包装、标签、合规要求和不可变更项。</p><h2>3. 使用一致证据比较供应商</h2><p>确认范围、起订量、交期、样品条件、付款条款和价格包含项后再比较。</p><h2>4. 批准样品和质量检查点</h2><p>以已批准样品和验收标准作为生产与验货决定的依据。</p><h2>5. 规划商务与物流交接</h2><p>发运前确认箱规、贸易条款、文件、运输路线和每次交接的责任。</p>",
+    },
+    "page_sourcing_agent_guide": {
+        "name": "采购代理选择指南",
+        "kicker": "选择可追责的执行伙伴",
+        "summary": "从范围、证据、利益关系、沟通、控制和项目记录评估采购伙伴。",
+        "body_html": "<h2>明确代理负责什么</h2><p>寻找供应商、供应商管理、产品开发、验货、集货和物流属于不同范围，需要明确代理准备哪些决定、哪些决定由买家保留。</p><h2>询问信息如何核实</h2><p>合格的伙伴会区分供应商说法与观察证据，并记录未解决风险。</p><h2>理解费用和激励关系</h2><p>确认服务费、供应商佣金、第三方成本及可能影响建议的商业关系。</p><h2>检查工作记录</h2><p>了解需求、报价、样品、验货、批准和交付异常如何记录并交付给你。</p>",
+    },
+}
+
+
+CHAPTER_CHINESE = {
+    "guide_import_budget": ("规划落地成本预算", "联系供应商前估算产品、样品、检测、运费、税费和风险预留。"),
+    "guide_import_product": ("选择可行的产品和市场", "检查需求、利润、限制、差异化和测试市场所需数量。"),
+    "guide_import_research": ("把调研转成产品需求", "把参考产品和客户需求整理成供应商可一致报价的规格。"),
+    "guide_import_online_suppliers": ("通过线上渠道寻找供应商", "建立候选清单，不把平台标识或供应商陈述当成最终证据。"),
+    "guide_import_offline_suppliers": ("利用展会和产业带", "围绕相关产业集群、明确问题和需要收集的证据安排拜访。"),
+    "guide_import_verify": ("核实供应商能力", "检查主体、产能、质量控制、沟通和具体产品范围的匹配度。"),
+    "guide_import_quote": ("取得可比较的报价", "比较前统一规格、起订量、模具、包装、贸易条款和排除项。"),
+    "guide_import_select": ("用一致标准选择供应商", "综合商业匹配、技术能力、响应、证据与风险，而不是只看价格。"),
+    "guide_import_confirm": ("确认样品和订单细节", "锁定样品、验收标准、文件、付款节点和变更流程。"),
+    "guide_import_shipping": ("准备验货与运输", "规划验货时间、箱规、运输方案、报关文件和交付节点。"),
+    "guide_agent_scope": ("采购伙伴应负责什么？", "把资源介绍、采购支持和完整项目管理拆成明确交付物。"),
+    "guide_agent_services": ("应该包含哪些服务？", "根据实际缺口匹配采购、开发、跟进、验货、集货和运输。"),
+    "guide_agent_fit": ("什么时候使用代理更有价值？", "评估产品复杂度、供应商数量、本地跟进需求和协调失败成本。"),
+    "guide_agent_fees": ("如何审查费用和激励？", "明确服务范围、第三方成本、佣金和费用变化条件。"),
+    "guide_agent_selection": ("如何选择可追责的伙伴？", "检查品类匹配、证据、沟通节奏、风险升级和最终项目记录。"),
+}
+
+
+PAYMENT_CHINESE = {
+    "payment_method_bank_transfer_draft": {"name": "银行转账", "summary": "核实收款人与银行信息后，用于已批准的报价单或发票。", "instructions": "<p>请替换为已核实的公司收款人、币种、银行和附言要求。敏感付款信息应尽量保留在正式发票中。</p>", "fee_note": "付款前确认银行及中转行费用。", "verification_notice": "财务完成收款人和审批流程核实前不要发布。"},
+    "payment_method_online_link_draft": {"name": "已批准的在线付款链接", "summary": "只使用与已批准报价单或发票关联的付款链接。", "instructions": "<p>请替换为实际服务商、支持币种、交易限制和对账流程。</p>", "fee_note": "核实服务商和当前费率后再发布费用。", "verification_notice": "付款前确认域名、收款人和发票编号。"},
+    "payment_method_trade_protection_draft": {"name": "平台交易保障", "summary": "仅在项目已确认交易方式和适用保障条款时使用。", "instructions": "<p>请替换为实际平台流程、交易限制和服务费承担方式。</p>", "fee_note": "保障范围和费用以平台当前条款为准。", "verification_notice": "不要暗示超过已批准订单书面条款的保障。"},
+}
+
+
+FOOTER_COLUMN_CHINESE = {
+    "footer_column_main": "主菜单", "footer_column_services": "我们的服务", "footer_column_solutions": "解决方案",
+    "footer_column_contact_draft": "联系我们", "footer_column_hours_draft": "工作时间",
+}
+
+
+FOOTER_LINK_CHINESE = {
+    "footer_link_home": "首页", "footer_link_products": "产品", "footer_link_about": "关于我们", "footer_link_payment": "付款信息", "footer_link_guide": "进口指南", "footer_link_blog": "博客",
+    "footer_link_sourcing": "采购代理", "footer_link_development": "产品开发", "footer_link_inspection": "验货与质量控制", "footer_link_shipping": "集货与运输", "footer_link_more_services": "查看全部服务",
+    "footer_link_private_brands": "自有品牌", "footer_link_online_sellers": "在线卖家", "footer_link_dropshipping": "一件代发业务", "footer_link_quality": "质量控制", "footer_link_agent_guide": "采购代理指南",
+}
+
+
 MENU_CHINESE = {
     "menu_sourcing_home": "首页",
     "menu_sourcing_services": "服务",
@@ -238,7 +317,13 @@ MENU_CHINESE = {
     "menu_sourcing_products": "产品",
     "menu_sourcing_pricing": "服务方案",
     "menu_sourcing_insights": "采购知识",
+    "menu_sourcing_blog": "博客",
+    "menu_sourcing_import_guide": "从中国进口指南",
+    "menu_sourcing_agent_guide": "采购代理指南",
     "menu_sourcing_about": "关于我们",
+    "menu_sourcing_payment": "付款信息",
+    "menu_sourcing_about_us": "关于我们",
+    "menu_sourcing_founder": "创始人与管理团队",
     "menu_sourcing_quote": "提交采购需求",
 }
 
@@ -273,6 +358,29 @@ def apply_sourcing_translations(env):
         record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
         if record:
             record.with_context(lang="zh_CN").write(values)
+    for xmlid, values in PAGE_CHINESE.items():
+        record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
+        if record:
+            record.with_context(lang="zh_CN").write(values)
+    for xmlid, values in CHAPTER_CHINESE.items():
+        record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
+        if record:
+            record.with_context(lang="zh_CN").write({
+                "name": values[0], "summary": values[1],
+                "reading_time": "%s 分钟阅读" % record.reading_time.split(" ")[0],
+            })
+    for xmlid, values in PAYMENT_CHINESE.items():
+        record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
+        if record:
+            record.with_context(lang="zh_CN").write(values)
+    for xmlid, name in FOOTER_COLUMN_CHINESE.items():
+        record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
+        if record:
+            record.with_context(lang="zh_CN").write({"name": name})
+    for xmlid, name in FOOTER_LINK_CHINESE.items():
+        record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
+        if record:
+            record.with_context(lang="zh_CN").write({"name": name})
     for xmlid, name in MENU_CHINESE.items():
         record = env.ref("lightlink_sourcing_website.%s" % xmlid, raise_if_not_found=False)
         if record:

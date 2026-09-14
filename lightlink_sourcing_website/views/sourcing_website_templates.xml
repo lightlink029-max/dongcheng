@@ -8,6 +8,67 @@
         </div>
     </template>
 
+    <template id="sourcing_subnav" name="Sourcing Website Navigation">
+        <nav class="ll-sourcing-nav" aria-label="Sourcing website navigation">
+            <div class="container">
+                <a class="ll-sourcing-brand" href="/sourcing" t-field="sourcing_website.sourcing_brand_name"/>
+                <div class="ll-sourcing-links">
+                    <a href="/sourcing/services">Services</a>
+                    <a href="/sourcing/solutions">Solutions</a>
+                    <a href="/sourcing/products">Products</a>
+                    <div class="dropdown">
+                        <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Resources</button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/blog">Our Blog</a></li>
+                            <li><a class="dropdown-item" href="/sourcing/resources/importing-from-china">Importing from China Guide</a></li>
+                            <li><a class="dropdown-item" href="/sourcing/resources/sourcing-agent-guide">Sourcing Agent Guide</a></li>
+                        </ul>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">About</button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/sourcing/payment">Payment Information</a></li>
+                            <li><a class="dropdown-item" href="/sourcing/about">About Us</a></li>
+                            <li><a class="dropdown-item" href="/sourcing/founder">Founder &amp; Leadership</a></li>
+                        </ul>
+                    </div>
+                    <a href="/sourcing/request" class="btn btn-primary ll-sourcing-nav-cta">Get a Quote</a>
+                </div>
+            </div>
+        </nav>
+    </template>
+
+    <template id="sourcing_footer" name="Sourcing Website Footer">
+        <footer class="ll-sourcing-footer">
+            <div class="container">
+                <div class="row g-5">
+                    <div t-foreach="sourcing_footer_columns" t-as="column" class="col-6 col-lg">
+                        <h2 t-field="column.name"/>
+                        <ul t-if="column.column_type == 'links'">
+                            <li t-foreach="column.link_ids.filtered(lambda item: item.active)" t-as="footer_link">
+                                <a t-att-href="footer_link.url" t-field="footer_link.name"/>
+                            </li>
+                        </ul>
+                        <div t-else="" class="ll-footer-content" t-field="column.body_html"/>
+                    </div>
+                </div>
+                <div class="ll-footer-bottom">
+                    <span t-field="sourcing_website.sourcing_brand_name"/>
+                    <span>© <t t-out="datetime.datetime.now().year"/>. All rights reserved.</span>
+                </div>
+            </div>
+        </footer>
+    </template>
+
+    <template id="sourcing_layout" name="Sourcing Website Layout">
+        <t t-call="website.layout">
+            <t t-set="no_footer" t-value="True"/>
+            <t t-call="lightlink_sourcing_website.sourcing_subnav"/>
+            <t t-out="0"/>
+            <t t-call="lightlink_sourcing_website.sourcing_footer"/>
+        </t>
+    </template>
+
     <template id="sourcing_services_grid" name="Sourcing Services Grid">
         <div class="row g-4 ll-service-grid">
             <div t-foreach="sourcing_services" t-as="offering" class="col-md-6 col-xl-4">
@@ -60,18 +121,18 @@
     </template>
 
     <template id="sourcing_home" name="LightLink Sourcing">
-        <t t-call="website.layout">
+        <t t-call="lightlink_sourcing_website.sourcing_layout">
             <t t-set="additional_title">China Sourcing Services</t>
             <div id="wrap" class="oe_structure ll-sourcing-site">
                 <t t-set="hero_asset" t-value="sourcing_assets.get('hero')"/>
                 <section class="ll-hero" t-att-style="hero_asset and '--ll-hero-image: url(/web/image/ll.sourcing.asset/%s/image);' % hero_asset.id or ''">
                     <div class="container position-relative">
                         <div class="ll-hero-copy">
-                            <span class="ll-kicker" t-field="request.website.sourcing_brand_name"/>
+                            <span class="ll-kicker" t-field="sourcing_website.sourcing_brand_name"/>
                             <h1 t-if="sourcing_project and sourcing_project.website_public_name" t-field="sourcing_project.website_public_name"/>
                             <h1 t-else="">Source from China with a clear plan and accountable execution.</h1>
                             <p t-if="sourcing_project and sourcing_project.website_public_summary" t-field="sourcing_project.website_public_summary"/>
-                            <p t-else="" t-field="request.website.sourcing_tagline"/>
+                            <p t-else="" t-field="sourcing_website.sourcing_tagline"/>
                             <div class="d-flex flex-wrap gap-3">
                                 <a href="/sourcing/request" class="btn btn-primary btn-lg">Get a sourcing plan</a>
                                 <a href="/sourcing/services" class="btn btn-outline-dark btn-lg">Explore services</a>
@@ -144,9 +205,9 @@
                     <div class="container">
                         <t t-call="lightlink_sourcing_website.sourcing_section_heading"><t t-set="kicker">Product coverage</t><t t-set="title">Start with a category or show us a reference image</t><t t-set="subtitle">The category helps us route the request; the specification and evidence determine the real supplier fit.</t></t>
                         <div class="ll-category-grid">
-                            <a href="/shop"><i class="fa fa-home"/><span>Home &amp; Kitchen</span></a><a href="/shop"><i class="fa fa-mobile"/><span>Electronics</span></a><a href="/shop"><i class="fa fa-shopping-bag"/><span>Apparel &amp; Accessories</span></a><a href="/shop"><i class="fa fa-heart"/><span>Beauty &amp; Care</span></a><a href="/shop"><i class="fa fa-futbol-o"/><span>Sports &amp; Outdoor</span></a><a href="/shop"><i class="fa fa-paw"/><span>Pet Supplies</span></a><a href="/shop"><i class="fa fa-wrench"/><span>Tools &amp; Hardware</span></a><a href="/shop"><i class="fa fa-cogs"/><span>Industrial Products</span></a>
+                            <a href="/sourcing/products"><i class="fa fa-home"/><span>Home &amp; Kitchen</span></a><a href="/sourcing/products"><i class="fa fa-mobile"/><span>Electronics</span></a><a href="/sourcing/products"><i class="fa fa-shopping-bag"/><span>Apparel &amp; Accessories</span></a><a href="/sourcing/products"><i class="fa fa-heart"/><span>Beauty &amp; Care</span></a><a href="/sourcing/products"><i class="fa fa-futbol-o"/><span>Sports &amp; Outdoor</span></a><a href="/sourcing/products"><i class="fa fa-paw"/><span>Pet Supplies</span></a><a href="/sourcing/products"><i class="fa fa-wrench"/><span>Tools &amp; Hardware</span></a><a href="/sourcing/products"><i class="fa fa-cogs"/><span>Industrial Products</span></a>
                         </div>
-                        <div class="ll-image-search-callout"><div><i class="fa fa-camera"/><span><strong>Already have a product photo?</strong> Use visual search to find similar items in the current Odoo product catalog.</span></div><a href="/shop" class="btn btn-outline-primary">Open product catalog</a></div>
+                        <div class="ll-image-search-callout"><div><i class="fa fa-camera"/><span><strong>Already have a product photo?</strong> Send the image with your sourcing brief so the team can identify comparable products and specifications.</span></div><a href="/sourcing/products" class="btn btn-outline-primary">Open product catalog</a></div>
                     </div>
                 </section>
 
@@ -167,13 +228,95 @@
                         </div>
                     </div>
                 </section>
+                <section t-if="sourcing_metrics" class="ll-section ll-metrics-section">
+                    <div class="container"><div class="row g-4 text-center">
+                        <div t-foreach="sourcing_metrics" t-as="metric" class="col-6 col-lg">
+                            <div class="ll-metric"><strong t-field="metric.value_text"/><span t-field="metric.label"/></div>
+                        </div>
+                    </div></div>
+                </section>
+                <section t-if="sourcing_testimonials" class="ll-section ll-section-muted">
+                    <div class="container">
+                        <t t-call="lightlink_sourcing_website.sourcing_section_heading"><t t-set="kicker">Verified customer feedback</t><t t-set="title">What approved customers say</t><t t-set="subtitle">Only feedback with recorded permission and verification is published here.</t></t>
+                        <div class="row g-4">
+                            <div t-foreach="sourcing_testimonials" t-as="testimonial" class="col-lg-4">
+                                <article class="ll-testimonial h-100"><i class="fa fa-quote-left"/><p t-field="testimonial.quote"/><div><img t-if="testimonial.client_image" t-att-src="'/web/image/ll.sourcing.testimonial/%s/client_image' % testimonial.id" t-att-alt="testimonial.client_name"/><span><strong t-field="testimonial.client_name"/><small><t t-if="testimonial.client_role" t-field="testimonial.client_role"/><t t-if="testimonial.client_role and testimonial.company_name"> · </t><t t-if="testimonial.company_name" t-field="testimonial.company_name"/></small></span></div></article>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <t t-call="lightlink_sourcing_website.sourcing_cta"/>
+            </div>
+        </t>
+    </template>
+
+    <template id="sourcing_products" name="Sourcing Product Catalog">
+        <t t-call="lightlink_sourcing_website.sourcing_layout">
+            <t t-set="additional_title">Products We Can Help You Source</t>
+            <div id="wrap" class="oe_structure ll-sourcing-site">
+                <section class="ll-products-hero"><div class="container"><div class="row align-items-center g-5">
+                    <div class="col-lg-7"><span class="ll-kicker">Multi-category sourcing</span><h1>Find a product starting point, then source it to your requirements.</h1><p>Browse the current Odoo catalog by category. Existing products are references—not unverified promises about price, availability or compliance.</p><div class="d-flex flex-wrap gap-3"><a href="#product-categories" class="btn btn-primary btn-lg">Browse categories</a><a href="/sourcing/request" class="btn btn-outline-dark btn-lg">Send a product brief</a></div></div>
+                    <div class="col-lg-5"><div class="ll-product-hero-panel"><i class="fa fa-search"/><h2>Need something not listed?</h2><p>Send a photo, link or specification. The request will enter the same structured Odoo sourcing workflow.</p><a href="/sourcing/request" class="ll-text-link">Talk to the sourcing team <i class="fa fa-arrow-right"/></a></div></div>
+                </div></div></section>
+
+                <section id="product-categories" class="ll-section"><div class="container">
+                    <t t-call="lightlink_sourcing_website.sourcing_section_heading"><t t-set="kicker">Product categories</t><t t-set="title">Browse the categories already maintained in Odoo</t><t t-set="subtitle">Adding or reclassifying products in Odoo updates this page automatically.</t></t>
+                    <div t-if="product_categories" class="ll-product-category-grid">
+                        <a t-foreach="product_categories" t-as="category_info" t-att-href="'/sourcing/products?category=%s' % category_info.record.id" t-attf-class="ll-product-category-card #{selected_category and selected_category.id == category_info.record.id and 'is-active' or ''}">
+                            <img t-if="category_info.image_product" t-att-src="'/web/image/product.template/%s/image_512' % category_info.image_product.id" t-att-alt="category_info.record.name" loading="lazy"/>
+                            <span><strong t-field="category_info.record.name"/><small><t t-out="category_info.count"/> products</small></span>
+                        </a>
+                    </div>
+                    <div t-else="" class="ll-empty-state"><h3>No public product category is available yet.</h3><p>Publish products and assign Website Product Categories in Odoo, or send a sourcing brief directly.</p><a href="/sourcing/request" class="btn btn-primary">Send a sourcing brief</a></div>
+                </div></section>
+
+                <section class="ll-section ll-section-muted"><div class="container">
+                    <div class="ll-catalog-toolbar">
+                        <div><span class="ll-kicker">Current catalog</span><h2><t t-if="selected_category" t-field="selected_category.name"/><t t-else="">All products</t></h2><p><t t-out="product_total"/> matching products</p></div>
+                        <form action="/sourcing/products" method="get" class="ll-catalog-search">
+                            <input t-if="selected_category" type="hidden" name="category" t-att-value="selected_category.id"/>
+                            <label for="product_search">Search the product catalog</label>
+                            <div class="input-group"><input id="product_search" name="search" class="form-control" t-att-value="product_search" placeholder="Product name"/><button class="btn btn-primary" type="submit"><i class="fa fa-search"/> Search</button></div>
+                        </form>
+                    </div>
+                    <div t-if="products" class="row g-4">
+                        <div t-foreach="products" t-as="item" class="col-6 col-md-4 col-xl-3">
+                            <article class="ll-catalog-product h-100"><a t-att-href="item.website_url" class="ll-catalog-product-image"><img t-att-src="'/web/image/product.template/%s/image_512' % item.id" t-att-alt="item.name" loading="lazy"/></a><div><small t-if="item.public_categ_ids" t-field="item.public_categ_ids[0].name"/><h3><a t-att-href="item.website_url" t-field="item.name"/></h3><div class="ll-product-actions"><a t-att-href="item.website_url">View details</a><a t-att-href="'/sourcing/request?product_id=%s' % item.id" class="btn btn-sm btn-primary">Request quote</a></div></div></article>
+                        </div>
+                    </div>
+                    <div t-else="" class="ll-empty-state"><h3>No matching products found.</h3><p>Clear the filter or send the exact product reference with your request.</p><a href="/sourcing/products" class="btn btn-outline-dark">Clear filters</a> <a href="/sourcing/request" class="btn btn-primary">Send product brief</a></div>
+                    <div t-if="pager and pager.get('page_count', 0) &gt; 1" class="mt-5"><t t-call="website.pager"/></div>
+                </div></section>
+
+                <section class="ll-section"><div class="container"><div class="row g-5 align-items-center"><div class="col-lg-6"><span class="ll-kicker">Beyond catalog matching</span><h2 class="display-6">Use the listing as a brief, not as the final purchasing decision.</h2><p class="lead">The next step is to confirm specifications, quantity, target market, customization and delivery. Supplier selection and quotation comparison then happen against the same requirement.</p></div><div class="col-lg-6"><ul class="ll-check-list"><li>Source consumer and business products</li><li>Develop or customize a product</li><li>Compare suppliers and quotation scope</li><li>Plan inspection, packaging and delivery</li></ul></div></div></div></section>
+                <t t-call="lightlink_sourcing_website.sourcing_cta"/>
+            </div>
+        </t>
+    </template>
+
+    <template id="sourcing_content_page" name="Sourcing Content Page">
+        <t t-call="lightlink_sourcing_website.sourcing_layout">
+            <t t-set="additional_title" t-value="content_page.name"/>
+            <div id="wrap" class="oe_structure ll-sourcing-site">
+                <section class="ll-content-hero"><div class="container"><div class="row align-items-center g-5"><div class="col-lg-7"><span class="ll-kicker" t-field="content_page.kicker"/><h1 t-field="content_page.name"/><p t-field="content_page.summary"/></div><div t-if="content_page.image_asset_id" class="col-lg-5"><img t-att-src="'/web/image/ll.sourcing.asset/%s/image' % content_page.image_asset_id.id" t-att-alt="content_page.image_asset_id.alt_text"/></div></div></div></section>
+                <section class="ll-section"><div class="container"><div class="ll-rich-content" t-field="content_page.body_html"/></div></section>
+
+                <section t-if="content_page.code == 'resources'" class="ll-section ll-section-muted"><div class="container"><div class="row g-4">
+                    <div class="col-lg-4"><a href="/blog" class="ll-resource-card"><i class="fa fa-newspaper-o"/><h2>Our Blog</h2><p>Publish ongoing product, supplier and procurement insights through Odoo Blog.</p><small>Browse articles <i class="fa fa-arrow-right"/></small></a></div>
+                    <div class="col-lg-4"><a href="/sourcing/resources/importing-from-china" class="ll-resource-card"><i class="fa fa-map-signs"/><h2>Importing from China Guide</h2><p>Follow a structured learning path from budget and product brief to inspection and shipping.</p><small>Open the guide <i class="fa fa-arrow-right"/></small></a></div>
+                    <div class="col-lg-4"><a href="/sourcing/resources/sourcing-agent-guide" class="ll-resource-card"><i class="fa fa-users"/><h2>Sourcing Agent Guide</h2><p>Understand scope, services, fees, fit and partner selection before handing over a project.</p><small>Open the guide <i class="fa fa-arrow-right"/></small></a></div>
+                </div></div></section>
+
+                <section t-if="guide_chapters" class="ll-section ll-section-muted"><div class="container"><t t-call="lightlink_sourcing_website.sourcing_section_heading"><t t-set="kicker">Guide chapters</t><t t-set="title">Follow the sourcing decision in order</t><t t-set="subtitle">Each chapter can be maintained and linked to an Odoo article, knowledge page or approved video.</t></t><div class="ll-guide-list"><article t-foreach="guide_chapters" t-as="chapter" class="ll-guide-chapter"><span t-out="'%02d' % (chapter_index + 1)"/><div><h2 t-field="chapter.name"/><p t-field="chapter.summary"/><small><t t-if="chapter.video_time" t-field="chapter.video_time"/><t t-if="chapter.video_time and chapter.reading_time"> · </t><t t-if="chapter.reading_time" t-field="chapter.reading_time"/></small></div><a t-if="chapter.target_url" t-att-href="chapter.target_url" class="btn btn-outline-dark">Open chapter</a></article></div></div></section>
+
+                <section t-if="content_page.code == 'payment-information'" class="ll-section ll-section-muted"><div class="container"><div t-if="payment_methods" class="row g-4"><div t-foreach="payment_methods" t-as="method" class="col-lg-4"><article class="ll-payment-card h-100"><h2 t-field="method.name"/><p t-field="method.summary"/><div t-field="method.instructions"/><strong t-if="method.fee_note" t-field="method.fee_note"/><div class="alert alert-warning mt-3" t-field="method.verification_notice"/></article></div></div><div t-else="" class="ll-payment-safe-note"><i class="fa fa-shield"/><div><h2>Payment details are issued for the approved project.</h2><p>No public payment account is published until finance verifies the beneficiary, currency, fees and confirmation process. Use only the approved quotation or invoice and confirm unexpected changes through a second channel.</p></div></div></div></section>
                 <t t-call="lightlink_sourcing_website.sourcing_cta"/>
             </div>
         </t>
     </template>
 
     <template id="sourcing_services" name="Sourcing Services">
-        <t t-call="website.layout"><t t-set="additional_title">Sourcing Services</t><div id="wrap" class="oe_structure ll-sourcing-site">
+        <t t-call="lightlink_sourcing_website.sourcing_layout"><t t-set="additional_title">Sourcing Services</t><div id="wrap" class="oe_structure ll-sourcing-site">
             <section class="ll-page-hero"><div class="container"><span class="ll-kicker">Services</span><h1>Use the whole workflow or the part that removes your current bottleneck.</h1><p>Each service is connected to the same customer requirement, product and supplier records inside Odoo.</p></div></section>
             <section class="ll-section"><div class="container"><t t-call="lightlink_sourcing_website.sourcing_services_grid"/></div></section>
             <section class="ll-section ll-section-muted"><div class="container"><div class="row align-items-center g-5"><div class="col-lg-6"><span class="ll-kicker">What stays standard</span><h2 class="display-6">No parallel business system</h2><p class="lead">CRM manages the opportunity, Sales manages quotations, Purchase manages suppliers, Inventory manages stock and Website manages public content.</p></div><div class="col-lg-6"><ul class="ll-check-list"><li>One customer and inquiry history</li><li>Products reusable across projects</li><li>Supplier and quotation records remain in Odoo</li><li>Files, activities and decisions stay traceable</li><li>Website language switching remains native</li></ul></div></div></div></section>
@@ -182,7 +325,7 @@
     </template>
 
     <template id="sourcing_solutions" name="Sourcing Solutions">
-        <t t-call="website.layout"><t t-set="additional_title">Solutions by Buyer Type</t><div id="wrap" class="oe_structure ll-sourcing-site">
+        <t t-call="lightlink_sourcing_website.sourcing_layout"><t t-set="additional_title">Solutions by Buyer Type</t><div id="wrap" class="oe_structure ll-sourcing-site">
             <section class="ll-page-hero"><div class="container"><span class="ll-kicker">Solutions</span><h1>Different buyers need different controls—not a different system.</h1><p>Select a working pattern based on how you buy, sell and manage risk.</p></div></section>
             <section class="ll-section"><div class="container"><t t-call="lightlink_sourcing_website.sourcing_solutions_grid"/></div></section>
             <t t-call="lightlink_sourcing_website.sourcing_cta"/>
@@ -190,7 +333,7 @@
     </template>
 
     <template id="sourcing_offering" name="Sourcing Service or Solution">
-        <t t-call="website.layout">
+        <t t-call="lightlink_sourcing_website.sourcing_layout">
             <t t-set="additional_title" t-value="offering.name"/>
             <div id="wrap" class="oe_structure ll-sourcing-site">
                 <section class="ll-offering-hero">
@@ -219,7 +362,7 @@
     </template>
 
     <template id="sourcing_pricing" name="Sourcing Service Plans">
-        <t t-call="website.layout">
+        <t t-call="lightlink_sourcing_website.sourcing_layout">
             <t t-set="additional_title">Sourcing Service Plans</t>
             <div id="wrap" class="oe_structure ll-sourcing-site">
                 <section class="ll-page-hero"><div class="container"><span class="ll-kicker">Service plans</span><h1>Choose the operating support that fits how you buy.</h1><p>Pricing is confirmed against the actual product, supplier situation, quality scope and delivery requirement—before work starts.</p></div></section>
@@ -245,7 +388,7 @@
     </template>
 
     <template id="sourcing_about" name="About LightLink Sourcing">
-        <t t-call="website.layout"><t t-set="additional_title">About Our Sourcing Method</t><div id="wrap" class="oe_structure ll-sourcing-site">
+        <t t-call="lightlink_sourcing_website.sourcing_layout"><t t-set="additional_title">About Our Sourcing Method</t><div id="wrap" class="oe_structure ll-sourcing-site">
             <section class="ll-page-hero"><div class="container"><span class="ll-kicker">About</span><h1>A practical bridge between buyer intent and supplier execution.</h1><p>We organize sourcing around clear requirements, verifiable evidence and visible next actions.</p></div></section>
             <section class="ll-section"><div class="container"><div class="row g-5"><div class="col-lg-7"><h2 class="display-6">The system supports judgment; it does not replace it.</h2><p class="lead">AI can structure requests, translate working content and surface candidates. Supplier approval, claims, samples, prices, contracts and quality decisions remain human-controlled.</p><p>That principle keeps the website, CRM, purchasing workflow and content operation connected without turning unverified information into customer promises.</p></div><div class="col-lg-5"><div class="ll-principles"><div><b>01</b><span><strong>Evidence first</strong><small>Real product and supplier facts</small></span></div><div><b>02</b><span><strong>One record</strong><small>Inquiry to purchasing history</small></span></div><div><b>03</b><span><strong>Human approval</strong><small>At every commercial commitment</small></span></div></div></div></div></div></section>
             <section class="ll-section ll-section-muted"><div class="container"><t t-call="lightlink_sourcing_website.sourcing_section_heading"><t t-set="kicker">Process</t><t t-set="title">How a request becomes a controlled project</t><t t-set="subtitle">A simple public experience backed by structured operational records.</t></t><t t-call="lightlink_sourcing_website.sourcing_process"/></div></section>
@@ -254,7 +397,7 @@
     </template>
 
     <template id="sourcing_request" name="Sourcing Request">
-        <t t-call="website.layout"><t t-set="additional_title">Request a Sourcing Plan</t><div id="wrap" class="oe_structure ll-sourcing-site">
+        <t t-call="lightlink_sourcing_website.sourcing_layout"><t t-set="additional_title">Request a Sourcing Plan</t><div id="wrap" class="oe_structure ll-sourcing-site">
             <section class="ll-request-hero"><div class="container"><div class="row g-5"><div class="col-lg-5"><span class="ll-kicker">Structured inquiry</span><h1>Tell us what you need to source.</h1><p>Share enough detail for a useful first review. You can refine specifications, samples and commercial terms with the team later.</p><div class="ll-form-aside"><h3>Helpful information</h3><ul><li>Product and intended use</li><li>Quantity and target market</li><li>Reference photos or links</li><li>Customization and packaging</li><li>Required certifications</li><li>Target date and delivery location</li></ul></div></div>
                 <div class="col-lg-7"><form action="/sourcing/request/submit" method="post" enctype="multipart/form-data" class="ll-request-form"><input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/><input type="text" name="website" class="d-none" tabindex="-1" autocomplete="off"/><input type="hidden" name="product_id" t-att-value="product.id if product else ''"/><input type="hidden" name="utm_source" t-att-value="request.params.get('utm_source', '')"/><input type="hidden" name="utm_medium" t-att-value="request.params.get('utm_medium', '')"/><input type="hidden" name="utm_campaign" t-att-value="request.params.get('utm_campaign', '')"/><input type="hidden" name="utm_content" t-att-value="request.params.get('utm_content', '')"/><input type="hidden" name="utm_term" t-att-value="request.params.get('utm_term', '')"/>
                     <div t-if="form_error == 'missing'" class="alert alert-danger">Please complete your name, a valid email, service type and requirement details.</div>
@@ -275,7 +418,7 @@
     </template>
 
     <template id="sourcing_thank_you" name="Sourcing Request Thank You">
-        <t t-call="website.layout"><t t-set="additional_title">Request Received</t><div id="wrap" class="oe_structure ll-sourcing-site"><section class="ll-thank-you"><div class="container"><div class="ll-thank-you-card"><span class="ll-success-icon"><i class="fa fa-check"/></span><span class="ll-kicker">Request received</span><h1>Thank you. Your sourcing brief is now in our review queue.</h1><p>We will review the product, quantity, target and supporting files before responding with the next questions or recommended path.</p><div class="d-flex flex-wrap justify-content-center gap-3"><a href="/sourcing" class="btn btn-primary">Return to sourcing home</a><a href="/shop" class="btn btn-outline-dark">Browse products</a></div></div></div></section></div></t>
+        <t t-call="lightlink_sourcing_website.sourcing_layout"><t t-set="additional_title">Request Received</t><div id="wrap" class="oe_structure ll-sourcing-site"><section class="ll-thank-you"><div class="container"><div class="ll-thank-you-card"><span class="ll-success-icon"><i class="fa fa-check"/></span><span class="ll-kicker">Request received</span><h1>Thank you. Your sourcing brief is now in our review queue.</h1><p>We will review the product, quantity, target and supporting files before responding with the next questions or recommended path.</p><div class="d-flex flex-wrap justify-content-center gap-3"><a href="/sourcing" class="btn btn-primary">Return to sourcing home</a><a href="/sourcing/products" class="btn btn-outline-dark">Browse products</a></div></div></div></section></div></t>
     </template>
 
     <template id="product_sourcing_inquiry_cta" inherit_id="website_sale.product" name="Product Sourcing Inquiry CTA">

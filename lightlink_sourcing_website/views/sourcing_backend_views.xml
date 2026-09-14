@@ -298,6 +298,83 @@
         </field>
     </record>
 
+    <record id="view_ll_sourcing_content_page_list" model="ir.ui.view">
+        <field name="name">ll.sourcing.content.page.list</field>
+        <field name="model">ll.sourcing.content.page</field>
+        <field name="arch" type="xml">
+            <list string="采购网站内容页面">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="website_id"/>
+                <field name="published"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_ll_sourcing_content_page_form" model="ir.ui.view">
+        <field name="name">ll.sourcing.content.page.form</field>
+        <field name="model">ll.sourcing.content.page</field>
+        <field name="arch" type="xml">
+            <form string="采购网站内容页面">
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group><field name="code"/><field name="website_id" options="{'no_create': True}"/><field name="image_asset_id" domain="[('website_id', '=', website_id)]"/></group>
+                        <group><field name="sequence"/><field name="published"/><field name="active"/></group>
+                    </group>
+                    <group><field name="kicker"/><field name="summary"/></group>
+                    <notebook>
+                        <page string="页面正文"><field name="body_html" widget="html" nolabel="1"/></page>
+                        <page string="指南章节">
+                            <field name="chapter_ids" context="{'default_page_id': id}">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/><field name="name"/><field name="summary"/><field name="reading_time"/><field name="video_time"/><field name="target_url"/><field name="published"/><field name="active"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ll_sourcing_metric_list" model="ir.ui.view">
+        <field name="name">ll.sourcing.metric.list</field><field name="model">ll.sourcing.metric</field>
+        <field name="arch" type="xml"><list string="可信经营数据"><field name="sequence" widget="handle"/><field name="value_text"/><field name="label"/><field name="website_id"/><field name="verified"/><field name="published"/><field name="active"/></list></field>
+    </record>
+    <record id="view_ll_sourcing_metric_form" model="ir.ui.view">
+        <field name="name">ll.sourcing.metric.form</field><field name="model">ll.sourcing.metric</field>
+        <field name="arch" type="xml"><form string="可信经营数据"><sheet><group><group><field name="value_text"/><field name="label"/><field name="website_id" options="{'no_create': True}"/><field name="sequence"/></group><group><field name="verified"/><field name="published"/><field name="active"/></group></group><group string="核实依据"><field name="evidence_note"/><field name="evidence_url" widget="url"/></group></sheet></form></field>
+    </record>
+
+    <record id="view_ll_sourcing_testimonial_list" model="ir.ui.view">
+        <field name="name">ll.sourcing.testimonial.list</field><field name="model">ll.sourcing.testimonial</field>
+        <field name="arch" type="xml"><list string="客户评价"><field name="sequence" widget="handle"/><field name="client_name"/><field name="company_name"/><field name="website_id"/><field name="permission_confirmed"/><field name="verified"/><field name="published"/><field name="active"/></list></field>
+    </record>
+    <record id="view_ll_sourcing_testimonial_form" model="ir.ui.view">
+        <field name="name">ll.sourcing.testimonial.form</field><field name="model">ll.sourcing.testimonial</field>
+        <field name="arch" type="xml"><form string="客户评价"><sheet><group><group><field name="client_name"/><field name="client_role"/><field name="company_name"/><field name="website_id" options="{'no_create': True}"/></group><group><field name="client_image" widget="image" class="oe_avatar"/><field name="sequence"/><field name="active"/></group></group><group><field name="quote"/><field name="source_url" widget="url"/></group><group string="授权与发布"><field name="permission_confirmed"/><field name="verified"/><field name="published"/><field name="permission_note"/></group></sheet></form></field>
+    </record>
+
+    <record id="view_ll_sourcing_payment_method_list" model="ir.ui.view">
+        <field name="name">ll.sourcing.payment.method.list</field><field name="model">ll.sourcing.payment.method</field>
+        <field name="arch" type="xml"><list string="付款方式"><field name="sequence" widget="handle"/><field name="name"/><field name="website_id"/><field name="fee_note"/><field name="published"/><field name="active"/></list></field>
+    </record>
+    <record id="view_ll_sourcing_payment_method_form" model="ir.ui.view">
+        <field name="name">ll.sourcing.payment.method.form</field><field name="model">ll.sourcing.payment.method</field>
+        <field name="arch" type="xml"><form string="付款方式"><sheet><div class="oe_title"><h1><field name="name"/></h1></div><group><group><field name="website_id" options="{'no_create': True}"/><field name="sequence"/></group><group><field name="published"/><field name="active"/></group></group><group><field name="summary"/><field name="fee_note"/><field name="verification_notice"/></group><group string="付款说明"><field name="instructions" widget="html" nolabel="1"/></group></sheet></form></field>
+    </record>
+
+    <record id="view_ll_sourcing_footer_column_list" model="ir.ui.view">
+        <field name="name">ll.sourcing.footer.column.list</field><field name="model">ll.sourcing.footer.column</field>
+        <field name="arch" type="xml"><list string="采购网站页脚"><field name="sequence" widget="handle"/><field name="name"/><field name="column_type"/><field name="website_id"/><field name="published"/><field name="active"/></list></field>
+    </record>
+    <record id="view_ll_sourcing_footer_column_form" model="ir.ui.view">
+        <field name="name">ll.sourcing.footer.column.form</field><field name="model">ll.sourcing.footer.column</field>
+        <field name="arch" type="xml"><form string="采购网站页脚栏目"><sheet><group><group><field name="name"/><field name="column_type"/><field name="website_id" options="{'no_create': True}"/></group><group><field name="sequence"/><field name="published"/><field name="active"/></group></group><group string="文本内容" invisible="column_type != 'content'"><field name="body_html" widget="html" nolabel="1"/></group><group string="链接列表" invisible="column_type != 'links'"><field name="link_ids" context="{'default_column_id': id}"><list editable="bottom"><field name="sequence" widget="handle"/><field name="name"/><field name="url"/><field name="active"/></list></field></group></sheet></form></field>
+    </record>
+
     <record id="action_ll_sourcing_websites" model="ir.actions.act_window">
         <field name="name">独立采购网站</field>
         <field name="res_model">website</field>
@@ -315,10 +392,20 @@
         <field name="res_model">ll.sourcing.offering</field>
         <field name="view_mode">list,form</field>
     </record>
+    <record id="action_ll_sourcing_content_pages" model="ir.actions.act_window"><field name="name">网站页面与指南</field><field name="res_model">ll.sourcing.content.page</field><field name="view_mode">list,form</field></record>
+    <record id="action_ll_sourcing_metrics" model="ir.actions.act_window"><field name="name">可信经营数据</field><field name="res_model">ll.sourcing.metric</field><field name="view_mode">list,form</field></record>
+    <record id="action_ll_sourcing_testimonials" model="ir.actions.act_window"><field name="name">客户评价</field><field name="res_model">ll.sourcing.testimonial</field><field name="view_mode">list,form</field></record>
+    <record id="action_ll_sourcing_payment_methods" model="ir.actions.act_window"><field name="name">付款方式</field><field name="res_model">ll.sourcing.payment.method</field><field name="view_mode">list,form</field></record>
+    <record id="action_ll_sourcing_footer_columns" model="ir.actions.act_window"><field name="name">网站页脚</field><field name="res_model">ll.sourcing.footer.column</field><field name="view_mode">list,form</field></record>
 
     <menuitem id="menu_ll_sourcing_root" name="采购服务项目" parent="product_social_content_bridge.menu_psc_category_web_marketing" sequence="5"/>
     <menuitem id="menu_ll_sourcing_websites" name="独立网站设置" parent="menu_ll_sourcing_root" action="action_ll_sourcing_websites" sequence="10"/>
     <menuitem id="menu_ll_sourcing_offerings" name="服务与解决方案" parent="menu_ll_sourcing_root" action="action_ll_sourcing_offerings" sequence="20"/>
-    <menuitem id="menu_ll_sourcing_assets" name="网站图片资产" parent="menu_ll_sourcing_root" action="action_ll_sourcing_assets" sequence="30"/>
-    <menuitem id="menu_ll_sourcing_inquiries" name="采购询盘" parent="menu_ll_sourcing_root" action="product_social_content_bridge.action_psc_customer_requirements" sequence="40"/>
+    <menuitem id="menu_ll_sourcing_content_pages" name="网站页面与指南" parent="menu_ll_sourcing_root" action="action_ll_sourcing_content_pages" sequence="30"/>
+    <menuitem id="menu_ll_sourcing_assets" name="网站图片资产" parent="menu_ll_sourcing_root" action="action_ll_sourcing_assets" sequence="40"/>
+    <menuitem id="menu_ll_sourcing_metrics" name="可信经营数据" parent="menu_ll_sourcing_root" action="action_ll_sourcing_metrics" sequence="50"/>
+    <menuitem id="menu_ll_sourcing_testimonials" name="客户评价" parent="menu_ll_sourcing_root" action="action_ll_sourcing_testimonials" sequence="60"/>
+    <menuitem id="menu_ll_sourcing_payment_methods" name="付款方式" parent="menu_ll_sourcing_root" action="action_ll_sourcing_payment_methods" sequence="70"/>
+    <menuitem id="menu_ll_sourcing_footer_columns" name="网站页脚" parent="menu_ll_sourcing_root" action="action_ll_sourcing_footer_columns" sequence="80"/>
+    <menuitem id="menu_ll_sourcing_inquiries" name="采购询盘" parent="menu_ll_sourcing_root" action="product_social_content_bridge.action_psc_customer_requirements" sequence="90"/>
 </odoo>

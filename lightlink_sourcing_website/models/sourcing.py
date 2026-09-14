@@ -43,6 +43,21 @@ class Website(models.Model):
     sourcing_offering_ids = fields.One2many(
         "ll.sourcing.offering", "website_id", string="服务与解决方案",
     )
+    sourcing_content_page_ids = fields.One2many(
+        "ll.sourcing.content.page", "website_id", string="采购网站内容页面",
+    )
+    sourcing_metric_ids = fields.One2many(
+        "ll.sourcing.metric", "website_id", string="可信经营数据",
+    )
+    sourcing_testimonial_ids = fields.One2many(
+        "ll.sourcing.testimonial", "website_id", string="客户评价",
+    )
+    sourcing_payment_method_ids = fields.One2many(
+        "ll.sourcing.payment.method", "website_id", string="付款方式",
+    )
+    sourcing_footer_column_ids = fields.One2many(
+        "ll.sourcing.footer.column", "website_id", string="采购网站页脚",
+    )
 
     @api.model
     def initialize_lightlink_sourcing_site(self):
@@ -178,7 +193,13 @@ class Website(models.Model):
             "menu_sourcing_pricing",
             "menu_sourcing_products",
             "menu_sourcing_insights",
+            "menu_sourcing_blog",
+            "menu_sourcing_import_guide",
+            "menu_sourcing_agent_guide",
             "menu_sourcing_about",
+            "menu_sourcing_payment",
+            "menu_sourcing_about_us",
+            "menu_sourcing_founder",
             "menu_sourcing_quote",
         ):
             menu = self.env.ref(
@@ -273,6 +294,171 @@ class SourcingOffering(models.Model):
         for record in self:
             if not re.fullmatch(r"[a-z0-9-]+", record.slug or ""):
                 raise ValidationError(_("网址短名只能包含小写字母、数字和连字符。"))
+
+
+class SourcingContentPage(models.Model):
+    _name = "ll.sourcing.content.page"
+    _description = "采购网站内容页面"
+    _order = "sequence, id"
+
+    name = fields.Char(string="页面标题", required=True, translate=True)
+    code = fields.Char(string="页面代码", required=True, index=True)
+    website_id = fields.Many2one(
+        "website", string="网站", required=True, ondelete="cascade", index=True,
+    )
+    kicker = fields.Char(string="栏目眉题", translate=True)
+    summary = fields.Text(string="页面摘要", required=True, translate=True)
+    body_html = fields.Html(string="页面正文", required=True, translate=True)
+    image_asset_id = fields.Many2one("ll.sourcing.asset", string="主图")
+    chapter_ids = fields.One2many(
+        "ll.sourcing.guide.chapter", "page_id", string="指南章节",
+    )
+    sequence = fields.Integer(default=10)
+    published = fields.Boolean(string="网站发布", default=False, index=True)
+    active = fields.Boolean(default=True)
+
+    _website_code_unique = models.Constraint(
+        "UNIQUE(website_id, code)", "同一网站的页面代码不能重复。",
+    )
+
+    @api.constrains("code")
+    def _check_code(self):
+        for record in self:
+            if not re.fullmatch(r"[a-z0-9-]+", record.code or ""):
+                raise ValidationError(_("页面代码只能包含小写字母、数字和连字符。"))
+
+
+class SourcingGuideChapter(models.Model):
+    _name = "ll.sourcing.guide.chapter"
+    _description = "采购指南章节"
+    _order = "sequence, id"
+
+    name = fields.Char(string="章节标题", required=True, translate=True)
+    page_id = fields.Many2one(
+        "ll.sourcing.content.page", string="所属指南", required=True,
+        ondelete="cascade", index=True,
+    )
+    summary = fields.Text(string="章节摘要", required=True, translate=True)
+    reading_time = fields.Char(string="阅读时长", translate=True)
+    video_time = fields.Char(string="视频时长", translate=True)
+    target_url = fields.Char(
+        string="详情链接",
+        help="可链接到 Odoo 博客文章、知识页或外部视频；留空时只展示章节说明。",
+    )
+    sequence = fields.Integer(default=10)
+    published = fields.Boolean(string="网站发布", default=True, index=True)
+    active = fields.Boolean(default=True)
+
+
+class SourcingMetric(models.Model):
+    _name = "ll.sourcing.metric"
+    _description = "采购网站可信经营数据"
+    _order = "sequence, id"
+
+    value_text = fields.Char(string="展示数值", required=True, translate=True)
+    label = fields.Char(string="指标说明", required=True, translate=True)
+    website_id = fields.Many2one(
+        "website", string="网站", required=True, ondelete="cascade", index=True,
+    )
+    evidence_note = fields.Text(string="核实依据", help="填写内部记录、报表口径或可复核说明。")
+    evidence_url = fields.Char(string="证据链接")
+    verified = fields.Boolean(string="已核实", default=False, index=True)
+    published = fields.Boolean(string="网站发布", default=False, index=True)
+    sequence = fields.Integer(default=10)
+    active = fields.Boolean(default=True)
+
+    @api.constrains("published", "verified", "evidence_note")
+    def _check_publish_evidence(self):
+        for record in self:
+            if record.published and (not record.verified or not record.evidence_note):
+                raise ValidationError(_("经营数据发布前必须完成核实并填写核实依据。"))
+
+
+class SourcingTestimonial(models.Model):
+    _name = "ll.sourcing.testimonial"
+    _description = "采购网站客户评价"
+    _order = "sequence, id"
+
+    client_name = fields.Char(string="客户姓名", required=True, translate=True)
+    client_role = fields.Char(string="客户职务", translate=True)
+    company_name = fields.Char(string="客户公司", translate=True)
+    quote = fields.Text(string="评价内容", required=True, translate=True)
+    client_image = fields.Binary(string="客户图片", attachment=True)
+    website_id = fields.Many2one(
+        "website", string="网站", required=True, ondelete="cascade", index=True,
+    )
+    source_url = fields.Char(string="来源链接")
+    permission_note = fields.Text(string="授权与核实说明")
+    permission_confirmed = fields.Boolean(string="已取得公开授权", default=False)
+    verified = fields.Boolean(string="内容已核实", default=False, index=True)
+    published = fields.Boolean(string="网站发布", default=False, index=True)
+    sequence = fields.Integer(default=10)
+    active = fields.Boolean(default=True)
+
+    @api.constrains("published", "permission_confirmed", "verified", "permission_note")
+    def _check_publish_permission(self):
+        for record in self:
+            if record.published and (
+                not record.permission_confirmed
+                or not record.verified
+                or not record.permission_note
+            ):
+                raise ValidationError(_("客户评价发布前必须确认授权、完成核实并填写说明。"))
+
+
+class SourcingPaymentMethod(models.Model):
+    _name = "ll.sourcing.payment.method"
+    _description = "采购网站付款方式"
+    _order = "sequence, id"
+
+    name = fields.Char(string="付款方式", required=True, translate=True)
+    summary = fields.Text(string="适用说明", required=True, translate=True)
+    instructions = fields.Html(string="付款说明", required=True, translate=True)
+    fee_note = fields.Char(string="费用说明", translate=True)
+    verification_notice = fields.Text(string="防诈骗核验提示", required=True, translate=True)
+    website_id = fields.Many2one(
+        "website", string="网站", required=True, ondelete="cascade", index=True,
+    )
+    published = fields.Boolean(string="网站发布", default=False, index=True)
+    sequence = fields.Integer(default=10)
+    active = fields.Boolean(default=True)
+
+
+class SourcingFooterColumn(models.Model):
+    _name = "ll.sourcing.footer.column"
+    _description = "采购网站页脚栏目"
+    _order = "sequence, id"
+
+    name = fields.Char(string="栏目名称", required=True, translate=True)
+    column_type = fields.Selection([
+        ("links", "链接列表"),
+        ("content", "文本内容"),
+    ], string="栏目类型", required=True, default="links")
+    website_id = fields.Many2one(
+        "website", string="网站", required=True, ondelete="cascade", index=True,
+    )
+    body_html = fields.Html(string="栏目内容", translate=True)
+    link_ids = fields.One2many(
+        "ll.sourcing.footer.link", "column_id", string="页脚链接",
+    )
+    published = fields.Boolean(string="网站发布", default=True, index=True)
+    sequence = fields.Integer(default=10)
+    active = fields.Boolean(default=True)
+
+
+class SourcingFooterLink(models.Model):
+    _name = "ll.sourcing.footer.link"
+    _description = "采购网站页脚链接"
+    _order = "sequence, id"
+
+    name = fields.Char(string="链接名称", required=True, translate=True)
+    url = fields.Char(string="链接地址", required=True)
+    column_id = fields.Many2one(
+        "ll.sourcing.footer.column", string="页脚栏目", required=True,
+        ondelete="cascade", index=True,
+    )
+    sequence = fields.Integer(default=10)
+    active = fields.Boolean(default=True)
 
 
 class PublishingProject(models.Model):

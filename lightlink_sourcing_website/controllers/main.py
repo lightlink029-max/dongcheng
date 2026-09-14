@@ -112,6 +112,24 @@ class LightLinkSourcingWebsite(http.Controller):
         offerings = request.env["ll.sourcing.offering"].sudo().search([
             ("website_id", "=", website.id), ("active", "=", True),
         ], order="kind, sequence, id")
+        metrics = request.env["ll.sourcing.metric"].sudo().search([
+            ("website_id", "=", website.id),
+            ("active", "=", True),
+            ("verified", "=", True),
+            ("published", "=", True),
+        ], order="sequence, id")
+        testimonials = request.env["ll.sourcing.testimonial"].sudo().search([
+            ("website_id", "=", website.id),
+            ("active", "=", True),
+            ("verified", "=", True),
+            ("permission_confirmed", "=", True),
+            ("published", "=", True),
+        ], order="sequence, id")
+        footer_columns = request.env["ll.sourcing.footer.column"].sudo().search([
+            ("website_id", "=", website.id),
+            ("active", "=", True),
+            ("published", "=", True),
+        ], order="sequence, id")
         values = {
             "sourcing_website": website,
             "sourcing_project": project,
@@ -129,6 +147,9 @@ class LightLinkSourcingWebsite(http.Controller):
             "sourcing_value_services": offerings.filtered(
                 lambda item: item.kind == "service" and item.slug in _VALUE_SERVICE_SLUGS
             ),
+            "sourcing_metrics": metrics,
+            "sourcing_testimonials": testimonials,
+            "sourcing_footer_columns": footer_columns,
             "sourcing_service_email": (
                 project.website_service_email if project and project.website_service_email
                 else website.sourcing_service_email
@@ -141,6 +162,35 @@ class LightLinkSourcingWebsite(http.Controller):
         values.update(extra)
         return values
 
+    @staticmethod
+    def _catalog_categories(website):
+        Product = request.env["product.template"].sudo()
+        Category = request.env["product.public.category"].sudo()
+        catalog_domain = website.sale_product_domain()
+        assigned_categories = Product.search(catalog_domain).mapped("public_categ_ids")
+        root_categories = Category
+        for category in assigned_categories:
+            root = category
+            while root.parent_id:
+                root = root.parent_id
+            root_categories |= root
+
+        result = []
+        for category in root_categories.sorted(lambda item: (item.sequence, item.name, item.id)):
+            category_domain = catalog_domain & Domain(
+                "public_categ_ids", "child_of", category.id
+            )
+            count = Product.search_count(category_domain)
+            if count:
+                result.append({
+                    "record": category,
+                    "count": count,
+                    "image_product": Product.search(
+                        category_domain, limit=1, order="website_sequence, id desc"
+                    ),
+                })
+        return result
+
     @http.route("/sourcing", type="http", auth="public", website=True, sitemap=True)
     def sourcing_home(self, **kwargs):
         website = self._sourcing_website()
@@ -150,6 +200,65 @@ class LightLinkSourcingWebsite(http.Controller):
         return request.render(
             "lightlink_sourcing_website.sourcing_home",
             self._base_values(featured_products=products),
+        )
+
+    @http.route("/sourcing/products", type="http", auth="public", website=True, sitemap=True)
+    def sourcing_products(self, category=None, search=None, page=0, **kwargs):
+        website = self._sourcing_website()
+        Product = request.env["product.template"].sudo()
+        catalog_domain = website.sale_product_domain()
+        category_values = self._catalog_categories(website)
+        selected_category = request.env["product.public.category"]
+        if str(category or "").isdigit():
+            category_id = int(category)
+            selected = [
+                item["record"] for item in category_values
+                if item["record"].id == category_id
+            ]
+            if selected:
+                selected_category = selected[0]
+                catalog_domain = catalog_domain & Domain(
+                    "public_categ_ids", "child_of", selected_category.id
+                )
+
+        search_term = self._clean(search, 80)
+        if search_term:
+            catalog_domain = catalog_domain & Domain("name", "ilike", search_term)
+        try:
+            page_number = max(0, min(int(page or 0), 9999))
+        except (TypeError, ValueError):
+            page_number = 0
+        page_size = 24
+        total = Product.search_count(catalog_domain)
+        url_args = {}
+        if selected_category:
+            url_args["category"] = selected_category.id
+        if search_term:
+            url_args["search"] = search_term
+        pager = website.pager(
+            url="/sourcing/products",
+            total=total,
+            page=page_number,
+            step=page_size,
+            scope=7,
+            url_args=url_args,
+        )
+        products = Product.search(
+            catalog_domain,
+            limit=page_size,
+            offset=pager["offset"],
+            order="website_sequence, id desc",
+        )
+        return request.render(
+            "lightlink_sourcing_website.sourcing_products",
+            self._base_values(
+                products=products,
+                product_total=total,
+                product_categories=category_values,
+                selected_category=selected_category,
+                product_search=search_term,
+                pager=pager,
+            ),
         )
 
     @http.route("/sourcing/services", type="http", auth="public", website=True, sitemap=True)
@@ -195,11 +304,64 @@ class LightLinkSourcingWebsite(http.Controller):
             "lightlink_sourcing_website.sourcing_pricing", self._base_values()
         )
 
+    def _render_content_page(self, code):
+        website = self._sourcing_website()
+        content_page = request.env["ll.sourcing.content.page"].sudo().search([
+            ("website_id", "=", website.id),
+            ("code", "=", code),
+            ("active", "=", True),
+            ("published", "=", True),
+        ], limit=1)
+        if not content_page:
+            return request.not_found()
+        payments = request.env["ll.sourcing.payment.method"]
+        if code == "payment-information":
+            payments = payments.sudo().search([
+                ("website_id", "=", website.id),
+                ("active", "=", True),
+                ("published", "=", True),
+            ], order="sequence, id")
+        chapters = content_page.chapter_ids.filtered(
+            lambda item: item.active and item.published
+        ).sorted(lambda item: (item.sequence, item.id))
+        return request.render(
+            "lightlink_sourcing_website.sourcing_content_page",
+            self._base_values(
+                content_page=content_page,
+                payment_methods=payments,
+                guide_chapters=chapters,
+            ),
+        )
+
     @http.route("/sourcing/about", type="http", auth="public", website=True, sitemap=True)
     def sourcing_about(self, **kwargs):
-        return request.render(
-            "lightlink_sourcing_website.sourcing_about", self._base_values()
-        )
+        return self._render_content_page("about-us")
+
+    @http.route("/sourcing/payment", type="http", auth="public", website=True, sitemap=True)
+    def sourcing_payment(self, **kwargs):
+        return self._render_content_page("payment-information")
+
+    @http.route("/sourcing/founder", type="http", auth="public", website=True, sitemap=True)
+    def sourcing_founder(self, **kwargs):
+        return self._render_content_page("founder")
+
+    @http.route("/sourcing/resources", type="http", auth="public", website=True, sitemap=True)
+    def sourcing_resources(self, **kwargs):
+        return self._render_content_page("resources")
+
+    @http.route(
+        "/sourcing/resources/importing-from-china",
+        type="http", auth="public", website=True, sitemap=True,
+    )
+    def sourcing_importing_guide(self, **kwargs):
+        return self._render_content_page("importing-from-china")
+
+    @http.route(
+        "/sourcing/resources/sourcing-agent-guide",
+        type="http", auth="public", website=True, sitemap=True,
+    )
+    def sourcing_agent_guide(self, **kwargs):
+        return self._render_content_page("sourcing-agent-guide")
 
     @http.route("/sourcing/request", type="http", auth="public", website=True, sitemap=True)
     def sourcing_request(self, product_id=None, error=None, **kwargs):

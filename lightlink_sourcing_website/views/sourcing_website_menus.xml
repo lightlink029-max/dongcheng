@@ -23,7 +23,7 @@
     </record>
     <record id="menu_sourcing_products" model="website.menu">
         <field name="name">Products</field>
-        <field name="url">/shop</field>
+        <field name="url">/sourcing/products</field>
         <field name="website_id" ref="website_global_sourcing"/>
         <field name="parent_id" eval="False"/>
         <field name="sequence">40</field>
@@ -37,10 +37,31 @@
     </record>
     <record id="menu_sourcing_insights" model="website.menu">
         <field name="name">Resources</field>
-        <field name="url">/blog</field>
+        <field name="url">/sourcing/resources</field>
         <field name="website_id" ref="website_global_sourcing"/>
         <field name="parent_id" eval="False"/>
         <field name="sequence">50</field>
+    </record>
+    <record id="menu_sourcing_blog" model="website.menu">
+        <field name="name">Our Blog</field>
+        <field name="url">/blog</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="parent_id" ref="menu_sourcing_insights"/>
+        <field name="sequence">10</field>
+    </record>
+    <record id="menu_sourcing_import_guide" model="website.menu">
+        <field name="name">Importing from China Guide</field>
+        <field name="url">/sourcing/resources/importing-from-china</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="parent_id" ref="menu_sourcing_insights"/>
+        <field name="sequence">20</field>
+    </record>
+    <record id="menu_sourcing_agent_guide" model="website.menu">
+        <field name="name">Sourcing Agent Guide</field>
+        <field name="url">/sourcing/resources/sourcing-agent-guide</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="parent_id" ref="menu_sourcing_insights"/>
+        <field name="sequence">30</field>
     </record>
     <record id="menu_sourcing_about" model="website.menu">
         <field name="name">About</field>
@@ -48,6 +69,27 @@
         <field name="website_id" ref="website_global_sourcing"/>
         <field name="parent_id" eval="False"/>
         <field name="sequence">60</field>
+    </record>
+    <record id="menu_sourcing_payment" model="website.menu">
+        <field name="name">Payment Information</field>
+        <field name="url">/sourcing/payment</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="parent_id" ref="menu_sourcing_about"/>
+        <field name="sequence">10</field>
+    </record>
+    <record id="menu_sourcing_about_us" model="website.menu">
+        <field name="name">About Us</field>
+        <field name="url">/sourcing/about</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="parent_id" ref="menu_sourcing_about"/>
+        <field name="sequence">20</field>
+    </record>
+    <record id="menu_sourcing_founder" model="website.menu">
+        <field name="name">Founder &amp; Leadership</field>
+        <field name="url">/sourcing/founder</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="parent_id" ref="menu_sourcing_about"/>
+        <field name="sequence">30</field>
     </record>
     <record id="menu_sourcing_quote" model="website.menu">
         <field name="name">Get a Quote</field>

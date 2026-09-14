@@ -956,3 +956,218 @@ msgstr "提交数量、目标市场和定制要求，进入结构化采购审核
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.product_sourcing_inquiry_cta
 msgid "Request sourcing support"
 msgstr "申请采购支持"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_subnav
+msgid "Products"
+msgstr "产品"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_subnav
+msgid "Resources"
+msgstr "采购知识"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_subnav
+msgid "Our Blog"
+msgstr "博客"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_subnav
+msgid "Importing from China Guide"
+msgstr "从中国进口指南"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_subnav
+msgid "Sourcing Agent Guide"
+msgstr "采购代理指南"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_subnav
+msgid "Payment Information"
+msgstr "付款信息"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_subnav
+msgid "About Us"
+msgstr "关于我们"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_subnav
+msgid "Founder & Leadership"
+msgstr "创始人与管理团队"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_subnav
+msgid "Get a Quote"
+msgstr "提交采购需求"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
+msgid "Send the image with your sourcing brief so the team can identify comparable products and specifications."
+msgstr "把图片随采购需求一并提交，团队会据此识别可比较的产品和规格。"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
+msgid "Verified customer feedback"
+msgstr "已核实的客户反馈"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
+msgid "What approved customers say"
+msgstr "已授权客户的评价"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
+msgid "Only feedback with recorded permission and verification is published here."
+msgstr "这里只发布已记录授权并完成核实的客户反馈。"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Products We Can Help You Source"
+msgstr "我们可以协助采购的产品"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Multi-category sourcing"
+msgstr "多品类综合采购"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Find a product starting point, then source it to your requirements."
+msgstr "先找到产品方向，再按你的要求完成采购。"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Browse the current Odoo catalog by category. Existing products are references—not unverified promises about price, availability or compliance."
+msgstr "按分类浏览当前 Odoo 产品目录。现有产品仅作为需求参考，不代表未经核实的价格、供货或合规承诺。"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Browse categories"
+msgstr "浏览产品分类"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Send a product brief"
+msgstr "提交产品需求"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Need something not listed?"
+msgstr "没有找到需要的产品？"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Send a photo, link or specification. The request will enter the same structured Odoo sourcing workflow."
+msgstr "提交图片、链接或规格，需求会进入同一套结构化 Odoo 采购流程。"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Talk to the sourcing team"
+msgstr "联系采购团队"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Product categories"
+msgstr "产品分类"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Browse the categories already maintained in Odoo"
+msgstr "浏览 Odoo 中已经维护的产品分类"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Adding or reclassifying products in Odoo updates this page automatically."
+msgstr "在 Odoo 中新增产品或调整分类后，本页会自动更新。"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "No public product category is available yet."
+msgstr "当前还没有可公开展示的产品分类。"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Publish products and assign Website Product Categories in Odoo, or send a sourcing brief directly."
+msgstr "请在 Odoo 中发布产品并设置网站产品分类，或者直接提交采购需求。"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "All products"
+msgstr "全部产品"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "matching products"
+msgstr "个匹配产品"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Search the product catalog"
+msgstr "搜索产品目录"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Product name"
+msgstr "产品名称"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Search"
+msgstr "搜索"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "View details"
+msgstr "查看详情"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Request quote"
+msgstr "申请报价"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "No matching products found."
+msgstr "没有找到匹配的产品。"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Clear filters"
+msgstr "清除筛选"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Beyond catalog matching"
+msgstr "不止于目录匹配"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_products
+msgid "Use the listing as a brief, not as the final purchasing decision."
+msgstr "把产品列表作为需求起点，而不是最终采购决定。"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_content_page
+msgid "Guide chapters"
+msgstr "指南章节"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_content_page
+msgid "Follow the sourcing decision in order"
+msgstr "按照采购决策顺序学习"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_content_page
+msgid "Each chapter can be maintained and linked to an Odoo article, knowledge page or approved video."
+msgstr "每个章节都可以维护，并关联 Odoo 文章、知识库页面或已批准视频。"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_content_page
+msgid "Open chapter"
+msgstr "打开章节"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_content_page
+msgid "Payment details are issued for the approved project."
+msgstr "付款信息按已批准项目单独发出。"

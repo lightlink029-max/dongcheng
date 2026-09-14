@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="page_about_us" model="ll.sourcing.content.page">
+        <field name="name">About Our Sourcing Method</field>
+        <field name="code">about-us</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">About LightLink</field>
+        <field name="summary">A practical bridge between buyer requirements and accountable supplier execution.</field>
+        <field name="body_html"><![CDATA[
+            <h2>Clear requirements before supplier promises</h2>
+            <p>LightLink organizes each sourcing request around the product, intended use, target market, quantity, quality criteria and delivery requirement. This gives buyers and suppliers one working reference for the next decision.</p>
+            <h2>Evidence stays connected to the project</h2>
+            <p>Supplier options, quotations, samples, inspection findings, approvals and delivery milestones remain traceable in Odoo. AI may organize and translate working information, while people approve commercial and quality decisions.</p>
+            <h2>Built for repeat purchasing</h2>
+            <p>The result is not only one shipment. Confirmed product facts, supplier history and operating decisions can be reused when the buyer repeats or expands the purchase.</p>
+        ]]></field>
+        <field name="image_asset_id" ref="asset_sourcing_hero"/>
+        <field name="published" eval="True"/>
+        <field name="sequence">10</field>
+    </record>
+
+    <record id="page_payment_information" model="ll.sourcing.content.page">
+        <field name="name">Payment Information</field>
+        <field name="code">payment-information</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Safe commercial handover</field>
+        <field name="summary">Confirm scope, payee identity, currency, fees and payment milestones against an approved quotation or invoice.</field>
+        <field name="body_html"><![CDATA[
+            <h2>Use only payment instructions issued for your approved project</h2>
+            <p>Payment methods depend on the service scope, supplier arrangement, destination and transaction value. Your responsible contact will provide the approved quotation or invoice before payment.</p>
+            <h2>Verify changes before sending funds</h2>
+            <p>Do not rely on account details copied from a public page, forwarded message or an unexpected email. If payee or bank information changes, confirm it through a second verified contact channel before paying.</p>
+            <h2>Keep the payment record connected</h2>
+            <p>Reference the quotation, invoice, project and payment milestone so finance and operations can reconcile the transaction in Odoo.</p>
+        ]]></field>
+        <field name="image_asset_id" ref="asset_shipping_consolidation"/>
+        <field name="published" eval="True"/>
+        <field name="sequence">20</field>
+    </record>
+
+    <record id="page_founder" model="ll.sourcing.content.page">
+        <field name="name">Founder &amp; Leadership</field>
+        <field name="code">founder</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Accountability starts with ownership</field>
+        <field name="summary">The founder profile, operating principles and approved media can be maintained here after identity and biography are verified.</field>
+        <field name="body_html"><![CDATA[
+            <h2>Why this company exists</h2>
+            <p>Use this page to explain the real business problem the founder set out to solve, the relevant experience behind the service and the standard used to make difficult sourcing decisions.</p>
+            <h2>What clients can hold us accountable for</h2>
+            <p>Publish only responsibilities the team can actually deliver: clear requirements, visible checkpoints, evidence-based recommendations and timely escalation of unresolved risks.</p>
+            <h2>Before publishing a personal profile</h2>
+            <p>Add the verified founder name, biography, approved portrait and public professional links in Odoo. Do not reuse another company’s founder story or photograph.</p>
+        ]]></field>
+        <field name="image_asset_id" ref="asset_factory_audit"/>
+        <field name="published" eval="True"/>
+        <field name="sequence">30</field>
+    </record>
+
+    <record id="page_resources" model="ll.sourcing.content.page">
+        <field name="name">China Sourcing Resources</field>
+        <field name="code">resources</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Practical learning library</field>
+        <field name="summary">Use guides and project lessons to prepare better requirements, compare suppliers and control purchasing risk.</field>
+        <field name="body_html"><![CDATA[
+            <h2>Learn in the same order as the sourcing workflow</h2>
+            <p>Start with the product and market requirement, then learn supplier discovery, quotation comparison, sampling, quality control, commercial terms and delivery planning.</p>
+            <p>The blog remains the publishing system for individual articles. The structured guides below organize those articles into repeatable learning paths.</p>
+        ]]></field>
+        <field name="image_asset_id" ref="asset_product_development"/>
+        <field name="published" eval="True"/>
+        <field name="sequence">40</field>
+    </record>
+
+    <record id="page_importing_from_china" model="ll.sourcing.content.page">
+        <field name="name">Importing from China: Working Guide</field>
+        <field name="code">importing-from-china</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">From first brief to delivery</field>
+        <field name="summary">A structured learning path for defining the product, validating supply, approving quality and planning delivery.</field>
+        <field name="body_html"><![CDATA[
+            <h2>1. Define the commercial objective</h2>
+            <p>Clarify who will buy the product, how it will be used, the target quantity, required margin, destination market and launch timing.</p>
+            <h2>2. Turn the idea into a supplier-ready requirement</h2>
+            <p>Record dimensions, materials, functions, packaging, labeling, compliance needs and the details that must not change.</p>
+            <h2>3. Compare suppliers with consistent evidence</h2>
+            <p>Compare quotations only after confirming scope, MOQ, lead time, sample conditions, payment terms and what each price includes.</p>
+            <h2>4. Approve samples and quality checkpoints</h2>
+            <p>Use the approved sample and acceptance criteria as the reference for production and inspection decisions.</p>
+            <h2>5. Plan the commercial and logistics handover</h2>
+            <p>Confirm carton data, trade terms, documents, shipment route and responsibility at every handover before dispatch.</p>
+        ]]></field>
+        <field name="image_asset_id" ref="asset_shipping_consolidation"/>
+        <field name="published" eval="True"/>
+        <field name="sequence">50</field>
+    </record>
+
+    <record id="page_sourcing_agent_guide" model="ll.sourcing.content.page">
+        <field name="name">Sourcing Agent Selection Guide</field>
+        <field name="code">sourcing-agent-guide</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Choose an accountable operating partner</field>
+        <field name="summary">Evaluate a sourcing partner by scope, evidence, conflicts, communication, controls and the quality of its project record.</field>
+        <field name="body_html"><![CDATA[
+            <h2>Define what the agent is responsible for</h2>
+            <p>Supplier discovery, supplier management, product development, quality inspection, consolidation and logistics are different scopes. Confirm which decisions the agent prepares and which decisions remain with the buyer.</p>
+            <h2>Ask how information is verified</h2>
+            <p>A useful partner separates supplier statements from observed evidence and records unresolved risks instead of turning them into unsupported guarantees.</p>
+            <h2>Understand fees and incentives</h2>
+            <p>Confirm service fees, supplier commissions, third-party costs and any other commercial relationship that could affect the recommendation.</p>
+            <h2>Review the working record</h2>
+            <p>Ask how requirements, quotations, samples, inspections, approvals and delivery exceptions are documented and handed back to you.</p>
+        ]]></field>
+        <field name="image_asset_id" ref="asset_quality_inspection"/>
+        <field name="published" eval="True"/>
+        <field name="sequence">60</field>
+    </record>
+
+    <record id="guide_import_budget" model="ll.sourcing.guide.chapter">
+        <field name="name">Plan the landed-cost budget</field><field name="page_id" ref="page_importing_from_china"/>
+        <field name="summary">Estimate product, sampling, testing, freight, duties and contingency before contacting suppliers.</field><field name="reading_time">6 min read</field><field name="sequence">10</field>
+    </record>
+    <record id="guide_import_product" model="ll.sourcing.guide.chapter">
+        <field name="name">Choose a viable product and market</field><field name="page_id" ref="page_importing_from_china"/>
+        <field name="summary">Check demand, margin, restrictions, differentiation and the quantity needed to test the market.</field><field name="reading_time">8 min read</field><field name="sequence">20</field>
+    </record>
+    <record id="guide_import_research" model="ll.sourcing.guide.chapter">
+        <field name="name">Turn research into a product brief</field><field name="page_id" ref="page_importing_from_china"/>
+        <field name="summary">Convert reference products and customer needs into specifications a supplier can quote consistently.</field><field name="reading_time">8 min read</field><field name="sequence">30</field>
+    </record>
+    <record id="guide_import_online_suppliers" model="ll.sourcing.guide.chapter">
+        <field name="name">Find suppliers through online channels</field><field name="page_id" ref="page_importing_from_china"/>
+        <field name="summary">Build a candidate list without treating platform badges or supplier statements as final proof.</field><field name="reading_time">7 min read</field><field name="sequence">40</field>
+    </record>
+    <record id="guide_import_offline_suppliers" model="ll.sourcing.guide.chapter">
+        <field name="name">Use trade fairs and industrial clusters</field><field name="page_id" ref="page_importing_from_china"/>
+        <field name="summary">Plan visits around relevant product clusters, clear questions and evidence you need to collect.</field><field name="reading_time">7 min read</field><field name="sequence">50</field>
+    </record>
+    <record id="guide_import_verify" model="ll.sourcing.guide.chapter">
+        <field name="name">Verify supplier capability</field><field name="page_id" ref="page_importing_from_china"/>
+        <field name="summary">Review identity, capacity, quality controls, communication and fit for the exact product scope.</field><field name="reading_time">8 min read</field><field name="sequence">60</field>
+    </record>
+    <record id="guide_import_quote" model="ll.sourcing.guide.chapter">
+        <field name="name">Request a comparable quotation</field><field name="page_id" ref="page_importing_from_china"/>
+        <field name="summary">Align specification, MOQ, tooling, packaging, trade terms and exclusions before comparing price.</field><field name="reading_time">6 min read</field><field name="sequence">70</field>
+    </record>
+    <record id="guide_import_select" model="ll.sourcing.guide.chapter">
+        <field name="name">Select suppliers with consistent criteria</field><field name="page_id" ref="page_importing_from_china"/>
+        <field name="summary">Score commercial fit, technical ability, responsiveness, evidence and risk instead of price alone.</field><field name="reading_time">7 min read</field><field name="sequence">80</field>
+    </record>
+    <record id="guide_import_confirm" model="ll.sourcing.guide.chapter">
+        <field name="name">Confirm samples and order details</field><field name="page_id" ref="page_importing_from_china"/>
+        <field name="summary">Lock the approved sample, acceptance criteria, documents, payment milestones and change process.</field><field name="reading_time">7 min read</field><field name="sequence">90</field>
+    </record>
+    <record id="guide_import_shipping" model="ll.sourcing.guide.chapter">
+        <field name="name">Prepare inspection and shipping</field><field name="page_id" ref="page_importing_from_china"/>
+        <field name="summary">Plan inspection timing, carton data, freight options, customs documents and delivery handovers.</field><field name="reading_time">10 min read</field><field name="sequence">100</field>
+    </record>
+
+    <record id="guide_agent_scope" model="ll.sourcing.guide.chapter">
+        <field name="name">What is a sourcing partner responsible for?</field><field name="page_id" ref="page_sourcing_agent_guide"/>
+        <field name="summary">Separate introductions, purchasing support and full project management into clear deliverables.</field><field name="reading_time">5 min read</field><field name="sequence">10</field>
+    </record>
+    <record id="guide_agent_services" model="ll.sourcing.guide.chapter">
+        <field name="name">Which services should be included?</field><field name="page_id" ref="page_sourcing_agent_guide"/>
+        <field name="summary">Match sourcing, development, follow-up, inspection, consolidation and shipping to your real gaps.</field><field name="reading_time">6 min read</field><field name="sequence">20</field>
+    </record>
+    <record id="guide_agent_fit" model="ll.sourcing.guide.chapter">
+        <field name="name">When does an agent add value?</field><field name="page_id" ref="page_sourcing_agent_guide"/>
+        <field name="summary">Evaluate product complexity, supplier count, local follow-up needs and the cost of coordination failure.</field><field name="reading_time">6 min read</field><field name="sequence">30</field>
+    </record>
+    <record id="guide_agent_fees" model="ll.sourcing.guide.chapter">
+        <field name="name">How should fees and incentives be reviewed?</field><field name="page_id" ref="page_sourcing_agent_guide"/>
+        <field name="summary">Ask for transparent service scope, third-party costs, commissions and conditions that change the fee.</field><field name="reading_time">6 min read</field><field name="sequence">40</field>
+    </record>
+    <record id="guide_agent_selection" model="ll.sourcing.guide.chapter">
+        <field name="name">How do you select an accountable partner?</field><field name="page_id" ref="page_sourcing_agent_guide"/>
+        <field name="summary">Review category fit, evidence, communication rhythm, risk escalation and the project record you receive.</field><field name="reading_time">8 min read</field><field name="sequence">50</field>
+    </record>
+
+    <record id="payment_method_bank_transfer_draft" model="ll.sourcing.payment.method">
+        <field name="name">Bank Transfer</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="summary">Use for an approved quotation or invoice after payee and bank details are verified.</field>
+        <field name="instructions"><![CDATA[<p>Replace this draft with the verified company beneficiary, currency, bank and reference requirements. Keep sensitive payment details in the approved invoice when possible.</p>]]></field>
+        <field name="fee_note">Confirm bank and intermediary fees before payment.</field>
+        <field name="verification_notice">Do not publish until finance has verified the beneficiary and approval process.</field>
+        <field name="published" eval="False"/>
+        <field name="sequence">10</field>
+    </record>
+    <record id="payment_method_online_link_draft" model="ll.sourcing.payment.method">
+        <field name="name">Approved Online Payment Link</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="summary">Use only a payment link connected to the approved quotation or invoice.</field>
+        <field name="instructions"><![CDATA[<p>Replace this draft with the actual provider, supported currencies, transaction limits and reconciliation process.</p>]]></field>
+        <field name="fee_note">Publish fees only after the provider and current rate are verified.</field>
+        <field name="verification_notice">Confirm the domain, payee and invoice reference before payment.</field>
+        <field name="published" eval="False"/>
+        <field name="sequence">20</field>
+    </record>
+    <record id="payment_method_trade_protection_draft" model="ll.sourcing.payment.method">
+        <field name="name">Marketplace Trade Protection</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="summary">Use only when the transaction and eligible protection terms are confirmed for the project.</field>
+        <field name="instructions"><![CDATA[<p>Replace this draft with the actual platform workflow, transaction limit and responsibility for provider charges.</p>]]></field>
+        <field name="fee_note">Protection and fees depend on the platform’s current terms.</field>
+        <field name="verification_notice">Do not imply protection beyond the written platform terms for the approved order.</field>
+        <field name="published" eval="False"/>
+        <field name="sequence">30</field>
+    </record>
+
+    <record id="footer_column_main" model="ll.sourcing.footer.column">
+        <field name="name">Main Menu</field>
+        <field name="column_type">links</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="sequence">10</field>
+    </record>
+    <record id="footer_link_home" model="ll.sourcing.footer.link"><field name="name">Home</field><field name="url">/sourcing</field><field name="column_id" ref="footer_column_main"/><field name="sequence">10</field></record>
+    <record id="footer_link_products" model="ll.sourcing.footer.link"><field name="name">Products</field><field name="url">/sourcing/products</field><field name="column_id" ref="footer_column_main"/><field name="sequence">20</field></record>
+    <record id="footer_link_about" model="ll.sourcing.footer.link"><field name="name">About Us</field><field name="url">/sourcing/about</field><field name="column_id" ref="footer_column_main"/><field name="sequence">30</field></record>
+    <record id="footer_link_payment" model="ll.sourcing.footer.link"><field name="name">Payment Information</field><field name="url">/sourcing/payment</field><field name="column_id" ref="footer_column_main"/><field name="sequence">40</field></record>
+    <record id="footer_link_guide" model="ll.sourcing.footer.link"><field name="name">Importing Guide</field><field name="url">/sourcing/resources/importing-from-china</field><field name="column_id" ref="footer_column_main"/><field name="sequence">50</field></record>
+    <record id="footer_link_blog" model="ll.sourcing.footer.link"><field name="name">Our Blog</field><field name="url">/blog</field><field name="column_id" ref="footer_column_main"/><field name="sequence">60</field></record>
+
+    <record id="footer_column_services" model="ll.sourcing.footer.column">
+        <field name="name">Our Services</field>
+        <field name="column_type">links</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="sequence">20</field>
+    </record>
+    <record id="footer_link_sourcing" model="ll.sourcing.footer.link"><field name="name">Sourcing &amp; Purchasing</field><field name="url">/sourcing/services/sourcing-purchasing</field><field name="column_id" ref="footer_column_services"/><field name="sequence">10</field></record>
+    <record id="footer_link_development" model="ll.sourcing.footer.link"><field name="name">Product Development</field><field name="url">/sourcing/services/product-development</field><field name="column_id" ref="footer_column_services"/><field name="sequence">20</field></record>
+    <record id="footer_link_inspection" model="ll.sourcing.footer.link"><field name="name">Quality Inspection</field><field name="url">/sourcing/services/quality-inspection</field><field name="column_id" ref="footer_column_services"/><field name="sequence">30</field></record>
+    <record id="footer_link_shipping" model="ll.sourcing.footer.link"><field name="name">Consolidation &amp; Shipping</field><field name="url">/sourcing/services/consolidation-shipping</field><field name="column_id" ref="footer_column_services"/><field name="sequence">40</field></record>
+    <record id="footer_link_more_services" model="ll.sourcing.footer.link"><field name="name">View All Services</field><field name="url">/sourcing/services</field><field name="column_id" ref="footer_column_services"/><field name="sequence">50</field></record>
+
+    <record id="footer_column_solutions" model="ll.sourcing.footer.column">
+        <field name="name">Our Solutions</field>
+        <field name="column_type">links</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="sequence">30</field>
+    </record>
+    <record id="footer_link_private_brands" model="ll.sourcing.footer.link"><field name="name">Private Brands</field><field name="url">/sourcing/solutions/private-brands</field><field name="column_id" ref="footer_column_solutions"/><field name="sequence">10</field></record>
+    <record id="footer_link_online_sellers" model="ll.sourcing.footer.link"><field name="name">Online Sellers</field><field name="url">/sourcing/solutions/online-sellers</field><field name="column_id" ref="footer_column_solutions"/><field name="sequence">20</field></record>
+    <record id="footer_link_dropshipping" model="ll.sourcing.footer.link"><field name="name">Dropshipping Businesses</field><field name="url">/sourcing/solutions/dropshipping-businesses</field><field name="column_id" ref="footer_column_solutions"/><field name="sequence">30</field></record>
+    <record id="footer_link_quality" model="ll.sourcing.footer.link"><field name="name">Quality Control</field><field name="url">/sourcing/services/quality-inspection</field><field name="column_id" ref="footer_column_solutions"/><field name="sequence">40</field></record>
+    <record id="footer_link_agent_guide" model="ll.sourcing.footer.link"><field name="name">Sourcing Agent Guide</field><field name="url">/sourcing/resources/sourcing-agent-guide</field><field name="column_id" ref="footer_column_solutions"/><field name="sequence">50</field></record>
+
+    <record id="footer_column_contact_draft" model="ll.sourcing.footer.column">
+        <field name="name">Contact Us</field>
+        <field name="column_type">content</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="body_html"><![CDATA[<p>Add the verified LightLink service email and telephone numbers here, then enable website publishing.</p>]]></field>
+        <field name="published" eval="False"/>
+        <field name="sequence">40</field>
+    </record>
+    <record id="footer_column_hours_draft" model="ll.sourcing.footer.column">
+        <field name="name">Working Hours</field>
+        <field name="column_type">content</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="body_html"><![CDATA[<p>Add the actual service days, opening hours and time zone here, then enable website publishing.</p>]]></field>
+        <field name="published" eval="False"/>
+        <field name="sequence">50</field>
+    </record>
+</odoo>
