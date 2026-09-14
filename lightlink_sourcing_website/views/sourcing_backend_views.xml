@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_psc_project_form_sourcing_website" model="ir.ui.view">
+        <field name="name">psc.publishing.project.form.sourcing.website</field>
+        <field name="model">psc.publishing.project</field>
+        <field name="inherit_id" ref="product_social_content_bridge.view_psc_project_form_market_operations"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="采购服务官网" name="sourcing_website">
+                    <div class="alert alert-info" role="alert">
+                        网站只负责获客和收集采购需求；产品、客户、报价、采购、库存和交付继续使用 Odoo 标准业务模块。
+                    </div>
+                    <group>
+                        <group string="询盘归属">
+                            <field name="website_inquiry_enabled"/>
+                            <field name="website_service_email" widget="email"/>
+                            <field name="website_whatsapp_url" widget="url"/>
+                        </group>
+                        <group string="公开内容">
+                            <field name="website_public_name"/>
+                            <field name="website_public_summary"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_psc_customer_requirement_list_sourcing" model="ir.ui.view">
+        <field name="name">psc.customer.requirement.list.sourcing</field>
+        <field name="model">psc.customer.requirement</field>
+        <field name="inherit_id" ref="product_social_content_bridge.view_psc_customer_requirement_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='organization_type']" position="before">
+                <field name="request_type" optional="show"/>
+                <field name="product_category" optional="show"/>
+            </xpath>
+            <xpath expr="//field[@name='quantity']" position="after">
+                <field name="target_unit_price" optional="show"/>
+                <field name="delivery_country_id" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_psc_customer_requirement_form_sourcing" model="ir.ui.view">
+        <field name="name">psc.customer.requirement.form.sourcing</field>
+        <field name="model">psc.customer.requirement</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="stage" widget="statusbar" statusbar_visible="new,qualified,quoted,sample,negotiation,won"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group string="客户与来源">
+                            <field name="lead_id"/>
+                            <field name="project_id"/>
+                            <field name="track_id"/>
+                            <field name="website_source_url" widget="url"/>
+                            <field name="website_language"/>
+                        </group>
+                        <group string="采购概况">
+                            <field name="request_type"/>
+                            <field name="product_category"/>
+                            <field name="product_ids" widget="many2many_tags"/>
+                            <field name="organization_type"/>
+                            <field name="contact_role"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="数量与价格">
+                            <field name="quantity"/>
+                            <field name="target_unit_price"/>
+                            <field name="budget"/>
+                            <field name="currency_id"/>
+                            <field name="sample_required"/>
+                            <field name="target_purchase_date"/>
+                        </group>
+                        <group string="交付">
+                            <field name="delivery_country_id"/>
+                            <field name="delivery_port"/>
+                            <field name="incoterm"/>
+                            <field name="reference_url" widget="url"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="详细需求">
+                            <group><field name="requirement_details" nolabel="1" colspan="2"/></group>
+                        </page>
+                        <page string="定制、包装与合规">
+                            <group>
+                                <field name="customization_requirements"/>
+                                <field name="packaging_requirements"/>
+                                <field name="certification_requirements"/>
+                            </group>
+                        </page>
+                        <page string="客户附件">
+                            <field name="attachment_ids" widget="many2many_binary"/>
+                        </page>
+                        <page string="未成交说明" invisible="stage != 'lost'">
+                            <field name="lost_reason"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_product_template_form_sourcing" model="ir.ui.view">
+        <field name="name">product.template.form.sourcing</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='sale_ok']" position="after">
+                <field name="sourcing_inquiry_only"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
