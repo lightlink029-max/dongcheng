@@ -12,6 +12,7 @@
                     </div>
                     <group>
                         <group string="询盘归属">
+                            <field name="website_id" options="{'no_create': True}"/>
                             <field name="website_inquiry_enabled"/>
                             <field name="website_service_email" widget="email"/>
                             <field name="website_whatsapp_url" widget="url"/>
@@ -63,6 +64,7 @@
                         <group string="采购概况">
                             <field name="request_type"/>
                             <field name="product_category"/>
+                            <field name="business_stage"/>
                             <field name="product_ids" widget="many2many_tags"/>
                             <field name="organization_type"/>
                             <field name="contact_role"/>
@@ -117,4 +119,206 @@
             </xpath>
         </field>
     </record>
+
+    <record id="view_ll_sourcing_website_list" model="ir.ui.view">
+        <field name="name">website.sourcing.list</field>
+        <field name="model">website</field>
+        <field name="arch" type="xml">
+            <list string="独立采购网站" create="0" delete="0">
+                <field name="name"/>
+                <field name="domain"/>
+                <field name="sourcing_brand_name"/>
+                <field name="sourcing_service_email"/>
+                <field name="sourcing_enabled"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ll_sourcing_website_form" model="ir.ui.view">
+        <field name="name">website.sourcing.form</field>
+        <field name="model">website</field>
+        <field name="arch" type="xml">
+            <form string="采购网站设置" create="0" delete="0">
+                <sheet>
+                    <div class="oe_button_box" name="button_box"/>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <div class="alert alert-info" role="alert">
+                        此网站、菜单、询盘归属和内容资产与现有网站隔离。域名接入后，首页将进入采购服务站。
+                    </div>
+                    <group>
+                        <group string="独立网站">
+                            <field name="sourcing_enabled"/>
+                            <field name="domain" placeholder="例如 https://sourcing.example.com"/>
+                            <field name="sourcing_brand_name"/>
+                            <field name="sourcing_tagline"/>
+                        </group>
+                        <group string="客户联系">
+                            <field name="sourcing_service_email" widget="email"/>
+                            <field name="sourcing_whatsapp_url" widget="url"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="网站图片资产">
+                            <field name="sourcing_asset_ids" context="{'default_website_id': id}">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="image" widget="image" options="{'size': [96, 64]}"/>
+                                    <field name="name"/>
+                                    <field name="key"/>
+                                    <field name="alt_text"/>
+                                    <field name="active"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="服务与解决方案">
+                            <field name="sourcing_offering_ids" context="{'default_website_id': id}">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="kind"/>
+                                    <field name="name"/>
+                                    <field name="slug"/>
+                                    <field name="image_asset_id"/>
+                                    <field name="price_label" optional="hide"/>
+                                    <field name="featured"/>
+                                    <field name="active"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="询盘运营项目">
+                            <field name="sourcing_project_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="operation_state"/>
+                                    <field name="website_inquiry_enabled"/>
+                                    <field name="user_id"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ll_sourcing_asset_list" model="ir.ui.view">
+        <field name="name">ll.sourcing.asset.list</field>
+        <field name="model">ll.sourcing.asset</field>
+        <field name="arch" type="xml">
+            <list string="采购网站图片资产">
+                <field name="sequence" widget="handle"/>
+                <field name="image" widget="image" options="{'size': [120, 80]}"/>
+                <field name="name"/>
+                <field name="key"/>
+                <field name="website_id"/>
+                <field name="alt_text"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_ll_sourcing_asset_form" model="ir.ui.view">
+        <field name="name">ll.sourcing.asset.form</field>
+        <field name="model">ll.sourcing.asset</field>
+        <field name="arch" type="xml">
+            <form string="网站图片资产">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="key"/>
+                            <field name="website_id" options="{'no_create': True}"/>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="image" widget="image" class="oe_avatar"/>
+                        </group>
+                    </group>
+                    <group string="无障碍与内容说明">
+                        <field name="alt_text"/>
+                        <field name="caption"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ll_sourcing_offering_list" model="ir.ui.view">
+        <field name="name">ll.sourcing.offering.list</field>
+        <field name="model">ll.sourcing.offering</field>
+        <field name="arch" type="xml">
+            <list string="服务与解决方案">
+                <field name="sequence" widget="handle"/>
+                <field name="kind"/>
+                <field name="name"/>
+                <field name="slug"/>
+                <field name="website_id"/>
+                <field name="image_asset_id"/>
+                <field name="request_type"/>
+                <field name="price_label" optional="show"/>
+                <field name="featured"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_ll_sourcing_offering_form" model="ir.ui.view">
+        <field name="name">ll.sourcing.offering.form</field>
+        <field name="model">ll.sourcing.offering</field>
+        <field name="arch" type="xml">
+            <form string="服务与解决方案">
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="kind"/>
+                            <field name="slug"/>
+                            <field name="website_id" options="{'no_create': True}"/>
+                            <field name="request_type"/>
+                            <field name="price_label"/>
+                            <field name="badge"/>
+                        </group>
+                        <group>
+                            <field name="icon"/>
+                            <field name="image_asset_id" domain="[('website_id', '=', website_id)]"/>
+                            <field name="sequence"/>
+                            <field name="featured"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="kicker"/>
+                        <field name="summary"/>
+                        <field name="introduction"/>
+                    </group>
+                    <notebook>
+                        <page string="核心能力（每行一项）"><field name="benefits" nolabel="1"/></page>
+                        <page string="交付步骤（每行一步）"><field name="process" nolabel="1"/></page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_ll_sourcing_websites" model="ir.actions.act_window">
+        <field name="name">独立采购网站</field>
+        <field name="res_model">website</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('sourcing_enabled', '=', True)]</field>
+        <field name="views" eval="[(ref('view_ll_sourcing_website_list'), 'list'), (ref('view_ll_sourcing_website_form'), 'form')]"/>
+    </record>
+    <record id="action_ll_sourcing_assets" model="ir.actions.act_window">
+        <field name="name">网站图片资产</field>
+        <field name="res_model">ll.sourcing.asset</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_ll_sourcing_offerings" model="ir.actions.act_window">
+        <field name="name">服务与解决方案</field>
+        <field name="res_model">ll.sourcing.offering</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_ll_sourcing_root" name="采购服务项目" parent="product_social_content_bridge.menu_psc_category_web_marketing" sequence="5"/>
+    <menuitem id="menu_ll_sourcing_websites" name="独立网站设置" parent="menu_ll_sourcing_root" action="action_ll_sourcing_websites" sequence="10"/>
+    <menuitem id="menu_ll_sourcing_offerings" name="服务与解决方案" parent="menu_ll_sourcing_root" action="action_ll_sourcing_offerings" sequence="20"/>
+    <menuitem id="menu_ll_sourcing_assets" name="网站图片资产" parent="menu_ll_sourcing_root" action="action_ll_sourcing_assets" sequence="30"/>
+    <menuitem id="menu_ll_sourcing_inquiries" name="采购询盘" parent="menu_ll_sourcing_root" action="product_social_content_bridge.action_psc_customer_requirements" sequence="40"/>
 </odoo>

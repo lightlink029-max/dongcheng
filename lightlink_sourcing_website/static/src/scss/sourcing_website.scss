@@ -46,7 +46,10 @@ $ll-amber: #efaa42;
     align-items: center;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(90deg, rgba(246, 242, 233, .98) 0%, rgba(246, 242, 233, .94) 42%, rgba(246, 242, 233, .15) 68%), url('/lightlink_sourcing_website/static/src/img/sourcing-hero.png') center/cover no-repeat;
+    background-image: linear-gradient(90deg, rgba(246, 242, 233, .98) 0%, rgba(246, 242, 233, .94) 42%, rgba(246, 242, 233, .15) 68%), var(--ll-hero-image, url('/lightlink_sourcing_website/static/src/img/sourcing-hero-v2.webp'));
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
 
     &::after {
         content: '';
@@ -148,6 +151,18 @@ $ll-amber: #efaa42;
     box-shadow: 0 16px 40px rgba(16, 42, 45, .055);
 }
 
+.ll-card-link {
+    display: block;
+    height: 100%;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+        color: inherit;
+        text-decoration: none;
+    }
+}
+
 .ll-audience-card {
     min-height: 230px;
     padding: 2rem;
@@ -189,14 +204,31 @@ $ll-amber: #efaa42;
         font-size: 1.2rem;
     }
 
+    .ll-card-kicker {
+        display: block;
+        margin-top: 1.2rem;
+        color: $ll-teal;
+        font-size: .72rem;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+
     h3 {
-        margin: 1.4rem 0 .65rem;
+        margin: .55rem 0 .65rem;
         font-size: 1.3rem;
     }
 
     p {
         margin: 0;
         color: #66787a;
+    }
+
+    small {
+        display: block;
+        margin-top: 1.2rem;
+        color: $ll-teal;
+        font-weight: 750;
     }
 }
 
@@ -431,6 +463,126 @@ $ll-amber: #efaa42;
     li {
         color: #66787a;
     }
+
+    small {
+        display: block;
+        margin-top: 1.4rem;
+        color: $ll-teal;
+        font-weight: 750;
+    }
+}
+
+.ll-offering-hero {
+    padding: clamp(4.5rem, 8vw, 8rem) 0;
+    background: $ll-sand;
+
+    h1 {
+        margin: 1rem 0 1.4rem;
+        font-size: clamp(2.7rem, 5vw, 5rem);
+        line-height: 1;
+    }
+
+    p {
+        max-width: 650px;
+        margin-bottom: 2rem;
+        color: #5d7072;
+        font-size: 1.12rem;
+    }
+}
+
+.ll-offering-image {
+    overflow: hidden;
+    margin: 0;
+    border-radius: .55rem;
+    background: #fff;
+    box-shadow: 0 24px 60px rgba(16, 42, 45, .14);
+
+    img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: cover;
+    }
+
+    figcaption {
+        padding: .85rem 1rem;
+        color: #66787a;
+        font-size: .8rem;
+    }
+}
+
+.ll-detail-process {
+    margin: 1.5rem 0 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+        display: flex;
+        padding: 1rem 0;
+        align-items: center;
+        gap: 1rem;
+        border-bottom: 1px solid #d7dfdd;
+    }
+
+    b {
+        display: grid;
+        width: 2.4rem;
+        height: 2.4rem;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 50%;
+        color: #fff;
+        background: $ll-teal;
+        font-size: .78rem;
+    }
+}
+
+.ll-plan-card {
+    height: 100%;
+    padding: clamp(2rem, 4vw, 3.5rem);
+    position: relative;
+    border: 1px solid #d7e1de;
+    border-radius: .55rem;
+    background: #fff;
+    box-shadow: 0 18px 45px rgba(16, 42, 45, .07);
+
+    h2 {
+        margin: .75rem 0;
+        font-size: 2rem;
+    }
+
+    > p:not(.ll-plan-price) {
+        color: #66787a;
+    }
+}
+
+.ll-plan-card-featured {
+    border: 2px solid $ll-teal;
+}
+
+.ll-plan-badge {
+    display: inline-block;
+    margin-bottom: 1rem;
+    padding: .35rem .65rem;
+    border-radius: 999px;
+    color: $ll-teal-dark;
+    background: $ll-mint;
+    font-size: .72rem;
+    font-weight: 800;
+}
+
+.ll-plan-price {
+    color: $ll-teal;
+    font-size: 1.2rem;
+    font-weight: 800;
+}
+
+.ll-pricing-note {
+    max-width: 900px;
+    margin: 2.5rem auto 0;
+    color: #687a7c;
+    text-align: center;
+    font-size: .88rem;
 }
 
 .ll-principles {

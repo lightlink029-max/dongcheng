@@ -1,7 +1,7 @@
 {
     "name": "LightLink 采购服务官网",
-    "version": "19.0.1.0.0",
-    "summary": "面向采购服务获客的多语言官网与结构化询盘入口",
+    "version": "19.0.2.0.0",
+    "summary": "独立多语言采购服务官网、内容资产与结构化询盘运营闭环",
     "category": "Website/Website",
     "author": "LightLink",
     "license": "LGPL-3",
@@ -14,6 +14,8 @@
         "OdooTranslate",
     ],
     "data": [
+        "security/ir.model.access.csv",
+        "data/sourcing_defaults.xml",
         "views/sourcing_backend_views.xml",
         "views/sourcing_website_templates.xml",
         "views/sourcing_website_menus.xml",
@@ -23,6 +25,7 @@
             "lightlink_sourcing_website/static/src/scss/sourcing_website.scss",
         ],
     },
+    "post_init_hook": "post_init_hook",
     "application": False,
     "installable": True,
 }

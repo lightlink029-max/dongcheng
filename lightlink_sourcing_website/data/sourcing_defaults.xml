@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="website_global_sourcing" model="website">
+        <field name="name">LightLink Global Sourcing</field>
+        <field name="company_id" ref="base.main_company"/>
+        <field name="sourcing_enabled" eval="True"/>
+        <field name="sourcing_brand_name">LightLink Global Sourcing</field>
+        <field name="sourcing_tagline">China sourcing, product development and delivery control</field>
+    </record>
+
+    <record id="asset_sourcing_hero" model="ll.sourcing.asset">
+        <field name="name">首页主视觉</field>
+        <field name="key">hero</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="image" type="base64" file="lightlink_sourcing_website/static/src/img/sourcing-hero-v2.webp"/>
+        <field name="alt_text">International buyer and sourcing team reviewing product samples beside a factory</field>
+        <field name="caption">采购团队与国际买家共同核对产品方案</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="asset_product_development" model="ll.sourcing.asset">
+        <field name="name">产品开发与打样</field>
+        <field name="key">product_development</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="image" type="base64" file="lightlink_sourcing_website/static/src/img/product-development.webp"/>
+        <field name="alt_text">Buyer and sourcing specialist reviewing an unbranded product prototype and materials</field>
+        <field name="caption">从需求、材料和包装到可确认的生产样品</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="asset_quality_inspection" model="ll.sourcing.asset">
+        <field name="name">验货与质量控制</field>
+        <field name="key">quality_inspection</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="image" type="base64" file="lightlink_sourcing_website/static/src/img/quality-inspection.webp"/>
+        <field name="alt_text">Quality inspector measuring an unbranded component on a production line</field>
+        <field name="caption">按照已确认的规格和检查点记录质量证据</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="asset_shipping_consolidation" model="ll.sourcing.asset">
+        <field name="name">集货与国际物流</field>
+        <field name="key">shipping_consolidation</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="image" type="base64" file="lightlink_sourcing_website/static/src/img/shipping-consolidation.webp"/>
+        <field name="alt_text">Sourcing coordinators checking cartons before an international shipment</field>
+        <field name="caption">统一核对包装、装箱数据、集货和交付节点</field>
+        <field name="sequence">40</field>
+    </record>
+
+    <record id="offering_supplier_sourcing" model="ll.sourcing.offering">
+        <field name="name">Sourcing &amp; Purchasing</field>
+        <field name="slug">sourcing-purchasing</field>
+        <field name="kind">service</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Find new suppliers</field>
+        <field name="summary">Turn your product brief, target cost and market requirements into a comparable supplier shortlist.</field>
+        <field name="introduction">We structure the requirement first, then compare supplier fit, specifications, commercial terms and verifiable evidence before you approve the next step.</field>
+        <field name="benefits">Structured sourcing brief
+Comparable supplier and quotation inputs
+MOQ, lead-time and specification checks
+Decision history retained in Odoo</field>
+        <field name="process">Confirm product, quantity, market and target
+Build and screen the supplier shortlist
+Compare evidence, samples and commercial terms
+Approve the supplier and purchasing route</field>
+        <field name="icon">search</field>
+        <field name="image_asset_id" ref="asset_sourcing_hero"/>
+        <field name="request_type">find_supplier</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="offering_supplier_management" model="ll.sourcing.offering">
+        <field name="name">Supplier Management</field>
+        <field name="slug">supplier-management</field>
+        <field name="kind">service</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Manage existing suppliers</field>
+        <field name="summary">Coordinate your existing factories, orders, quality issues and delivery milestones through one accountable local workflow.</field>
+        <field name="introduction">Keep the suppliers you already know while gaining a structured local coordination layer for specifications, follow-up, quality evidence and delivery exceptions.</field>
+        <field name="benefits">One working requirement record
+Supplier follow-up and issue tracking
+Inspection evidence and corrective actions
+Reusable order and supplier history</field>
+        <field name="process">Import the current supplier and order context
+Confirm responsibilities and checkpoints
+Track samples, production and quality issues
+Review delivery and supplier performance</field>
+        <field name="icon">tasks</field>
+        <field name="image_asset_id" ref="asset_quality_inspection"/>
+        <field name="request_type">manage_supplier</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="offering_product_development" model="ll.sourcing.offering">
+        <field name="name">Product Development</field>
+        <field name="slug">product-development</field>
+        <field name="kind">service</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">From idea to approved sample</field>
+        <field name="summary">Coordinate specifications, materials, prototypes and revisions before production starts.</field>
+        <field name="introduction">A usable product brief is more than a reference photo. We connect intended use, dimensions, materials, packaging, target market and acceptance criteria.</field>
+        <field name="benefits">Production-ready requirement brief
+Material and construction options
+Sample version and feedback history
+Approval gate before production</field>
+        <field name="process">Clarify use case and target specification
+Evaluate feasible materials and construction
+Create, review and revise samples
+Freeze the approved production standard</field>
+        <field name="icon">cubes</field>
+        <field name="image_asset_id" ref="asset_product_development"/>
+        <field name="request_type">product_development</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="offering_private_label" model="ll.sourcing.offering">
+        <field name="name">Private Label &amp; Customization</field>
+        <field name="slug">private-label-customization</field>
+        <field name="kind">service</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Build a consistent branded product</field>
+        <field name="summary">Connect product changes, logo, packaging, labels and market requirements in one controlled brief.</field>
+        <field name="introduction">Branding decisions affect the product, packaging, labeling, cost and lead time. We keep those dependencies visible before mass production.</field>
+        <field name="benefits">Product and packaging requirements together
+Artwork and labeling checkpoints
+Sample sign-off before production
+Reusable specification for repeat orders</field>
+        <field name="process">Confirm brand and target-market requirements
+Define product and packaging changes
+Review artwork and physical samples
+Approve the final production package</field>
+        <field name="icon">tag</field>
+        <field name="image_asset_id" ref="asset_product_development"/>
+        <field name="request_type">private_label</field>
+        <field name="sequence">40</field>
+    </record>
+    <record id="offering_quality_inspection" model="ll.sourcing.offering">
+        <field name="name">Quality Inspection</field>
+        <field name="slug">quality-inspection</field>
+        <field name="kind">service</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Decide with evidence</field>
+        <field name="summary">Define inspection checkpoints and keep measurements, photos, issues and corrective actions traceable.</field>
+        <field name="introduction">Inspection is useful only when acceptance criteria are clear. We connect the approved sample and specification to recorded findings and release decisions.</field>
+        <field name="benefits">Pre-production and pre-shipment checkpoints
+Recorded measurements and photo evidence
+Issue severity and corrective actions
+Human-controlled release decision</field>
+        <field name="process">Confirm the inspection standard
+Select timing and sampling approach
+Record findings and non-conformities
+Approve, rework or hold the shipment</field>
+        <field name="icon">check-square-o</field>
+        <field name="image_asset_id" ref="asset_quality_inspection"/>
+        <field name="request_type">quality_inspection</field>
+        <field name="sequence">50</field>
+    </record>
+    <record id="offering_shipping" model="ll.sourcing.offering">
+        <field name="name">Consolidation &amp; Shipping</field>
+        <field name="slug">consolidation-shipping</field>
+        <field name="kind">service</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">One coordinated handover</field>
+        <field name="summary">Coordinate packaging, labeling, multi-supplier consolidation and international delivery milestones.</field>
+        <field name="introduction">We organize shipment inputs around verified carton data, agreed trade terms and visible handover milestones. Freight quotations and customs decisions remain explicit.</field>
+        <field name="benefits">Multi-supplier consolidation plan
+Packaging and carton-data checks
+Trade-term and handover visibility
+Shipment exception follow-up</field>
+        <field name="process">Confirm cargo data and delivery terms
+Coordinate supplier readiness and collection
+Consolidate and verify the shipment
+Track handover and delivery milestones</field>
+        <field name="icon">ship</field>
+        <field name="image_asset_id" ref="asset_shipping_consolidation"/>
+        <field name="request_type">shipping_consolidation</field>
+        <field name="sequence">60</field>
+    </record>
+
+    <record id="solution_importers" model="ll.sourcing.offering">
+        <field name="name">Importers &amp; Wholesalers</field>
+        <field name="slug">importers-wholesalers</field>
+        <field name="kind">solution</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Repeat purchasing</field>
+        <field name="summary">Build comparable product, supplier, pricing and delivery records that improve with every order.</field>
+        <field name="introduction">For broad catalogs and repeat orders, the operational record matters as much as the first supplier search.</field>
+        <field name="benefits">Reusable product and supplier facts
+MOQ and mixed-order planning
+Consolidation across suppliers
+Performance history for repeat orders</field>
+        <field name="process">Define category and purchasing targets
+Build a controlled product shortlist
+Approve suppliers and samples
+Repeat with retained operational history</field>
+        <field name="icon">archive</field>
+        <field name="image_asset_id" ref="asset_shipping_consolidation"/>
+        <field name="request_type">find_supplier</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="solution_online_sellers" model="ll.sourcing.offering">
+        <field name="name">Online Sellers</field>
+        <field name="slug">online-sellers</field>
+        <field name="kind">solution</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Validate before scaling</field>
+        <field name="summary">Move from a reference product to a testable sourcing brief, sample and small-batch decision.</field>
+        <field name="introduction">Speed matters, but unsupported product claims and unclear specifications create expensive returns. Validate the product facts before scaling inventory.</field>
+        <field name="benefits">Reference-image starting point
+Test-order and sample workflow
+Content-ready verified product facts
+Clear scale-up checkpoints</field>
+        <field name="process">Share the target product or reference
+Confirm the minimum viable specification
+Test samples or a small order
+Scale only after evidence is reviewed</field>
+        <field name="icon">shopping-cart</field>
+        <field name="image_asset_id" ref="asset_product_development"/>
+        <field name="request_type">find_supplier</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="solution_private_brands" model="ll.sourcing.offering">
+        <field name="name">Private Brands</field>
+        <field name="slug">private-brands</field>
+        <field name="kind">solution</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Differentiated products</field>
+        <field name="summary">Manage the product, packaging and quality standard as one evolving brand asset.</field>
+        <field name="introduction">Keep revisions, artwork, samples and acceptance criteria connected so the approved product can be reproduced consistently.</field>
+        <field name="benefits">One controlled brand specification
+Sample and artwork approval gates
+Quality criteria linked to the sample
+Repeat-order consistency</field>
+        <field name="process">Translate the brand concept into requirements
+Develop and compare feasible options
+Approve product and packaging samples
+Control production against the approved standard</field>
+        <field name="icon">diamond</field>
+        <field name="image_asset_id" ref="asset_product_development"/>
+        <field name="request_type">private_label</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="solution_enterprise" model="ll.sourcing.offering">
+        <field name="name">Enterprise &amp; Project Buyers</field>
+        <field name="slug">enterprise-project-buyers</field>
+        <field name="kind">solution</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">More controls, clearer accountability</field>
+        <field name="summary">Coordinate multi-party requirements, supplier evidence, quality gates and delivery milestones.</field>
+        <field name="introduction">Complex sourcing needs explicit ownership, approval gates and verified evidence. Odoo keeps the customer, quotation, purchase and delivery history connected.</field>
+        <field name="benefits">Structured stakeholder requirements
+Supplier and compliance evidence
+Formal quality and release checkpoints
+Traceable commercial and delivery history</field>
+        <field name="process">Align stakeholders and acceptance criteria
+Qualify suppliers and commercial options
+Control samples, quality and approvals
+Manage delivery and final handover</field>
+        <field name="icon">building</field>
+        <field name="image_asset_id" ref="asset_quality_inspection"/>
+        <field name="request_type">manage_supplier</field>
+        <field name="sequence">40</field>
+    </record>
+
+    <record id="plan_basic" model="ll.sourcing.offering">
+        <field name="name">Basic Sourcing</field>
+        <field name="slug">basic-sourcing</field>
+        <field name="kind">plan</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Start and validate</field>
+        <field name="summary">For buyers who need supplier discovery, quotation comparison and a controlled first order.</field>
+        <field name="introduction">Begin with a defined requirement and pay only for the services confirmed in your sourcing plan.</field>
+        <field name="benefits">Structured sourcing requirement
+Supplier shortlist and quotation comparison
+Sample and first-order coordination
+Optional inspection and shipping support</field>
+        <field name="icon">compass</field>
+        <field name="price_label">Scope-based quotation</field>
+        <field name="request_type">find_supplier</field>
+        <field name="featured" eval="False"/>
+        <field name="sequence">10</field>
+    </record>
+    <record id="plan_managed" model="ll.sourcing.offering">
+        <field name="name">Managed Sourcing</field>
+        <field name="slug">managed-sourcing</field>
+        <field name="kind">plan</field>
+        <field name="website_id" ref="website_global_sourcing"/>
+        <field name="kicker">Operate and scale</field>
+        <field name="summary">For repeat buyers who need ongoing supplier, quality, consolidation and delivery coordination.</field>
+        <field name="introduction">A continuing operating layer for existing or newly sourced suppliers, with responsibilities and checkpoints agreed before work starts.</field>
+        <field name="benefits">Existing or new supplier management
+Order and production follow-up
+Quality evidence and issue handling
+Consolidation and delivery coordination</field>
+        <field name="icon">tasks</field>
+        <field name="price_label">Service plan by quotation</field>
+        <field name="badge">Recommended for repeat buyers</field>
+        <field name="request_type">manage_supplier</field>
+        <field name="featured" eval="False"/>
+        <field name="sequence">20</field>
+    </record>
+</odoo>

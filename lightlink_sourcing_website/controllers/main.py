@@ -33,7 +33,13 @@ _REQUEST_TYPES = {
     "manage_supplier",
     "product_development",
     "private_label",
+    "quality_inspection",
+    "shipping_consolidation",
+    "dropshipping",
+    "design_customization",
 }
+_OFFERING_KINDS = {"services": "service", "solutions": "solution"}
+_BUSINESS_STAGES = {"idea", "testing", "buying", "scaling"}
 
 
 class LightLinkSourcingWebsite(http.Controller):
@@ -66,9 +72,7 @@ class LightLinkSourcingWebsite(http.Controller):
         Project = request.env["psc.publishing.project"].sudo()
         domain = [
             ("website_inquiry_enabled", "=", True),
-            "|",
-            ("product_line_id.website_id", "=", website.id),
-            ("product_line_id.website_id", "=", False),
+            ("website_id", "=", website.id),
         ]
         return (
             Project.search(domain + [("operation_state", "=", "active")], limit=1)
@@ -78,9 +82,33 @@ class LightLinkSourcingWebsite(http.Controller):
     @staticmethod
     def _base_values(**extra):
         project = LightLinkSourcingWebsite._active_project()
+        assets = request.env["ll.sourcing.asset"].sudo().search([
+            ("website_id", "=", request.website.id), ("active", "=", True),
+        ])
+        offerings = request.env["ll.sourcing.offering"].sudo().search([
+            ("website_id", "=", request.website.id), ("active", "=", True),
+        ], order="kind, sequence, id")
         values = {
             "sourcing_project": project,
             "countries": request.env["res.country"].sudo().search([], order="name"),
+            "sourcing_assets": {asset.key: asset for asset in assets},
+            "sourcing_services": offerings.filtered(lambda item: item.kind == "service"),
+            "sourcing_solutions": offerings.filtered(lambda item: item.kind == "solution"),
+            "sourcing_plans": offerings.filtered(lambda item: item.kind == "plan"),
+            "sourcing_featured_services": offerings.filtered(
+                lambda item: item.kind == "service" and item.featured
+            ),
+            "sourcing_featured_solutions": offerings.filtered(
+                lambda item: item.kind == "solution" and item.featured
+            ),
+            "sourcing_service_email": (
+                project.website_service_email if project and project.website_service_email
+                else request.website.sourcing_service_email
+            ),
+            "sourcing_whatsapp_url": (
+                project.website_whatsapp_url if project and project.website_whatsapp_url
+                else request.website.sourcing_whatsapp_url
+            ),
         }
         values.update(extra)
         return values
@@ -101,10 +129,40 @@ class LightLinkSourcingWebsite(http.Controller):
             "lightlink_sourcing_website.sourcing_services", self._base_values()
         )
 
+    @http.route(
+        "/sourcing/<string:kind>/<string:slug>",
+        type="http",
+        auth="public",
+        website=True,
+        sitemap=False,
+    )
+    def sourcing_offering(self, kind, slug, **kwargs):
+        offering_kind = _OFFERING_KINDS.get(kind)
+        if not offering_kind:
+            return request.not_found()
+        offering = request.env["ll.sourcing.offering"].sudo().search([
+            ("website_id", "=", request.website.id),
+            ("kind", "=", offering_kind),
+            ("slug", "=", self._clean(slug, 120)),
+            ("active", "=", True),
+        ], limit=1)
+        if not offering:
+            return request.not_found()
+        return request.render(
+            "lightlink_sourcing_website.sourcing_offering",
+            self._base_values(offering=offering, offering_url_kind=kind),
+        )
+
     @http.route("/sourcing/solutions", type="http", auth="public", website=True, sitemap=True)
     def sourcing_solutions(self, **kwargs):
         return request.render(
             "lightlink_sourcing_website.sourcing_solutions", self._base_values()
+        )
+
+    @http.route("/sourcing/pricing", type="http", auth="public", website=True, sitemap=True)
+    def sourcing_pricing(self, **kwargs):
+        return request.render(
+            "lightlink_sourcing_website.sourcing_pricing", self._base_values()
         )
 
     @http.route("/sourcing/about", type="http", auth="public", website=True, sitemap=True)
@@ -148,6 +206,9 @@ class LightLinkSourcingWebsite(http.Controller):
         company_name = self._clean(post.get("company_name"), 160)
         requirement_details = self._clean(post.get("requirement_details"), 5000)
         request_type = self._clean(post.get("request_type"), 40)
+        business_stage = self._clean(post.get("business_stage"), 40)
+        if business_stage not in _BUSINESS_STAGES:
+            business_stage = False
         valid_email = email_split(email)
         if (
             not contact_name
@@ -199,6 +260,7 @@ class LightLinkSourcingWebsite(http.Controller):
                     "product_ids": [(6, 0, product.ids)] if product else False,
                     "request_type": request_type,
                     "product_category": self._clean(post.get("product_category"), 160),
+                    "business_stage": business_stage,
                     "organization_type": self._clean(post.get("organization_type"), 120),
                     "contact_role": self._clean(post.get("contact_role"), 120),
                     "requirement_details": requirement_details,
@@ -272,6 +334,7 @@ class LightLinkSourcingWebsite(http.Controller):
             ("Service", post.get("request_type")),
             ("Product category", post.get("product_category")),
             ("Organization", post.get("organization_type")),
+            ("Business stage", post.get("business_stage")),
             ("Contact role", post.get("contact_role")),
             ("Quantity", post.get("quantity")),
             ("Target unit price", post.get("target_unit_price")),

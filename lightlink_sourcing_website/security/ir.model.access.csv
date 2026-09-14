@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ll_sourcing_asset_user,ll.sourcing.asset user,model_ll_sourcing_asset,base.group_user,1,1,1,1
+access_ll_sourcing_asset_public,ll.sourcing.asset public,model_ll_sourcing_asset,base.group_public,1,0,0,0
+access_ll_sourcing_offering_user,ll.sourcing.offering user,model_ll_sourcing_offering,base.group_user,1,1,1,1
+access_ll_sourcing_offering_public,ll.sourcing.offering public,model_ll_sourcing_offering,base.group_public,1,0,0,0
