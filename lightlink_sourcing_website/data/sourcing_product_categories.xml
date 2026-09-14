@@ -2,35 +2,35 @@
 <odoo noupdate="1">
     <record id="product_category_apparel" model="product.public.category"><field name="name">Apparel</field><field name="website_id" ref="website_global_sourcing"/><field name="sequence">10</field></record>
     <record id="product_category_furniture" model="product.public.category"><field name="name">Furniture</field><field name="website_id" ref="website_global_sourcing"/><field name="sequence">20</field></record>
-    <record id="product_category_bags_cases" model="product.public.category"><field name="name">Bags &amp; Cases</field><field name="website_id" ref="website_global_sourcing"/><field name="sequence">30</field></record>
+    <record id="product_category_bags_cases" model="product.public.category"><field name="name">Bags &amp; Cases</field><field name="website_id" ref="website_global_sourcing"/><field name="sequence">30</field><field name="sourcing_image_asset_id" ref="asset_product_photography"/></record>
     <record id="product_category_bags_handbags" model="product.public.category">
         <field name="name">Handbags</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="product_category_bags_cases"/><field name="sequence">10</field>
-        <field name="image_1920" type="base64" file="lightlink_sourcing_website/static/src/img/product-development.webp"/>
+        <field name="sourcing_image_asset_id" ref="asset_product_development"/>
         <field name="website_description">Explore practical handbag sourcing options by material, construction, hardware, finish, packaging and target market.</field>
     </record>
     <record id="product_category_bags_backpacks" model="product.public.category">
         <field name="name">Backpacks</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="product_category_bags_cases"/><field name="sequence">20</field>
-        <field name="image_1920" type="base64" file="lightlink_sourcing_website/static/src/img/quality-inspection.webp"/>
+        <field name="sourcing_image_asset_id" ref="asset_quality_inspection"/>
         <field name="website_description">Define capacity, compartments, fabric, reinforcement, comfort, branding and testing requirements before supplier comparison.</field>
     </record>
     <record id="product_category_bags_toiletry" model="product.public.category">
         <field name="name">Toiletry Bags</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="product_category_bags_cases"/><field name="sequence">30</field>
-        <field name="image_1920" type="base64" file="lightlink_sourcing_website/static/src/img/packaging-design.png"/>
+        <field name="sourcing_image_asset_id" ref="asset_packaging_design"/>
         <field name="website_description">Source toiletry and cosmetic organizers with clear size, lining, closure, waterproofing, labeling and packing requirements.</field>
     </record>
     <record id="product_category_bags_travel" model="product.public.category">
         <field name="name">Travel Bags</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="product_category_bags_cases"/><field name="sequence">40</field>
-        <field name="image_1920" type="base64" file="lightlink_sourcing_website/static/src/img/shipping-consolidation.webp"/>
+        <field name="sourcing_image_asset_id" ref="asset_shipping_consolidation"/>
         <field name="website_description">Plan travel-bag sourcing around intended use, load, dimensions, materials, accessories, transport testing and retail presentation.</field>
     </record>
     <record id="product_category_bags_pouches" model="product.public.category">
         <field name="name">Pouches</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="product_category_bags_cases"/><field name="sequence">50</field>
-        <field name="image_1920" type="base64" file="lightlink_sourcing_website/static/src/img/product-photography.png"/>
+        <field name="sourcing_image_asset_id" ref="asset_product_photography"/>
         <field name="website_description">Develop pouches for products, gifts or organization with controlled dimensions, printing, closures, inserts and packaging.</field>
     </record>
     <record id="product_category_bags_special" model="product.public.category">
         <field name="name">Special Bags</field><field name="website_id" ref="website_global_sourcing"/><field name="parent_id" ref="product_category_bags_cases"/><field name="sequence">60</field>
-        <field name="image_1920" type="base64" file="lightlink_sourcing_website/static/src/img/factory-audit.png"/>
+        <field name="sourcing_image_asset_id" ref="asset_factory_audit"/>
         <field name="website_description">Use a structured brief for technical, promotional or special-use bags where function, safety and test criteria matter.</field>
     </record>
     <record id="product_category_beauty" model="product.public.category"><field name="name">Beauty &amp; Personal Care</field><field name="website_id" ref="website_global_sourcing"/><field name="sequence">40</field></record>

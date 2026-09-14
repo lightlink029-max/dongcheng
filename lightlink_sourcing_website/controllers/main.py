@@ -183,13 +183,13 @@ class LightLinkSourcingWebsite(http.Controller):
                 "public_categ_ids", "child_of", category.id
             )
             count = Product.search_count(category_domain)
-            image_category = category if category.image_512 else category.child_id.filtered(
-                lambda item: bool(item.image_512)
+            image_asset = category.sourcing_image_asset_id or category.child_id.mapped(
+                "sourcing_image_asset_id"
             )[:1]
             result.append({
                 "record": category,
                 "count": count,
-                "image_category": image_category,
+                "image_asset": image_asset,
                 "image_product": Product.search(
                     category_domain, limit=1, order="website_sequence, id desc"
                 ),

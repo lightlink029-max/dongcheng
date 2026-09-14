@@ -78,6 +78,8 @@ class TestSourcingContent(TransactionCase):
         bags = self.env.ref("lightlink_sourcing_website.product_category_bags_cases")
         self.assertEqual(bags.website_id, website)
         self.assertEqual(len(bags.child_id), 6)
+        self.assertTrue(bags.sourcing_image_asset_id)
+        self.assertTrue(all(bags.child_id.mapped("sourcing_image_asset_id")))
         self.assertTrue(bags.sourcing_hero_subtitle)
         self.assertTrue(bags.sourcing_inquiry_heading)
 

@@ -78,6 +78,7 @@ msgstr "先提交需求，我们会根据你的实际采购场景整理下一步
 
 #. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_cta
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Start a sourcing request"
 msgstr "提交采购需求"
 
@@ -93,6 +94,7 @@ msgstr "用清晰方案和可追责执行完成中国采购。"
 
 #. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_home
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Get a sourcing plan"
 msgstr "获取采购方案"
 
@@ -832,6 +834,8 @@ msgstr "目的国家"
 
 #. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
 msgid "Choose a country"
 msgstr "选择国家"
 
@@ -852,11 +856,15 @@ msgstr "3. 联系信息"
 
 #. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
 msgid "Name *"
 msgstr "姓名 *"
 
 #. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
 msgid "Business email *"
 msgstr "商务邮箱 *"
 
@@ -867,6 +875,8 @@ msgstr "公司"
 
 #. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
 msgid "Phone / WhatsApp"
 msgstr "电话 / WhatsApp"
 
@@ -897,6 +907,7 @@ msgstr "我授权仅将这些信息和上传文件用于评估并回复本次采
 
 #. module: lightlink_sourcing_website
 #: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_request
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Submit sourcing request"
 msgstr "提交采购需求"
 
@@ -1176,117 +1187,169 @@ msgid "Payment details are issued for the approved project."
 msgstr "付款信息按已批准项目单独发出。"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Product category"
 msgstr "产品分类"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Product options"
 msgstr "产品方向"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Product directions ready for your sourcing brief"
 msgstr "可按采购需求展开的产品方向"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Each category and its content can be maintained in Odoo. Product facts are confirmed against your exact requirement."
 msgstr "每个分类及其内容都可在 Odoo 中维护；产品事实将依据您的实际需求确认。"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "This category is ready for content."
 msgstr "此分类已可维护内容。"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Add child categories, descriptions, images or public products in Odoo. The page updates from those records."
 msgstr "在 Odoo 中添加子分类、介绍、图片或公开产品，页面会随记录更新。"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Tell us what you want to source"
 msgstr "告诉我们您要采购什么"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Share the product, quantity, specifications, target market and destination. The inquiry will be saved in Odoo for structured follow-up."
 msgstr "请提供产品、数量、规格、目标市场和目的地；询盘将保存到 Odoo 中进行结构化跟进。"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "One requirement record"
 msgstr "一条统一需求记录"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Supplier and quotation follow-up"
 msgstr "供应商与报价跟进"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Sample and quality checkpoints"
 msgstr "样品与质量检查点"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Traceable communication"
 msgstr "可追溯沟通记录"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Product requirements *"
 msgstr "产品需求 *"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
 msgid "Tell us your Yiwu sourcing plan"
 msgstr "告诉我们您的义乌采购计划"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
 msgid "Visit and sourcing requirements *"
 msgstr "行程与采购需求 *"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
 msgid "Submit plan"
 msgstr "提交计划"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
 msgid "Plan every part of the visit"
 msgstr "规划行程的每个部分"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
 msgid "Yiwu sourcing and travel information in one place"
 msgstr "在一个页面查看义乌采购与行程信息"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
 msgid "Each section is a separate Odoo-managed page, so your team can update text and images without changing code."
 msgstr "每个板块都是由 Odoo 管理的独立页面，团队无需修改代码即可更新文字和图片。"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
 msgid "Open guide"
 msgstr "打开指南"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu_detail
 msgid "Visit Yiwu guides"
 msgstr "访问义乌指南"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu_detail
 msgid "Discuss your Yiwu visit"
 msgstr "沟通您的义乌行程"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Clear product specifications"
 msgstr "明确产品规格"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Customization and packaging support"
 msgstr "定制与包装支持"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
 msgid "Supplier and quality coordination"
 msgstr "供应商与质量协调"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_content_page
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu_detail
 msgid "Visit Yiwu"
 msgstr "访问义乌"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_content_page
 msgid "Plan the visit"
 msgstr "规划行程"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_content_page
 msgid "Plan market visits, local business support, fairs, transport, hotels and practical city arrangements."
 msgstr "规划市场走访、本地商务支持、展会、交通、住宿和实用城市安排。"
 
 #. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
 msgid "I authorize the use of this information to evaluate and respond to my sourcing request."
 msgstr "我授权仅使用这些信息评估并回复我的采购需求。"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_yiwu
+msgid "Country"
+msgstr "国家"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+msgid "Request a quote"
+msgstr "申请报价"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+msgid "products in Odoo"
+msgstr "个 Odoo 产品"
+
+#. module: lightlink_sourcing_website
+#: model_terms:ir.ui.view,arch_db:lightlink_sourcing_website.sourcing_product_category
+msgid "Product type, dimensions, materials, functions, customization, quantity and delivery destination."
+msgstr "产品类型、尺寸、材料、功能、定制要求、数量和交付目的地。"

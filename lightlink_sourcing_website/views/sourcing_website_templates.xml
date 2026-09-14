@@ -282,7 +282,7 @@
                     <t t-call="lightlink_sourcing_website.sourcing_section_heading"><t t-set="kicker">Product categories</t><t t-set="title">Browse the categories already maintained in Odoo</t><t t-set="subtitle">Adding or reclassifying products in Odoo updates this page automatically.</t></t>
                     <div t-if="product_categories" class="ll-product-category-grid">
                         <a t-foreach="product_categories" t-as="category_info" t-att-href="'/sourcing/products/category/%s' % category_info['record'].id" t-attf-class="ll-product-category-card #{selected_category and selected_category.id == category_info['record'].id and 'is-active' or ''}">
-                            <img t-if="category_info['image_category']" t-att-src="'/web/image/product.public.category/%s/image_512' % category_info['image_category'].id" t-att-alt="category_info['record'].name" loading="lazy"/>
+                            <img t-if="category_info['image_asset']" t-att-src="'/web/image/ll.sourcing.asset/%s/image' % category_info['image_asset'].id" t-att-alt="category_info['image_asset'].alt_text" loading="lazy"/>
                             <img t-elif="category_info['image_product']" t-att-src="'/web/image/product.template/%s/image_512' % category_info['image_product'].id" t-att-alt="category_info['record'].name" loading="lazy"/>
                             <div t-else="" class="ll-product-category-placeholder"><i class="fa fa-cubes"/></div>
                             <span><strong t-field="category_info['record'].name"/><small><t t-out="category_info['count']"/> products</small></span>
@@ -330,8 +330,8 @@
                         </div>
                         <div class="col-lg-5">
                             <div class="ll-category-hero-image">
-                                <img t-if="category.image_1920" t-att-src="'/web/image/product.public.category/%s/image_1920' % category.id" t-att-alt="category.name"/>
-                                <img t-elif="category_children and category_children[0]['record'].image_1920" t-att-src="'/web/image/product.public.category/%s/image_1920' % category_children[0]['record'].id" t-att-alt="category.name"/>
+                                <img t-if="category.sourcing_image_asset_id" t-att-src="'/web/image/ll.sourcing.asset/%s/image' % category.sourcing_image_asset_id.id" t-att-alt="category.sourcing_image_asset_id.alt_text"/>
+                                <img t-elif="category.image_1920" t-att-src="'/web/image/product.public.category/%s/image_1920' % category.id" t-att-alt="category.name"/>
                                 <div t-else="" class="ll-category-image-placeholder"><i class="fa fa-cubes"/></div>
                             </div>
                         </div>
@@ -354,7 +354,8 @@
                     <div t-if="category_children" class="ll-category-offering-grid">
                         <article t-foreach="category_children" t-as="category_info" class="ll-category-offering">
                             <div class="ll-category-offering-image">
-                                <img t-if="category_info['record'].image_512" t-att-src="'/web/image/product.public.category/%s/image_512' % category_info['record'].id" t-att-alt="category_info['record'].name" loading="lazy"/>
+                                <img t-if="category_info['record'].sourcing_image_asset_id" t-att-src="'/web/image/ll.sourcing.asset/%s/image' % category_info['record'].sourcing_image_asset_id.id" t-att-alt="category_info['record'].sourcing_image_asset_id.alt_text" loading="lazy"/>
+                                <img t-elif="category_info['record'].image_512" t-att-src="'/web/image/product.public.category/%s/image_512' % category_info['record'].id" t-att-alt="category_info['record'].name" loading="lazy"/>
                                 <img t-elif="category_info['image_product']" t-att-src="'/web/image/product.template/%s/image_512' % category_info['image_product'].id" t-att-alt="category_info['record'].name" loading="lazy"/>
                                 <div t-else="" class="ll-category-image-placeholder"><i class="fa fa-cube"/></div>
                             </div>

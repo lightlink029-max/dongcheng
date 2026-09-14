@@ -277,6 +277,12 @@ class Website(models.Model):
 class ProductPublicCategory(models.Model):
     _inherit = "product.public.category"
 
+    sourcing_image_asset_id = fields.Many2one(
+        "ll.sourcing.asset",
+        string="采购分类页图片",
+        ondelete="set null",
+        help="采购分类页公开显示的图片；从网站图片资产中选择。",
+    )
     sourcing_hero_subtitle = fields.Char(
         string="分类页副标题",
         translate=True,
