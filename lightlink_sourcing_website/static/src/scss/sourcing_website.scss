@@ -116,6 +116,37 @@ $ll-amber: #efaa42;
     }
 }
 
+.ll-intent-card {
+    display: flex;
+    min-height: 260px;
+    padding: clamp(2rem, 4vw, 3.2rem);
+    gap: 2rem;
+    border: 1px solid #d5e2de;
+    border-radius: .5rem;
+    background: linear-gradient(145deg, #fff, #f2faf7);
+    box-shadow: 0 18px 45px rgba(16, 42, 45, .06);
+
+    > span {
+        color: $ll-amber;
+        font-size: 2rem;
+        font-weight: 800;
+    }
+
+    h3 {
+        margin: .25rem 0 .8rem;
+        font-size: 1.65rem;
+    }
+
+    p {
+        color: #66787a;
+    }
+
+    small {
+        color: $ll-teal;
+        font-weight: 750;
+    }
+}
+
 .ll-section {
     padding: clamp(4.8rem, 8vw, 8rem) 0;
 }
@@ -227,6 +258,50 @@ $ll-amber: #efaa42;
     small {
         display: block;
         margin-top: 1.2rem;
+        color: $ll-teal;
+        font-weight: 750;
+    }
+}
+
+.ll-value-services {
+    background: $ll-sand;
+}
+
+.ll-value-card {
+    overflow: hidden;
+    border: 1px solid #dce5e2;
+    border-radius: .5rem;
+    background: #fff;
+    box-shadow: 0 16px 40px rgba(16, 42, 45, .06);
+
+    img {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+    }
+
+    > div {
+        padding: 1.5rem;
+
+        > span {
+            color: $ll-teal;
+            font-size: .72rem;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+    }
+
+    h3 {
+        margin: .5rem 0 .65rem;
+        font-size: 1.3rem;
+    }
+
+    p {
+        color: #66787a;
+    }
+
+    small {
         color: $ll-teal;
         font-weight: 750;
     }

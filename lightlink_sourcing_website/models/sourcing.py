@@ -13,6 +13,10 @@ REQUEST_TYPES = [
     ("shipping_consolidation", "集货与国际物流"),
     ("dropshipping", "一件代发"),
     ("design_customization", "产品与包装设计"),
+    ("photography_video", "产品摄影与视频"),
+    ("warehousing_kitting", "仓储、换标与组合包装"),
+    ("supplier_audit", "工厂与供应商审核"),
+    ("marketplace_prep", "电商平台 / FBA 备货"),
 ]
 
 

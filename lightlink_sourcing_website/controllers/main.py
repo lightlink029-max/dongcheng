@@ -37,9 +37,21 @@ _REQUEST_TYPES = {
     "shipping_consolidation",
     "dropshipping",
     "design_customization",
+    "photography_video",
+    "warehousing_kitting",
+    "supplier_audit",
+    "marketplace_prep",
 }
 _OFFERING_KINDS = {"services": "service", "solutions": "solution"}
 _BUSINESS_STAGES = {"idea", "testing", "buying", "scaling"}
+_VALUE_SERVICE_SLUGS = {
+    "dropshipping-fulfillment",
+    "product-photography-video",
+    "packaging-graphic-design",
+    "warehousing-repacking-kitting",
+    "factory-supplier-audit",
+    "marketplace-fba-preparation",
+}
 
 
 class LightLinkSourcingWebsite(http.Controller):
@@ -100,6 +112,9 @@ class LightLinkSourcingWebsite(http.Controller):
             ),
             "sourcing_featured_solutions": offerings.filtered(
                 lambda item: item.kind == "solution" and item.featured
+            ),
+            "sourcing_value_services": offerings.filtered(
+                lambda item: item.kind == "service" and item.slug in _VALUE_SERVICE_SLUGS
             ),
             "sourcing_service_email": (
                 project.website_service_email if project and project.website_service_email
