@@ -45,7 +45,7 @@
                     <div t-foreach="sourcing_footer_columns" t-as="column" class="col-6 col-lg">
                         <h2 t-field="column.name"/>
                         <ul t-if="column.column_type == 'links'">
-                            <li t-foreach="column.link_ids.filtered(lambda item: item.active)" t-as="footer_link">
+                            <li t-foreach="column.link_ids" t-as="footer_link">
                                 <a t-att-href="footer_link.url" t-field="footer_link.name"/>
                             </li>
                         </ul>
@@ -54,7 +54,7 @@
                 </div>
                 <div class="ll-footer-bottom">
                     <span t-field="sourcing_website.sourcing_brand_name"/>
-                    <span>© <t t-out="datetime.datetime.now().year"/>. All rights reserved.</span>
+                    <span>© 2026. All rights reserved.</span>
                 </div>
             </div>
         </footer>
