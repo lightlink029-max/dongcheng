@@ -219,6 +219,13 @@ class MarketOperationsWorkflowCase(TransactionCase):
             "active_status": "active",
         })
         self.assertIn(product.id, [item["id"] for item in payload["products"]])
+        workspace_product = next(
+            item for item in payload["products"] if item["id"] == product.id
+        )
+        self.assertEqual(
+            workspace_product["image_url"],
+            f"/web/image/product.template/{product.id}/image_512",
+        )
         self.assertIn(
             category.id,
             [item["id"] for item in payload["filters"]["categories"]],

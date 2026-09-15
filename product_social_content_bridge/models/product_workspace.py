@@ -123,7 +123,7 @@ class BusinessHubProductWorkspace(models.Model):
                 "tags": product.product_tag_ids.mapped("name")[:6],
                 "keywords": product.psc_procurement_keywords or "",
                 "has_image": bool(product.image_128),
-                "image_url": f"/web/image/product.template/{product.id}/image_256",
+                "image_url": f"/web/image/product.template/{product.id}/image_512",
                 "active": product.active,
                 "write_date": (
                     local_write_date.strftime("%Y-%m-%d %H:%M")
