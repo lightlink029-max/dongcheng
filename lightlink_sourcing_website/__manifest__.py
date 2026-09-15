@@ -1,6 +1,6 @@
 {
     "name": "LightLink 采购服务官网",
-    "version": "19.0.2.5.5",
+    "version": "19.0.2.5.6",
     "summary": "独立多语言采购服务官网、内容资产与结构化询盘运营闭环",
     "category": "Website/Website",
     "author": "LightLink",
