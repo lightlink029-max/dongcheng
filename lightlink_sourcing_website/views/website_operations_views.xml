@@ -483,11 +483,29 @@
         <field name="view_mode">kanban,list,form</field>
         <field name="domain">[]</field>
         <field name="search_view_id" ref="view_ll_website_operations_search"/>
-        <field name="views" eval="[(ref('view_ll_website_operations_kanban'), 'kanban'), (ref('view_ll_website_operations_list'), 'list'), (ref('view_ll_website_operations_form'), 'form')]"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">创建或选择一个网站开始运营</p>
             <p>采购代理站和工厂站共享 Odoo 的产品、CRM 与业务数据，公开页面、产品文案、工厂能力和询盘按网站隔离。</p>
         </field>
+    </record>
+
+    <record id="action_ll_sourcing_websites_view_kanban" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_ll_website_operations_kanban"/>
+        <field name="act_window_id" ref="action_ll_sourcing_websites"/>
+    </record>
+    <record id="action_ll_sourcing_websites_view_list" model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_ll_website_operations_list"/>
+        <field name="act_window_id" ref="action_ll_sourcing_websites"/>
+    </record>
+    <record id="action_ll_sourcing_websites_view_form" model="ir.actions.act_window.view">
+        <field name="sequence">3</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_ll_website_operations_form"/>
+        <field name="act_window_id" ref="action_ll_sourcing_websites"/>
     </record>
 
     <menuitem id="menu_ll_sourcing_root" name="网站运营中心" parent="product_social_content_bridge.menu_psc_category_web_marketing" action="action_ll_sourcing_websites" sequence="5"/>
