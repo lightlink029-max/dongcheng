@@ -158,7 +158,8 @@
                                     <list editable="bottom">
                                         <field name="sequence" widget="handle"/>
                                         <field name="name"/>
-                                        <field name="parent_id" domain="[('website_id', '=', parent.id)]"/>
+                                        <field name="website_id" column_invisible="True"/>
+                                        <field name="parent_id" domain="[('website_id', '=', website_id)]"/>
                                         <field name="url"/>
                                         <field name="new_window"/>
                                     </list>
