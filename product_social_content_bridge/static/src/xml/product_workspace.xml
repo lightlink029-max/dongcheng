@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="product_social_content_bridge.ProductWorkspace">
+        <section class="o_psc_product_workspace" aria-label="产品工作台">
+            <div class="o_psc_product_workspace_header">
+                <div>
+                    <h1>产品工作台</h1>
+                    <p>统一管理 Odoo 产品、分类、属性、图片和采购关键词。</p>
+                </div>
+                <div class="o_psc_product_workspace_actions">
+                    <button type="button" class="btn btn-primary" t-on-click="newProduct">
+                        <i class="fa fa-plus me-1"/>新建产品
+                    </button>
+                    <button type="button" class="btn btn-secondary" t-on-click="newCategory">
+                        <i class="fa fa-folder-o me-1"/>新建分类
+                    </button>
+                    <button type="button" class="btn btn-secondary" t-on-click="manageAttributes">
+                        <i class="fa fa-tags me-1"/>管理属性
+                    </button>
+                    <button type="button" class="btn btn-secondary" t-on-click="openProductList">
+                        <i class="fa fa-list me-1"/>产品列表/批量导入
+                    </button>
+                </div>
+            </div>
+
+            <div class="o_psc_product_filters">
+                <div class="o_psc_product_filter_keyword">
+                    <label for="psc_product_keyword">关键词</label>
+                    <input id="psc_product_keyword"
+                           type="search"
+                           class="form-control"
+                           placeholder="名称、编号、条码、关键词、属性值或描述"
+                           t-model="state.filters.keyword"
+                           t-on-keydown="onSearchKeydown"/>
+                </div>
+                <div>
+                    <label for="psc_product_category">产品分类</label>
+                    <select id="psc_product_category" class="form-select"
+                            t-model="state.filters.category_id" t-on-change="applyFilters">
+                        <option value="">全部分类</option>
+                        <option t-foreach="state.options.categories" t-as="category" t-key="category.id"
+                                t-att-value="category.id"><t t-esc="category.name"/></option>
+                    </select>
+                </div>
+                <div>
+                    <label for="psc_product_attribute">产品属性</label>
+                    <select id="psc_product_attribute" class="form-select"
+                            t-model="state.filters.attribute_value_id" t-on-change="applyFilters">
+                        <option value="">全部属性值</option>
+                        <option t-foreach="state.options.attribute_values" t-as="attribute" t-key="attribute.id"
+                                t-att-value="attribute.id"><t t-esc="attribute.name"/></option>
+                    </select>
+                </div>
+                <div>
+                    <label for="psc_product_tag">产品标签</label>
+                    <select id="psc_product_tag" class="form-select"
+                            t-model="state.filters.tag_id" t-on-change="applyFilters">
+                        <option value="">全部标签</option>
+                        <option t-foreach="state.options.tags" t-as="tag" t-key="tag.id"
+                                t-att-value="tag.id"><t t-esc="tag.name"/></option>
+                    </select>
+                </div>
+                <div>
+                    <label for="psc_product_image">图片状态</label>
+                    <select id="psc_product_image" class="form-select"
+                            t-model="state.filters.image_status" t-on-change="applyFilters">
+                        <option value="all">全部图片状态</option>
+                        <option value="with_image">有图片</option>
+                        <option value="without_image">无图片</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="psc_product_active">产品状态</label>
+                    <select id="psc_product_active" class="form-select"
+                            t-model="state.filters.active_status" t-on-change="applyFilters">
+                        <option value="active">启用</option>
+                        <option value="archived">已归档</option>
+                        <option value="all">全部状态</option>
+                    </select>
+                </div>
+                <div class="o_psc_product_filter_actions">
+                    <button type="button" class="btn btn-primary" t-on-click="applyFilters" t-att-disabled="state.loading">
+                        <i class="fa fa-search me-1"/>查询
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" t-on-click="clearFilters" t-att-disabled="state.loading">
+                        清除
+                    </button>
+                </div>
+            </div>
+
+            <div class="o_psc_product_workspace_summary">
+                <strong>找到 <t t-esc="state.total"/> 个产品</strong>
+                <span>当前显示 <t t-esc="state.products.length"/> 个</span>
+                <button type="button" class="btn btn-link" t-on-click="manageCategories">管理全部分类</button>
+            </div>
+
+            <div class="o_psc_product_loading" t-if="state.loading &amp;&amp; !state.products.length">
+                <i class="fa fa-spinner fa-spin me-2"/>正在加载产品…
+            </div>
+            <div class="o_psc_product_empty" t-elif="!state.products.length">
+                <i class="fa fa-cube"/>
+                <strong>没有符合条件的产品</strong>
+                <span>可以清除筛选，或直接新建产品。</span>
+            </div>
+            <div class="o_psc_product_cards" t-else="">
+                <button t-foreach="state.products" t-as="product" t-key="product.id"
+                        type="button" class="o_psc_product_card"
+                        t-on-click="() => this.openProduct(product)">
+                    <span class="o_psc_product_image">
+                        <img t-if="product.has_image" t-att-src="product.image_url" t-att-alt="product.name" loading="lazy"/>
+                        <span t-else="" class="o_psc_product_image_placeholder">
+                            <i class="fa fa-picture-o"/><small>暂无图片</small>
+                        </span>
+                        <span t-if="!product.active" class="badge text-bg-secondary">已归档</span>
+                    </span>
+                    <span class="o_psc_product_card_body">
+                        <strong class="o_psc_product_name" t-att-title="product.name"><t t-esc="product.name"/></strong>
+                        <span class="o_psc_product_meta">
+                            <span t-if="product.default_code">编码：<t t-esc="product.default_code"/></span>
+                            <span t-if="product.barcode">条码：<t t-esc="product.barcode"/></span>
+                        </span>
+                        <span class="o_psc_product_category"><i class="fa fa-folder-o me-1"/><t t-esc="product.category"/></span>
+                        <span class="o_psc_product_attributes" t-if="product.attributes.length">
+                            <span t-foreach="product.attributes" t-as="attribute" t-key="attribute"><t t-esc="attribute"/></span>
+                        </span>
+                        <span class="o_psc_product_tags" t-if="product.tags.length">
+                            <span t-foreach="product.tags" t-as="tag" t-key="tag" class="badge rounded-pill text-bg-light"><t t-esc="tag"/></span>
+                        </span>
+                        <span class="o_psc_product_keywords" t-if="product.keywords" t-att-title="product.keywords">
+                            关键词：<t t-esc="product.keywords"/>
+                        </span>
+                        <small class="o_psc_product_updated">更新：<t t-esc="product.write_date"/></small>
+                    </span>
+                </button>
+            </div>
+
+            <div class="o_psc_product_load_more" t-if="state.hasMore">
+                <button type="button" class="btn btn-outline-primary" t-on-click="() => this.loadProducts(true)" t-att-disabled="state.loading">
+                    <i t-if="state.loading" class="fa fa-spinner fa-spin me-1"/>加载更多
+                </button>
+            </div>
+        </section>
+    </t>
+</templates>

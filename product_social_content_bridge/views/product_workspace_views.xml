@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_psc_product_template_form" model="ir.ui.view">
+        <field name="name">product.template.form.psc.procurement</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <field name="categ_id" position="after">
+                <field name="product_tag_ids" widget="many2many_tags" string="产品标签"/>
+                <field name="psc_procurement_keywords" placeholder="例如：防水鞋, PVC, 工厂直供, 欧洲市场"/>
+                <field name="psc_category_attribute_template_ids"
+                       widget="many2many_tags"
+                       readonly="1"
+                       invisible="not psc_category_attribute_template_ids"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_psc_product_quick_form" model="ir.ui.view">
+        <field name="name">product.template.form.psc.quick.create</field>
+        <field name="model">product.template</field>
+        <field name="arch" type="xml">
+            <form string="快速新建采购产品">
+                <sheet>
+                    <field name="image_1920" widget="image" class="oe_avatar"
+                           options="{'convert_to_webp': True, 'preview_image': 'image_128', 'zoom': True}"/>
+                    <div class="oe_title">
+                        <label for="name" string="产品名称"/>
+                        <h1><field name="name" placeholder="例如：防水 PVC 劳保鞋"/></h1>
+                    </div>
+                    <div class="alert alert-info" role="alert">
+                        先完成可搜索的核心资料；价格、供应商、库存和网站内容可在保存后继续维护。
+                    </div>
+                    <group>
+                        <group string="基础信息">
+                            <field name="categ_id" string="产品分类"/>
+                            <field name="default_code" string="内部编码"/>
+                            <field name="barcode" string="条码"/>
+                            <field name="product_tag_ids" widget="many2many_tags" string="产品标签"/>
+                            <field name="psc_procurement_keywords" placeholder="材质、用途、市场叫法；多个关键词用逗号分隔"/>
+                        </group>
+                        <group string="分类录入指引">
+                            <field name="psc_category_attribute_template_ids" widget="many2many_tags" readonly="1"/>
+                            <field name="sale_ok"/>
+                            <field name="purchase_ok"/>
+                            <field name="type" widget="radio" options="{'horizontal': True}"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="产品属性" groups="product.group_product_variant">
+                            <field name="attribute_line_ids" context="{'show_attribute': False}">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="attribute_id" readonly="id"/>
+                                    <field name="value_ids" widget="many2many_tags"
+                                           options="{'no_create_edit': True, 'color_field': 'color'}"
+                                           context="{'default_attribute_id': attribute_id, 'show_attribute': False}"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="采购与销售说明">
+                            <group>
+                                <field name="description_purchase" placeholder="供应商询价、采购订单使用的说明"/>
+                                <field name="description_sale" placeholder="报价单、销售订单使用的说明"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_psc_product_quick_create" model="ir.actions.act_window">
+        <field name="name">新建采购产品</field>
+        <field name="res_model">product.template</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_psc_product_quick_form"/>
+        <field name="target">current</field>
+        <field name="context">{'default_sale_ok': True, 'default_purchase_ok': True}</field>
+    </record>
+
+    <record id="view_psc_product_category_form" model="ir.ui.view">
+        <field name="name">product.category.form.psc.attribute.template</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <field name="parent_id" position="after">
+                <field name="psc_attribute_template_ids"
+                       widget="many2many_tags"
+                       options="{'no_create_edit': True}"
+                       placeholder="选择本分类产品通常需要填写的属性"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_psc_product_template_search" model="ir.ui.view">
+        <field name="name">product.template.search.psc.procurement</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_search_view"/>
+        <field name="arch" type="xml">
+            <field name="name" position="replace">
+                <field name="name" string="产品/编码/关键词/属性"
+                       filter_domain="['|', '|', '|', '|', '|', '|', '|', '|', ('default_code', 'ilike', self), ('product_variant_ids.default_code', 'ilike', self), ('name', 'ilike', self), ('barcode', 'ilike', self), ('psc_procurement_keywords', 'ilike', self), ('product_tag_ids.name', 'ilike', self), ('attribute_line_ids.value_ids.name', 'ilike', self), ('description_purchase', 'ilike', self), ('description_sale', 'ilike', self)]"/>
+            </field>
+            <field name="product_tag_ids" position="after">
+                <field name="psc_procurement_keywords" string="采购关键词"/>
+                <separator/>
+                <filter name="psc_with_image" string="有图片" domain="[('image_1920', '!=', False)]"/>
+                <filter name="psc_without_image" string="无图片" domain="[('image_1920', '=', False)]"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="business_hub_main" model="psc.business.hub">
+        <field name="product_workspace_widget">ready</field>
+    </record>
+
+    <record id="view_psc_product_workspace_form" model="ir.ui.view">
+        <field name="name">psc.product.workspace.form</field>
+        <field name="model">psc.business.hub</field>
+        <field name="arch" type="xml">
+            <form string="产品工作台" create="false" edit="false" delete="false">
+                <sheet>
+                    <field name="product_workspace_widget" widget="psc_product_workspace" nolabel="1" readonly="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_psc_product_workspace" model="ir.actions.act_window">
+        <field name="name">产品工作台</field>
+        <field name="res_model">psc.business.hub</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_psc_product_workspace_form"/>
+        <field name="res_id" ref="business_hub_main"/>
+        <field name="target">current</field>
+    </record>
+
+    <menuitem id="menu_psc_product_workspace" name="产品工作台"
+              parent="menu_psc_category_supply_chain" action="action_psc_product_workspace" sequence="5"/>
+    <menuitem id="menu_psc_product_categories" name="产品分类"
+              parent="menu_psc_category_supply_chain" action="product.product_category_action_form" sequence="6"/>
+    <menuitem id="menu_psc_product_attributes" name="产品属性"
+              parent="menu_psc_category_supply_chain" action="product.attribute_action" sequence="7"/>
+</odoo>

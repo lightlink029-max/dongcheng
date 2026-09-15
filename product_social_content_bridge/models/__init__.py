@@ -7,3 +7,4 @@ from . import publishing_delivery
 from . import market_operations
 from . import ai_operations
 from . import business_hub
+from . import product_workspace

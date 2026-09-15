@@ -1,6 +1,6 @@
 {
     "name": "产品线社媒发布中心",
-    "version": "19.0.8.1.4",
+    "version": "19.0.8.2.0",
     "summary": "从赛道、产品池到ChatGPT协同、销售归因和持续优化的市场运营中心",
     "category": "Marketing/Social Marketing",
     "author": "LightLink",
@@ -26,12 +26,16 @@
         "views/res_config_settings_views.xml",
         "views/local_production_views.xml",
         "views/app_menu_categories.xml",
+        "views/product_workspace_views.xml",
     ],
     "assets": {
         "web.assets_backend": [
             "product_social_content_bridge/static/src/js/business_navigation.js",
             "product_social_content_bridge/static/src/xml/business_navigation.xml",
             "product_social_content_bridge/static/src/scss/business_navigation.scss",
+            "product_social_content_bridge/static/src/js/product_workspace.js",
+            "product_social_content_bridge/static/src/xml/product_workspace.xml",
+            "product_social_content_bridge/static/src/scss/product_workspace.scss",
         ],
     },
     "uninstall_hook": "uninstall_hook",

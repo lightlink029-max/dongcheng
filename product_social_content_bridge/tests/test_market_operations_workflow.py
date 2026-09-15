@@ -168,6 +168,68 @@ class MarketOperationsWorkflowCase(TransactionCase):
             [category["code"] for category in reset["categories"]],
         )
 
+    def test_product_workspace_reuses_odoo_products_and_combined_filters(self):
+        attribute = self.env["product.attribute"].create({
+            "name": "[AUTO TEST] Material",
+        })
+        attribute_value = self.env["product.attribute.value"].create({
+            "name": "[AUTO TEST] Recycled Cotton",
+            "attribute_id": attribute.id,
+        })
+        category = self.env["product.category"].create({
+            "name": "[AUTO TEST] Sustainable Bags",
+            "psc_attribute_template_ids": [(6, 0, attribute.ids)],
+        })
+        tag = self.env["product.tag"].create({"name": "[AUTO TEST] Export Ready"})
+        product = self.env["product.template"].create({
+            "name": "[AUTO TEST] Canvas Sourcing Bag",
+            "default_code": "AUTO-WORKSPACE-001",
+            "categ_id": category.id,
+            "product_tag_ids": [(6, 0, tag.ids)],
+            "psc_procurement_keywords": "workspace-needle, reusable tote",
+            "attribute_line_ids": [(0, 0, {
+                "attribute_id": attribute.id,
+                "value_ids": [(6, 0, attribute_value.ids)],
+            })],
+        })
+
+        self.assertIn(attribute, product.psc_category_attribute_template_ids)
+        payload = self.env["psc.business.hub"].get_product_workspace({
+            "keyword": "workspace-needle",
+            "category_id": category.id,
+            "attribute_value_id": attribute_value.id,
+            "tag_id": tag.id,
+            "image_status": "without_image",
+            "active_status": "active",
+        })
+        self.assertIn(product.id, [item["id"] for item in payload["products"]])
+        self.assertIn(
+            category.id,
+            [item["id"] for item in payload["filters"]["categories"]],
+        )
+        self.assertIn(
+            attribute_value.id,
+            [item["id"] for item in payload["filters"]["attribute_values"]],
+        )
+        self.assertIn(tag.id, [item["id"] for item in payload["filters"]["tags"]])
+
+        attribute_payload = self.env["psc.business.hub"].get_product_workspace({
+            "keyword": "Recycled Cotton",
+        })
+        self.assertIn(
+            product.id,
+            [item["id"] for item in attribute_payload["products"]],
+        )
+
+        procurement = next(
+            category for category in self.env["psc.business.hub"].get_sidebar_navigation()["categories"]
+            if category["code"] == "procurement_delivery"
+        )
+        self.assertIn(
+            self.env.ref("product_social_content_bridge.menu_psc_product_workspace").id,
+            [item["id"] for item in procurement["items"]],
+        )
+
     def test_dashboard_contains_native_operating_data_dashboard(self):
         if not self.env.registry.get("spreadsheet.dashboard"):
             self.skipTest("Dashboards app is not installed")

@@ -119,6 +119,13 @@ export class BusinessNavigation extends Component {
         await this.menu.selectMenu(target);
     }
 
+    onItemKeydown(event, item) {
+        if (!this.state.editMode && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault();
+            this.openMenu(item);
+        }
+    }
+
     onDragStart(event) {
         if (!this.state.editMode || this.state.saving) {
             event.preventDefault();
@@ -456,12 +463,6 @@ export class BusinessSidebar extends Component {
         await this.menu.selectMenu(target);
     }
 
-    onItemKeydown(event, item) {
-        if (!this.state.editMode && (event.key === "Enter" || event.key === " ")) {
-            event.preventDefault();
-            this.openMenu(item);
-        }
-    }
 }
 
 registry.category("fields").add("psc_business_navigation", {
