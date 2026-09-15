@@ -19,6 +19,23 @@
                 </div>
             </div>
 
+            <div class="o_psc_nav_add_category" t-if="state.editMode">
+                <label for="psc_new_nav_category">新增导航模块</label>
+                <input
+                    id="psc_new_nav_category"
+                    type="text"
+                    class="form-control"
+                    placeholder="例如：网站运营、工厂管理"
+                    maxlength="64"
+                    t-model="state.newCategoryName"
+                    t-on-keydown="onNewCategoryKeydown"
+                />
+                <button type="button" class="btn btn-primary" t-on-click="addCategory" t-att-disabled="state.saving">
+                    <i class="fa fa-plus me-1"/>添加模块
+                </button>
+                <span>添加后，把需要的功能入口拖入新模块。</span>
+            </div>
+
             <div class="o_psc_nav_loading" t-if="state.loading">
                 <i class="fa fa-spinner fa-spin me-2"/>正在加载功能导航…
             </div>
@@ -34,8 +51,29 @@
                     t-on-drop="dropAtEnd"
                 >
                     <header>
-                        <h3><i t-att-class="'fa ' + category.icon + ' me-2'"/><t t-esc="category.name"/></h3>
-                        <span><t t-esc="category.items.length"/> 项</span>
+                        <h3 t-if="!state.editMode || !category.custom"><i t-att-class="'fa ' + category.icon + ' me-2'"/><t t-esc="category.name"/></h3>
+                        <div class="o_psc_nav_category_name" t-else="">
+                            <i t-att-class="'fa ' + category.icon"/>
+                            <input
+                                type="text"
+                                class="form-control"
+                                maxlength="64"
+                                t-model="category.name"
+                                t-on-change="() => this.renameCategory(category)"
+                            />
+                        </div>
+                        <div class="o_psc_nav_category_tools">
+                            <button
+                                t-if="state.editMode &amp;&amp; category.custom"
+                                type="button"
+                                class="btn btn-sm btn-outline-danger"
+                                title="删除模块"
+                                t-on-click="() => this.removeCategory(category)"
+                            >
+                                <i class="fa fa-trash-o"/>
+                            </button>
+                            <span><t t-esc="category.items.length"/> 项</span>
+                        </div>
                     </header>
                     <div class="o_psc_nav_items">
                         <button

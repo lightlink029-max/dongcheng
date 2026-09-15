@@ -135,24 +135,32 @@ class MarketOperationsWorkflowCase(TransactionCase):
         procurement = next(
             section for section in layout if section["code"] == "procurement_delivery"
         )
-        procurement["menu_ids"] = list(reversed(procurement["menu_ids"]))
+        moved_menu_id = procurement["menu_ids"].pop()
+        layout.append({
+            "code": "custom_factory_ops",
+            "name": "工厂管理",
+            "menu_ids": [moved_menu_id],
+        })
 
         saved = hub.save_sidebar_navigation(layout)
         sidebar = hub.get_sidebar_navigation()
         self.assertEqual(saved["categories"], sidebar["categories"])
-        saved_procurement = next(
+        custom = next(
             category for category in sidebar["categories"]
-            if category["code"] == "procurement_delivery"
+            if category["code"] == "custom_factory_ops"
         )
-        self.assertEqual(
-            [item["id"] for item in saved_procurement["items"]],
-            procurement["menu_ids"],
-        )
+        self.assertTrue(custom["custom"])
+        self.assertEqual(custom["name"], "工厂管理")
+        self.assertEqual([item["id"] for item in custom["items"]], [moved_menu_id])
 
         reset = hub.reset_sidebar_navigation()
         self.assertEqual(
             [category["code"] for category in reset["categories"]],
             [category["code"] for category in initial["categories"]],
+        )
+        self.assertNotIn(
+            "custom_factory_ops",
+            [category["code"] for category in reset["categories"]],
         )
 
     def test_dashboard_contains_native_operating_data_dashboard(self):

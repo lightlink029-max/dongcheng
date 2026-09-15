@@ -1,4 +1,5 @@
 import json
+import re
 
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, ValidationError
@@ -95,6 +96,8 @@ SIDEBAR_NAVIGATION = (
 )
 
 SIDEBAR_LAYOUT_PARAMETER = "product_social_content_bridge.sidebar_navigation_layout"
+SIDEBAR_MAX_CATEGORIES = 20
+SIDEBAR_CUSTOM_CATEGORY_PATTERN = re.compile(r"custom_[a-z0-9_]{1,40}$")
 
 
 APP_MENU_GROUPS = {
@@ -741,11 +744,12 @@ class BusinessHub(models.Model):
     def get_sidebar_navigation(self):
         """Return the shared task-oriented navigation used by both navigation views."""
         visible_ids = self.env["ir.ui.menu"]._visible_menu_ids()
-        category_codes = {code for code, _name, _icon, _items in SIDEBAR_NAVIGATION}
-        menu_definitions = {}
-        default_layout = {
-            code: [] for code, _name, _icon, _items in SIDEBAR_NAVIGATION
+        category_definitions = {
+            code: {"name": name, "icon": icon}
+            for code, name, icon, _items in SIDEBAR_NAVIGATION
         }
+        menu_definitions = {}
+        default_layout = {code: [] for code in category_definitions}
         for code, _name, _icon, item_definitions in SIDEBAR_NAVIGATION:
             for xmlid, fallback_icon in item_definitions:
                 menu = self.env.ref(xmlid, raise_if_not_found=False)
@@ -755,6 +759,7 @@ class BusinessHub(models.Model):
                 default_layout[code].append(menu.id)
 
         configured_layout = {}
+        custom_categories = []
         raw_layout = self.env["ir.config_parameter"].sudo().get_param(
             SIDEBAR_LAYOUT_PARAMETER, ""
         )
@@ -762,17 +767,47 @@ class BusinessHub(models.Model):
             try:
                 values = json.loads(raw_layout)
                 if isinstance(values, dict):
-                    configured_ids = set()
-                    for code, menu_ids in values.items():
-                        if code not in category_codes or not isinstance(menu_ids, list):
+                    values = [
+                        {"code": code, "menu_ids": menu_ids}
+                        for code, menu_ids in values.items()
+                    ]
+                configured_ids = set()
+                configured_codes = set()
+                for section in values if isinstance(values, list) else []:
+                    if not isinstance(section, dict):
+                        continue
+                    code = section.get("code")
+                    menu_ids = section.get("menu_ids", [])
+                    is_custom = (
+                        isinstance(code, str)
+                        and SIDEBAR_CUSTOM_CATEGORY_PATTERN.fullmatch(code)
+                    )
+                    if (
+                        code in configured_codes
+                        or (code not in category_definitions and not is_custom)
+                        or not isinstance(menu_ids, list)
+                    ):
+                        continue
+                    custom_name = ""
+                    if is_custom:
+                        custom_name = str(section.get("name") or "").strip()
+                        if not custom_name:
                             continue
-                        configured_layout[code] = []
-                        for menu_id in menu_ids:
-                            if menu_id in menu_definitions and menu_id not in configured_ids:
-                                configured_layout[code].append(menu_id)
-                                configured_ids.add(menu_id)
+                    configured_codes.add(code)
+                    configured_layout[code] = []
+                    for menu_id in menu_ids:
+                        if menu_id in menu_definitions and menu_id not in configured_ids:
+                            configured_layout[code].append(menu_id)
+                            configured_ids.add(menu_id)
+                    if is_custom:
+                        custom_categories.append({
+                            "code": code,
+                            "name": custom_name[:64],
+                            "icon": "fa-folder-o",
+                        })
             except (TypeError, ValueError):
                 configured_layout = {}
+                custom_categories = []
 
         assigned_ids = {
             menu_id for menu_ids in configured_layout.values() for menu_id in menu_ids
@@ -784,10 +819,20 @@ class BusinessHub(models.Model):
             )
             assigned_ids.update(menu_ids)
 
+        category_list = [
+            {
+                "code": code,
+                "name": name,
+                "icon": icon,
+                "custom": False,
+            }
+            for code, name, icon, _items in SIDEBAR_NAVIGATION
+        ] + [dict(category, custom=True) for category in custom_categories]
         categories = []
-        for code, name, icon, _item_definitions in SIDEBAR_NAVIGATION:
+        for category in category_list:
+            code = category["code"]
             items = []
-            for menu_id in configured_layout[code]:
+            for menu_id in configured_layout.get(code, []):
                 definition = menu_definitions.get(menu_id)
                 if not definition or menu_id not in visible_ids:
                     continue
@@ -801,8 +846,9 @@ class BusinessHub(models.Model):
                 })
             categories.append({
                 "code": code,
-                "name": _(name),
-                "icon": icon,
+                "name": category["name"] if category["custom"] else _(category["name"]),
+                "icon": category["icon"],
+                "custom": category["custom"],
                 "items": items,
             })
         return {"categories": categories}
@@ -817,10 +863,10 @@ class BusinessHub(models.Model):
     def save_sidebar_navigation(self, layout):
         if not self.env.user.has_group("base.group_system"):
             raise AccessError(_("只有系统管理员可以调整左侧功能导航。"))
-        if not isinstance(layout, list) or len(layout) > len(SIDEBAR_NAVIGATION):
+        if not isinstance(layout, list) or len(layout) > SIDEBAR_MAX_CATEGORIES:
             raise ValidationError(_("左侧导航布局格式无效。"))
 
-        valid_codes = {code for code, _name, _icon, _items in SIDEBAR_NAVIGATION}
+        default_codes = {code for code, _name, _icon, _items in SIDEBAR_NAVIGATION}
         allowed_ids = set()
         for _code, _name, _icon, item_definitions in SIDEBAR_NAVIGATION:
             for xmlid, _fallback_icon in item_definitions:
@@ -830,28 +876,52 @@ class BusinessHub(models.Model):
 
         seen_codes = set()
         seen_ids = set()
-        normalized = {}
+        normalized = []
+        normalized_names = set()
         for section in layout:
             if not isinstance(section, dict):
                 raise ValidationError(_("左侧导航分类格式无效。"))
             code = section.get("code")
             menu_ids = section.get("menu_ids", [])
-            if code not in valid_codes or code in seen_codes or not isinstance(menu_ids, list):
+            is_custom = (
+                isinstance(code, str)
+                and SIDEBAR_CUSTOM_CATEGORY_PATTERN.fullmatch(code)
+            )
+            if (
+                (code not in default_codes and not is_custom)
+                or code in seen_codes
+                or not isinstance(menu_ids, list)
+            ):
                 raise ValidationError(_("左侧导航分类格式无效。"))
             seen_codes.add(code)
-            normalized[code] = []
+            if is_custom:
+                name = str(section.get("name") or "").strip()
+                if not name or len(name) > 64:
+                    raise ValidationError(_("自定义模块名称不能为空、重复或超过 64 个字符。"))
+            else:
+                name = next(
+                    label for default_code, label, _icon, _items in SIDEBAR_NAVIGATION
+                    if default_code == code
+                )
+            if name.casefold() in normalized_names:
+                raise ValidationError(_("自定义模块名称不能为空、重复或超过 64 个字符。"))
+            normalized_names.add(name.casefold())
+            normalized_section = {"code": code, "name": name, "menu_ids": []}
             for menu_id in menu_ids:
                 if not isinstance(menu_id, int) or menu_id not in allowed_ids or menu_id in seen_ids:
                     raise ValidationError(_("左侧导航包含无效或重复的菜单。"))
                 seen_ids.add(menu_id)
-                normalized[code].append(menu_id)
+                normalized_section["menu_ids"].append(menu_id)
+            normalized.append(normalized_section)
 
+        if not default_codes.issubset(seen_codes):
+            raise ValidationError(_("六个默认导航模块必须保留。"))
         visible_allowed_ids = allowed_ids & self.env["ir.ui.menu"]._visible_menu_ids()
         if seen_ids != visible_allowed_ids:
             raise ValidationError(_("必须保留所有当前可见的左侧功能入口。"))
         self.env["ir.config_parameter"].sudo().set_param(
             SIDEBAR_LAYOUT_PARAMETER,
-            json.dumps(normalized),
+            json.dumps(normalized, ensure_ascii=False),
         )
         return self.get_managed_sidebar_navigation()
 

@@ -61,6 +61,7 @@ export class BusinessNavigation extends Component {
             canEdit: false,
             categories: [],
             draggedMenuId: null,
+            newCategoryName: "",
             status: "",
         });
         onWillStart(() => this.loadNavigation());
@@ -192,8 +193,64 @@ export class BusinessNavigation extends Component {
     serializeLayout() {
         return this.state.categories.map((category) => ({
             code: category.code,
+            name: category.name,
             menu_ids: category.items.map((item) => item.id),
         }));
+    }
+
+    async addCategory() {
+        if (!this.state.editMode || this.state.saving) {
+            return;
+        }
+        const name = this.state.newCategoryName.trim();
+        if (!name) {
+            this.notification.add("请先填写新模块名称。", { type: "warning" });
+            return;
+        }
+        if (this.state.categories.length >= 20) {
+            this.notification.add("最多可以保留 20 个导航模块。", { type: "warning" });
+            return;
+        }
+        this.state.categories.push({
+            code: `custom_${Date.now().toString(36)}`,
+            name,
+            icon: "fa-folder-o",
+            custom: true,
+            items: [],
+        });
+        this.state.newCategoryName = "";
+        await this.saveLayout();
+    }
+
+    onNewCategoryKeydown(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            this.addCategory();
+        }
+    }
+
+    async renameCategory(category) {
+        category.name = category.name.trim();
+        if (!category.name) {
+            this.notification.add("模块名称不能为空。", { type: "warning" });
+            await this.loadNavigation();
+            return;
+        }
+        await this.saveLayout();
+    }
+
+    async removeCategory(category) {
+        if (!category.custom) {
+            return;
+        }
+        if (category.items.length) {
+            this.notification.add("请先把模块内的入口移到其他模块，再删除。", { type: "warning" });
+            return;
+        }
+        this.state.categories = this.state.categories.filter(
+            (candidate) => candidate.code !== category.code
+        );
+        await this.saveLayout();
     }
 
     async saveLayout() {

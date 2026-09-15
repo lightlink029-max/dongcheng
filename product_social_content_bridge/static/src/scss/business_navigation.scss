@@ -301,6 +301,29 @@
         font-size: .875rem;
     }
 
+    .o_psc_nav_add_category {
+        display: grid;
+        grid-template-columns: auto minmax(220px, 420px) auto 1fr;
+        gap: .75rem;
+        align-items: center;
+        margin-bottom: 1rem;
+        border: 1px solid #cfe2e0;
+        border-radius: .75rem;
+        padding: .85rem 1rem;
+        background: #f5fbfa;
+
+        label {
+            margin: 0;
+            color: #0c5250;
+            font-weight: 700;
+        }
+
+        span {
+            color: #6b7b80;
+            font-size: .875rem;
+        }
+    }
+
     .o_psc_nav_loading,
     .o_psc_nav_empty {
         padding: 1rem;
@@ -354,6 +377,27 @@
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: .75rem;
         min-height: 5.75rem;
+    }
+
+    .o_psc_nav_category_name {
+        display: flex;
+        flex: 1 1 auto;
+        gap: .6rem;
+        align-items: center;
+        min-width: 180px;
+        color: #0c5250;
+
+        input {
+            max-width: 280px;
+            font-weight: 700;
+        }
+    }
+
+    .o_psc_nav_category_tools {
+        display: flex;
+        gap: .65rem;
+        align-items: center;
+        margin-left: auto;
     }
 
     .o_psc_nav_item {
@@ -440,6 +484,10 @@
     }
 
     @media (max-width: 768px) {
+        .o_psc_nav_add_category {
+            grid-template-columns: 1fr;
+        }
+
         .o_psc_nav_sections {
             grid-template-columns: 1fr;
         }
