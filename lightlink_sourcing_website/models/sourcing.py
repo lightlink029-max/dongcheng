@@ -23,19 +23,26 @@ REQUEST_TYPES = [
 class Website(models.Model):
     _inherit = "website"
 
+    ll_business_type = fields.Selection([
+        ("general", "通用企业网站"),
+        ("sourcing_agency", "采购代理网站"),
+        ("factory", "工厂网站"),
+    ], string="网站业务类型", required=True, default="general", index=True)
+    ll_operations_note = fields.Text(
+        string="运营说明",
+        help="记录该网站的定位、负责人和当前运营重点，仅供内部使用。",
+    )
     sourcing_enabled = fields.Boolean(string="独立采购服务网站")
     sourcing_brand_name = fields.Char(
-        string="采购网站品牌名", default="LightLink Global Sourcing", translate=True,
+        string="网站品牌名", translate=True,
     )
     sourcing_tagline = fields.Char(
-        string="采购网站标语",
-        default="China sourcing, product development and delivery control",
-        translate=True,
+        string="网站标语", translate=True,
     )
-    sourcing_service_email = fields.Char(string="采购服务邮箱")
-    sourcing_whatsapp_url = fields.Char(string="采购服务 WhatsApp 链接")
+    sourcing_service_email = fields.Char(string="服务邮箱")
+    sourcing_whatsapp_url = fields.Char(string="WhatsApp 链接")
     sourcing_project_ids = fields.One2many(
-        "psc.publishing.project", "website_id", string="采购运营项目",
+        "psc.publishing.project", "website_id", string="网站运营项目",
     )
     sourcing_asset_ids = fields.One2many(
         "ll.sourcing.asset", "website_id", string="网站图片资产",
@@ -44,7 +51,7 @@ class Website(models.Model):
         "ll.sourcing.offering", "website_id", string="服务与解决方案",
     )
     sourcing_content_page_ids = fields.One2many(
-        "ll.sourcing.content.page", "website_id", string="采购网站内容页面",
+        "ll.sourcing.content.page", "website_id", string="网站内容页面",
     )
     sourcing_metric_ids = fields.One2many(
         "ll.sourcing.metric", "website_id", string="可信经营数据",
@@ -56,8 +63,95 @@ class Website(models.Model):
         "ll.sourcing.payment.method", "website_id", string="付款方式",
     )
     sourcing_footer_column_ids = fields.One2many(
-        "ll.sourcing.footer.column", "website_id", string="采购网站页脚",
+        "ll.sourcing.footer.column", "website_id", string="网站页脚",
     )
+    ll_factory_capability_ids = fields.One2many(
+        "ll.website.factory.capability", "website_id", string="工厂能力",
+    )
+    ll_product_presentation_ids = fields.One2many(
+        "ll.website.product.presentation", "website_id", string="网站产品内容",
+    )
+    ll_source_lead_ids = fields.One2many(
+        "crm.lead", "ll_source_website_id", string="网站线索",
+    )
+    ll_source_requirement_ids = fields.One2many(
+        "psc.customer.requirement", "website_id", string="网站询盘",
+    )
+    ll_source_touchpoint_ids = fields.One2many(
+        "psc.customer.touchpoint", "website_id", string="网站触点",
+    )
+    ll_menu_ids = fields.One2many(
+        "website.menu", "website_id", string="网站导航",
+    )
+    ll_product_category_ids = fields.One2many(
+        "product.public.category", "website_id", string="网站产品分类",
+    )
+    ll_project_count = fields.Integer(string="运营项目", compute="_compute_ll_operations_counts")
+    ll_page_count = fields.Integer(string="网站页面", compute="_compute_ll_operations_counts")
+    ll_asset_count = fields.Integer(string="图片素材", compute="_compute_ll_operations_counts")
+    ll_inquiry_count = fields.Integer(string="网站询盘", compute="_compute_ll_operations_counts")
+    ll_factory_capability_count = fields.Integer(
+        string="工厂能力", compute="_compute_ll_operations_counts",
+    )
+    ll_product_presentation_count = fields.Integer(
+        string="产品内容", compute="_compute_ll_operations_counts",
+    )
+
+    def _compute_ll_operations_counts(self):
+        for website in self:
+            website.ll_project_count = len(website.sourcing_project_ids)
+            website.ll_page_count = len(website.sourcing_content_page_ids)
+            website.ll_asset_count = len(website.sourcing_asset_ids)
+            website.ll_inquiry_count = len(website.ll_source_requirement_ids)
+            website.ll_factory_capability_count = len(website.ll_factory_capability_ids)
+            website.ll_product_presentation_count = len(website.ll_product_presentation_ids)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for values in vals_list:
+            if "ll_business_type" in values and "sourcing_enabled" not in values:
+                values["sourcing_enabled"] = values["ll_business_type"] == "sourcing_agency"
+        return super().create(vals_list)
+
+    def write(self, values):
+        if "ll_business_type" in values and "sourcing_enabled" not in values:
+            values = dict(values, sourcing_enabled=values["ll_business_type"] == "sourcing_agency")
+        return super().write(values)
+
+    def _ll_open_related(self, model, name, domain=None):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": name,
+            "res_model": model,
+            "view_mode": "list,form",
+            "domain": domain or [("website_id", "=", self.id)],
+            "context": {"default_website_id": self.id},
+        }
+
+    def action_ll_open_projects(self):
+        return self._ll_open_related("psc.publishing.project", _("网站运营项目"))
+
+    def action_ll_open_pages(self):
+        return self._ll_open_related("ll.sourcing.content.page", _("网站页面与指南"))
+
+    def action_ll_open_assets(self):
+        return self._ll_open_related("ll.sourcing.asset", _("网站图片素材"))
+
+    def action_ll_open_inquiries(self):
+        return self._ll_open_related("psc.customer.requirement", _("网站询盘"))
+
+    def action_ll_open_factory_capabilities(self):
+        return self._ll_open_related("ll.website.factory.capability", _("工厂能力"))
+
+    def action_ll_open_product_presentations(self):
+        return self._ll_open_related("ll.website.product.presentation", _("网站产品内容"))
+
+    def action_ll_open_public_site(self):
+        self.ensure_one()
+        base_url = (self.domain or self.get_base_url()).rstrip("/")
+        path = "/sourcing" if self.ll_business_type == "sourcing_agency" else "/"
+        return {"type": "ir.actions.act_url", "url": "%s%s" % (base_url, path), "target": "new"}
 
     @api.model
     def initialize_lightlink_sourcing_site(self):
@@ -68,7 +162,10 @@ class Website(models.Model):
         if not website:
             return False
 
-        website_values = {"sourcing_enabled": True}
+        website_values = {
+            "sourcing_enabled": True,
+            "ll_business_type": "sourcing_agency",
+        }
         language = self.env["res.lang"].search([
             ("code", "in", ("en_US", "en_GB")), ("active", "=", True),
         ], order="code desc", limit=1)
@@ -540,6 +637,106 @@ class SourcingFooterLink(models.Model):
     active = fields.Boolean(default=True)
 
 
+class WebsiteFactoryCapability(models.Model):
+    _name = "ll.website.factory.capability"
+    _description = "工厂网站能力内容"
+    _order = "category, sequence, id"
+
+    name = fields.Char(string="能力名称", required=True, translate=True)
+    category = fields.Selection([
+        ("profile", "工厂介绍"),
+        ("production_line", "生产线"),
+        ("equipment", "设备"),
+        ("process", "生产工艺"),
+        ("quality", "质量控制"),
+        ("certification", "认证资质"),
+        ("case", "客户案例"),
+        ("factory_tour", "验厂与参观"),
+    ], string="能力类型", required=True, default="profile", index=True)
+    website_id = fields.Many2one(
+        "website", string="工厂网站", required=True, ondelete="cascade", index=True,
+    )
+    summary = fields.Text(string="公开摘要", required=True, translate=True)
+    body_html = fields.Html(string="详细内容", translate=True)
+    image_asset_id = fields.Many2one(
+        "ll.sourcing.asset", string="展示图片", ondelete="set null",
+    )
+    evidence_note = fields.Text(
+        string="核实依据",
+        help="填写设备台账、认证文件、验厂记录或其他可复核依据。",
+    )
+    evidence_url = fields.Char(string="证据链接")
+    verified = fields.Boolean(string="已核实", default=False, index=True)
+    published = fields.Boolean(string="网站发布", default=False, index=True)
+    sequence = fields.Integer(default=10)
+    active = fields.Boolean(default=True)
+
+    @api.constrains("published", "verified", "evidence_note")
+    def _check_publish_evidence(self):
+        for record in self:
+            if record.published and (not record.verified or not record.evidence_note):
+                raise ValidationError(_("工厂能力发布前必须完成核实并填写核实依据。"))
+
+    @api.constrains("website_id", "image_asset_id")
+    def _check_image_website(self):
+        for record in self:
+            if record.image_asset_id and record.image_asset_id.website_id != record.website_id:
+                raise ValidationError(_("工厂能力与展示图片必须属于同一个网站。"))
+
+
+class WebsiteProductPresentation(models.Model):
+    _name = "ll.website.product.presentation"
+    _description = "网站产品展示内容"
+    _rec_name = "public_name"
+    _order = "sequence, id"
+
+    website_id = fields.Many2one(
+        "website", string="网站", required=True, ondelete="cascade", index=True,
+    )
+    product_tmpl_id = fields.Many2one(
+        "product.template", string="Odoo 产品", required=True, ondelete="cascade", index=True,
+    )
+    public_name = fields.Char(string="网站展示名称", required=True, translate=True)
+    summary = fields.Text(string="产品摘要", required=True, translate=True)
+    application_scenarios = fields.Text(string="应用场景", translate=True)
+    moq_text = fields.Char(string="起订量说明", translate=True)
+    customization_scope = fields.Text(string="定制范围", translate=True)
+    manufacturing_process = fields.Text(string="生产与质量说明", translate=True)
+    call_to_action = fields.Selection([
+        ("quote", "获取报价"),
+        ("sample", "申请样品"),
+        ("contact", "联系咨询"),
+    ], string="主要行动按钮", required=True, default="quote")
+    image_asset_id = fields.Many2one(
+        "ll.sourcing.asset", string="展示图片", ondelete="set null",
+    )
+    evidence_note = fields.Text(
+        string="核实依据",
+        help="记录规格、起订量、定制范围和生产信息的内部依据。",
+    )
+    verified = fields.Boolean(string="已核实", default=False, index=True)
+    published = fields.Boolean(string="网站发布", default=False, index=True)
+    featured = fields.Boolean(string="重点展示", default=False)
+    sequence = fields.Integer(default=10)
+    active = fields.Boolean(default=True)
+
+    _website_product_unique = models.Constraint(
+        "UNIQUE(website_id, product_tmpl_id)", "同一网站不能重复配置同一个产品。",
+    )
+
+    @api.constrains("published", "verified", "evidence_note")
+    def _check_publish_evidence(self):
+        for record in self:
+            if record.published and (not record.verified or not record.evidence_note):
+                raise ValidationError(_("网站产品发布前必须完成核实并填写核实依据。"))
+
+    @api.constrains("website_id", "image_asset_id")
+    def _check_image_website(self):
+        for record in self:
+            if record.image_asset_id and record.image_asset_id.website_id != record.website_id:
+                raise ValidationError(_("网站产品与展示图片必须属于同一个网站。"))
+
+
 class PublishingProject(models.Model):
     _inherit = "psc.publishing.project"
 
@@ -582,6 +779,25 @@ class CustomerRequirement(models.Model):
         "requirement_id",
         "attachment_id",
         string="客户附件",
+    )
+    website_id = fields.Many2one(
+        "website", string="来源网站", index=True, ondelete="set null",
+    )
+
+
+class CustomerTouchpoint(models.Model):
+    _inherit = "psc.customer.touchpoint"
+
+    website_id = fields.Many2one(
+        "website", string="来源网站", index=True, ondelete="set null",
+    )
+
+
+class CrmLead(models.Model):
+    _inherit = "crm.lead"
+
+    ll_source_website_id = fields.Many2one(
+        "website", string="来源网站", index=True, ondelete="set null",
     )
 
 

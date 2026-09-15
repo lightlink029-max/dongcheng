@@ -494,6 +494,7 @@ class LightLinkSourcingWebsite(http.Controller):
             query = urlencode({"error": "missing"})
             return request.redirect("/sourcing/request?%s" % query)
 
+        website = self._sourcing_website()
         project = self._active_project()
         country = request.env["res.country"]
         if str(post.get("country_id", "")).isdigit():
@@ -502,7 +503,6 @@ class LightLinkSourcingWebsite(http.Controller):
         product_id = int(post["product_id"]) if str(post.get("product_id", "")).isdigit() else False
         product = request.env["product.template"]
         if product_id:
-            website = self._sourcing_website()
             product = request.env["product.template"].sudo().search(
                 Domain("id", "=", product_id) & website.sale_product_domain(),
                 limit=1,
@@ -522,6 +522,7 @@ class LightLinkSourcingWebsite(http.Controller):
                 "country_id": country_id,
                 "description": self._lead_description(post),
                 "psc_project_id": project.id if project else False,
+                "ll_source_website_id": website.id,
             }
         )
 
@@ -551,6 +552,7 @@ class LightLinkSourcingWebsite(http.Controller):
                     "reference_url": self._clean(post.get("reference_url"), 1000),
                     "website_source_url": self._clean(request.httprequest.referrer, 1000),
                     "website_language": request.env.lang,
+                    "website_id": website.id,
                 }
             )
 
@@ -560,6 +562,7 @@ class LightLinkSourcingWebsite(http.Controller):
                 "event_type": "inquiry",
                 "source_type": "website",
                 "project_id": project.id if project else False,
+                "website_id": website.id,
                 "product_id": product.id if product else False,
                 "landing_url": self._clean(request.httprequest.referrer, 1000),
                 "utm_source": self._clean(post.get("utm_source"), 120),

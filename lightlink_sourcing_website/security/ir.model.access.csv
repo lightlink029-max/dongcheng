@@ -10,3 +10,5 @@ access_ll_sourcing_testimonial_user,ll.sourcing.testimonial user,model_ll_sourci
 access_ll_sourcing_payment_method_user,ll.sourcing.payment.method user,model_ll_sourcing_payment_method,base.group_user,1,1,1,1
 access_ll_sourcing_footer_column_user,ll.sourcing.footer.column user,model_ll_sourcing_footer_column,base.group_user,1,1,1,1
 access_ll_sourcing_footer_link_user,ll.sourcing.footer.link user,model_ll_sourcing_footer_link,base.group_user,1,1,1,1
+access_ll_website_factory_capability_user,ll.website.factory.capability user,model_ll_website_factory_capability,base.group_user,1,1,1,1
+access_ll_website_product_presentation_user,ll.website.product.presentation user,model_ll_website_product_presentation,base.group_user,1,1,1,1

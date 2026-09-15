@@ -33,6 +33,7 @@
         <field name="inherit_id" ref="product_social_content_bridge.view_psc_customer_requirement_list"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='organization_type']" position="before">
+                <field name="website_id" optional="show"/>
                 <field name="request_type" optional="show"/>
                 <field name="product_category" optional="show"/>
             </xpath>
@@ -56,6 +57,7 @@
                     <group>
                         <group string="客户与来源">
                             <field name="lead_id"/>
+                            <field name="website_id"/>
                             <field name="project_id"/>
                             <field name="track_id"/>
                             <field name="website_source_url" widget="url"/>

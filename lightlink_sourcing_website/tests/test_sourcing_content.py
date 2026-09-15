@@ -129,3 +129,62 @@ class TestSourcingContent(TransactionCase):
             asset = self.env.ref("lightlink_sourcing_website.%s" % xmlid)
             self.assertTrue(asset.image)
             self.assertTrue(asset.alt_text)
+
+    def test_multi_website_operations_and_factory_content(self):
+        sourcing_website = self.env.ref(
+            "lightlink_sourcing_website.website_global_sourcing"
+        )
+        self.assertEqual(sourcing_website.ll_business_type, "sourcing_agency")
+        self.assertTrue(sourcing_website.sourcing_enabled)
+
+        factory_website = self.env["website"].create({
+            "name": "Test Factory Website",
+            "ll_business_type": "factory",
+        })
+        self.assertFalse(factory_website.sourcing_enabled)
+
+        capability = self.env["ll.website.factory.capability"].create({
+            "website_id": factory_website.id,
+            "category": "production_line",
+            "name": "Test production line",
+            "summary": "Verified production line summary",
+            "evidence_note": "Internal equipment register TEST-001",
+            "verified": True,
+            "published": True,
+        })
+        self.assertEqual(capability.website_id, factory_website)
+        self.assertEqual(factory_website.ll_factory_capability_count, 1)
+
+        product = self.env["product.template"].create({"name": "Test factory product"})
+        presentation = self.env["ll.website.product.presentation"].create({
+            "website_id": factory_website.id,
+            "product_tmpl_id": product.id,
+            "public_name": "Factory product for website",
+            "summary": "Site-specific verified product summary",
+            "evidence_note": "Internal product sheet TEST-PRODUCT-001",
+            "verified": True,
+            "published": True,
+        })
+        self.assertEqual(presentation.website_id, factory_website)
+        self.assertEqual(factory_website.ll_product_presentation_count, 1)
+
+        lead = self.env["crm.lead"].create({
+            "name": "Factory website inquiry",
+            "type": "lead",
+            "ll_source_website_id": factory_website.id,
+        })
+        self.assertEqual(lead.ll_source_website_id, factory_website)
+
+    def test_factory_claim_requires_evidence_before_publication(self):
+        factory_website = self.env["website"].create({
+            "name": "Unverified Factory Website",
+            "ll_business_type": "factory",
+        })
+        with self.assertRaises(ValidationError):
+            self.env["ll.website.factory.capability"].create({
+                "website_id": factory_website.id,
+                "category": "certification",
+                "name": "Unverified certification",
+                "summary": "Must not be published",
+                "published": True,
+            })

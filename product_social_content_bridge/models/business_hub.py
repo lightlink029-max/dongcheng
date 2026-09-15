@@ -36,7 +36,7 @@ SIDEBAR_NAVIGATION = (
             ("product_social_content_bridge.menu_psc_contents", "fa-file-text-o"),
             ("product_social_content_bridge.menu_psc_assets", "fa-picture-o"),
             ("product_social_content_bridge.menu_psc_publication_tasks", "fa-paper-plane"),
-            ("website.menu_website_configuration", "fa-globe"),
+            ("lightlink_sourcing_website.menu_ll_sourcing_root", "fa-globe"),
             ("social.menu_social_global", "fa-share-alt"),
             ("mass_mailing.mass_mailing_menu_root", "fa-envelope-o"),
         ),

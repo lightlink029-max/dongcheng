@@ -3,6 +3,7 @@
     <record id="website_global_sourcing" model="website">
         <field name="name">LightLink Global Sourcing</field>
         <field name="company_id" ref="base.main_company"/>
+        <field name="ll_business_type">sourcing_agency</field>
         <field name="sourcing_enabled" eval="True"/>
         <field name="sourcing_brand_name">LightLink Global Sourcing</field>
         <field name="sourcing_tagline">China sourcing, product development and delivery control</field>

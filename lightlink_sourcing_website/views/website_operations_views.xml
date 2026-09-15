@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_ll_website_operations_search" model="ir.ui.view">
+        <field name="name">website.operations.search</field>
+        <field name="model">website</field>
+        <field name="arch" type="xml">
+            <search string="网站运营中心">
+                <field name="name"/>
+                <field name="domain"/>
+                <field name="ll_business_type"/>
+                <filter string="采购代理网站" name="sourcing_agency" domain="[('ll_business_type', '=', 'sourcing_agency')]"/>
+                <filter string="工厂网站" name="factory" domain="[('ll_business_type', '=', 'factory')]"/>
+                <filter string="通用企业网站" name="general" domain="[('ll_business_type', '=', 'general')]"/>
+                <group expand="0" string="分组">
+                    <filter string="网站类型" name="group_business_type" context="{'group_by': 'll_business_type'}"/>
+                    <filter string="公司" name="group_company" context="{'group_by': 'company_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_ll_website_operations_kanban" model="ir.ui.view">
+        <field name="name">website.operations.kanban</field>
+        <field name="model">website</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile" quick_create="false">
+                <field name="name"/>
+                <field name="domain"/>
+                <field name="ll_business_type"/>
+                <field name="sourcing_brand_name"/>
+                <field name="default_lang_id"/>
+                <field name="ll_project_count"/>
+                <field name="ll_page_count"/>
+                <field name="ll_asset_count"/>
+                <field name="ll_inquiry_count"/>
+                <field name="ll_factory_capability_count"/>
+                <field name="ll_product_presentation_count"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <strong class="fs-4"><field name="name"/></strong>
+                            <field name="ll_business_type" widget="badge"/>
+                        </div>
+                        <div class="text-muted mb-2" t-if="record.domain.value">
+                            <i class="fa fa-globe me-1"/><field name="domain"/>
+                        </div>
+                        <div class="mb-3" t-if="record.sourcing_brand_name.value">
+                            <field name="sourcing_brand_name"/>
+                        </div>
+                        <div class="row g-2 text-center">
+                            <div class="col-4"><strong><field name="ll_project_count"/></strong><br/><span class="text-muted">项目</span></div>
+                            <div class="col-4"><strong><field name="ll_page_count"/></strong><br/><span class="text-muted">页面</span></div>
+                            <div class="col-4"><strong><field name="ll_asset_count"/></strong><br/><span class="text-muted">素材</span></div>
+                            <div class="col-4 mt-2"><strong><field name="ll_product_presentation_count"/></strong><br/><span class="text-muted">产品</span></div>
+                            <div class="col-4 mt-2"><strong><field name="ll_factory_capability_count"/></strong><br/><span class="text-muted">工厂能力</span></div>
+                            <div class="col-4 mt-2"><strong><field name="ll_inquiry_count"/></strong><br/><span class="text-muted">询盘</span></div>
+                        </div>
+                        <footer class="mt-3 border-top pt-2">
+                            <span class="text-muted">默认语言：</span><field name="default_lang_id"/>
+                        </footer>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_ll_website_operations_list" model="ir.ui.view">
+        <field name="name">website.operations.list</field>
+        <field name="model">website</field>
+        <field name="arch" type="xml">
+            <list string="网站运营中心" delete="0">
+                <field name="name"/>
+                <field name="ll_business_type" widget="badge"/>
+                <field name="domain"/>
+                <field name="default_lang_id"/>
+                <field name="ll_project_count"/>
+                <field name="ll_page_count"/>
+                <field name="ll_asset_count"/>
+                <field name="ll_product_presentation_count"/>
+                <field name="ll_factory_capability_count"/>
+                <field name="ll_inquiry_count"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ll_website_operations_form" model="ir.ui.view">
+        <field name="name">website.operations.form</field>
+        <field name="model">website</field>
+        <field name="arch" type="xml">
+            <form string="网站运营中心" delete="0">
+                <header>
+                    <button name="action_ll_open_public_site" type="object" string="打开网站" class="btn-primary" icon="fa-external-link"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_ll_open_projects" type="object" class="oe_stat_button" icon="fa-briefcase">
+                            <field name="ll_project_count" widget="statinfo" string="运营项目"/>
+                        </button>
+                        <button name="action_ll_open_pages" type="object" class="oe_stat_button" icon="fa-file-text-o">
+                            <field name="ll_page_count" widget="statinfo" string="页面"/>
+                        </button>
+                        <button name="action_ll_open_assets" type="object" class="oe_stat_button" icon="fa-picture-o">
+                            <field name="ll_asset_count" widget="statinfo" string="图片素材"/>
+                        </button>
+                        <button name="action_ll_open_product_presentations" type="object" class="oe_stat_button" icon="fa-cube">
+                            <field name="ll_product_presentation_count" widget="statinfo" string="产品内容"/>
+                        </button>
+                        <button name="action_ll_open_factory_capabilities" type="object" class="oe_stat_button" icon="fa-industry" invisible="ll_business_type != 'factory'">
+                            <field name="ll_factory_capability_count" widget="statinfo" string="工厂能力"/>
+                        </button>
+                        <button name="action_ll_open_inquiries" type="object" class="oe_stat_button" icon="fa-comments-o">
+                            <field name="ll_inquiry_count" widget="statinfo" string="网站询盘"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name" string="网站名称"/>
+                        <h1><field name="name" placeholder="例如：LightLink 采购代理官网"/></h1>
+                    </div>
+                    <div class="alert alert-info" role="alert">
+                        先选择网站业务类型，再维护该网站自己的页面、素材、产品内容和询盘。CRM、产品主数据与素材能力可复用，公开内容按网站隔离。
+                    </div>
+                    <group>
+                        <group string="网站身份">
+                            <field name="ll_business_type"/>
+                            <field name="domain" placeholder="例如 https://factory.example.com"/>
+                            <field name="sourcing_brand_name" string="网站品牌名"/>
+                            <field name="sourcing_tagline" string="网站标语"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="语言与联系">
+                            <field name="default_lang_id"/>
+                            <field name="language_ids" widget="many2many_tags"/>
+                            <field name="sourcing_service_email" string="服务邮箱" widget="email"/>
+                            <field name="sourcing_whatsapp_url" string="WhatsApp 链接" widget="url"/>
+                            <field name="sourcing_enabled" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="运营总览" name="operations_overview">
+                            <group string="内部运营说明">
+                                <field name="ll_operations_note" nolabel="1" placeholder="记录网站定位、目标客户、负责人、当前重点和下一步。"/>
+                            </group>
+                            <group string="网站对应的运营项目">
+                                <field name="sourcing_project_ids" context="{'default_website_id': id}">
+                                    <list>
+                                        <field name="name"/>
+                                        <field name="operation_state" widget="badge"/>
+                                        <field name="website_inquiry_enabled"/>
+                                        <field name="user_id"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                        <page string="页面与导航" name="pages_navigation">
+                            <group string="头部导航">
+                                <field name="ll_menu_ids" context="{'default_website_id': id}">
+                                    <list editable="bottom">
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="name"/>
+                                        <field name="parent_id" domain="[('website_id', '=', parent.id)]"/>
+                                        <field name="url"/>
+                                        <field name="new_window"/>
+                                    </list>
+                                </field>
+                            </group>
+                            <group string="网站页面与指南">
+                                <field name="sourcing_content_page_ids" context="{'default_website_id': id}">
+                                    <list>
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="name"/>
+                                        <field name="code"/>
+                                        <field name="published"/>
+                                        <field name="active"/>
+                                    </list>
+                                </field>
+                            </group>
+                            <group string="网站页脚">
+                                <field name="sourcing_footer_column_ids" context="{'default_website_id': id}">
+                                    <list>
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="name"/>
+                                        <field name="column_type"/>
+                                        <field name="published"/>
+                                        <field name="active"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                        <page string="图片素材" name="website_assets">
+                            <field name="sourcing_asset_ids" context="{'default_website_id': id}">
+                                <list>
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="image" widget="image" options="{'size': [96, 64]}"/>
+                                    <field name="name"/>
+                                    <field name="key"/>
+                                    <field name="alt_text"/>
+                                    <field name="active"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="采购服务与方案" name="sourcing_services" invisible="ll_business_type != 'sourcing_agency'">
+                            <field name="sourcing_offering_ids" context="{'default_website_id': id}">
+                                <list>
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="kind" widget="badge"/>
+                                    <field name="name"/>
+                                    <field name="slug"/>
+                                    <field name="request_type"/>
+                                    <field name="featured"/>
+                                    <field name="active"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="工厂能力" name="factory_capabilities" invisible="ll_business_type != 'factory'">
+                            <div class="alert alert-warning" role="alert">
+                                设备、认证、产能、质量和案例必须有可复核依据，核实后才能发布。
+                            </div>
+                            <field name="ll_factory_capability_ids" context="{'default_website_id': id}">
+                                <list>
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="category" widget="badge"/>
+                                    <field name="name"/>
+                                    <field name="image_asset_id"/>
+                                    <field name="verified"/>
+                                    <field name="published"/>
+                                    <field name="active"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="产品与分类" name="products_categories">
+                            <group string="各网站独立的产品介绍">
+                                <field name="ll_product_presentation_ids" context="{'default_website_id': id}">
+                                    <list>
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="product_tmpl_id"/>
+                                        <field name="public_name"/>
+                                        <field name="call_to_action"/>
+                                        <field name="featured"/>
+                                        <field name="verified"/>
+                                        <field name="published"/>
+                                    </list>
+                                </field>
+                            </group>
+                            <group string="网站产品分类">
+                                <field name="ll_product_category_ids" context="{'default_website_id': id}">
+                                    <list>
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="name"/>
+                                        <field name="parent_id"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                        <page string="信任内容与支付" name="trust_payment">
+                            <group string="已核实经营数据">
+                                <field name="sourcing_metric_ids" context="{'default_website_id': id}">
+                                    <list><field name="sequence" widget="handle"/><field name="value_text"/><field name="label"/><field name="verified"/><field name="published"/></list>
+                                </field>
+                            </group>
+                            <group string="客户评价">
+                                <field name="sourcing_testimonial_ids" context="{'default_website_id': id}">
+                                    <list><field name="sequence" widget="handle"/><field name="client_name"/><field name="company_name"/><field name="permission_confirmed"/><field name="verified"/><field name="published"/></list>
+                                </field>
+                            </group>
+                            <group string="付款方式" invisible="ll_business_type != 'sourcing_agency'">
+                                <field name="sourcing_payment_method_ids" context="{'default_website_id': id}">
+                                    <list><field name="sequence" widget="handle"/><field name="name"/><field name="fee_note"/><field name="published"/><field name="active"/></list>
+                                </field>
+                            </group>
+                        </page>
+                        <page string="询盘与来源" name="inquiries_sources">
+                            <group string="网站询盘">
+                                <field name="ll_source_requirement_ids" readonly="1">
+                                    <list>
+                                        <field name="name"/>
+                                        <field name="lead_id"/>
+                                        <field name="project_id"/>
+                                        <field name="request_type"/>
+                                        <field name="product_category"/>
+                                        <field name="stage" widget="badge"/>
+                                        <field name="create_date"/>
+                                    </list>
+                                </field>
+                            </group>
+                            <group string="客户来源触点">
+                                <field name="ll_source_touchpoint_ids" readonly="1">
+                                    <list>
+                                        <field name="occurred_at"/>
+                                        <field name="lead_id"/>
+                                        <field name="event_type" widget="badge"/>
+                                        <field name="landing_url"/>
+                                        <field name="utm_source"/>
+                                        <field name="utm_campaign"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ll_factory_capability_search" model="ir.ui.view">
+        <field name="name">ll.website.factory.capability.search</field>
+        <field name="model">ll.website.factory.capability</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="website_id"/>
+                <field name="category"/>
+                <filter string="已发布" name="published" domain="[('published', '=', True)]"/>
+                <filter string="待核实" name="unverified" domain="[('verified', '=', False)]"/>
+                <group expand="0" string="分组"><filter string="网站" name="group_website" context="{'group_by': 'website_id'}"/><filter string="类型" name="group_category" context="{'group_by': 'category'}"/></group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_ll_factory_capability_list" model="ir.ui.view">
+        <field name="name">ll.website.factory.capability.list</field>
+        <field name="model">ll.website.factory.capability</field>
+        <field name="arch" type="xml">
+            <list decoration-success="published" decoration-warning="not verified">
+                <field name="sequence" widget="handle"/>
+                <field name="category" widget="badge"/>
+                <field name="name"/>
+                <field name="website_id"/>
+                <field name="image_asset_id"/>
+                <field name="verified"/>
+                <field name="published"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ll_factory_capability_form" model="ir.ui.view">
+        <field name="name">ll.website.factory.capability.form</field>
+        <field name="model">ll.website.factory.capability</field>
+        <field name="arch" type="xml">
+            <form string="工厂能力">
+                <sheet>
+                    <div class="oe_title"><h1><field name="name" placeholder="例如：注塑生产线"/></h1></div>
+                    <group>
+                        <group><field name="website_id" domain="[('ll_business_type', '=', 'factory')]"/><field name="category"/><field name="sequence"/><field name="active"/></group>
+                        <group><field name="image_asset_id" domain="[('website_id', '=', website_id)]"/><field name="verified"/><field name="published"/></group>
+                    </group>
+                    <group string="公开摘要"><field name="summary" nolabel="1"/></group>
+                    <notebook>
+                        <page string="详细内容"><field name="body_html" widget="html" nolabel="1"/></page>
+                        <page string="核实依据"><group><field name="evidence_note"/><field name="evidence_url" widget="url"/></group></page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ll_product_presentation_search" model="ir.ui.view">
+        <field name="name">ll.website.product.presentation.search</field>
+        <field name="model">ll.website.product.presentation</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="public_name"/>
+                <field name="product_tmpl_id"/>
+                <field name="website_id"/>
+                <filter string="重点展示" name="featured" domain="[('featured', '=', True)]"/>
+                <filter string="已发布" name="published" domain="[('published', '=', True)]"/>
+                <filter string="待核实" name="unverified" domain="[('verified', '=', False)]"/>
+                <group expand="0" string="分组"><filter string="网站" name="group_website" context="{'group_by': 'website_id'}"/></group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_ll_product_presentation_list" model="ir.ui.view">
+        <field name="name">ll.website.product.presentation.list</field>
+        <field name="model">ll.website.product.presentation</field>
+        <field name="arch" type="xml">
+            <list decoration-success="published" decoration-warning="not verified">
+                <field name="sequence" widget="handle"/>
+                <field name="public_name"/>
+                <field name="product_tmpl_id"/>
+                <field name="website_id"/>
+                <field name="call_to_action" widget="badge"/>
+                <field name="featured"/>
+                <field name="verified"/>
+                <field name="published"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ll_product_presentation_form" model="ir.ui.view">
+        <field name="name">ll.website.product.presentation.form</field>
+        <field name="model">ll.website.product.presentation</field>
+        <field name="arch" type="xml">
+            <form string="网站产品内容">
+                <sheet>
+                    <div class="oe_title"><h1><field name="public_name" placeholder="网站展示名称"/></h1></div>
+                    <group>
+                        <group><field name="website_id"/><field name="product_tmpl_id"/><field name="call_to_action"/><field name="sequence"/></group>
+                        <group><field name="image_asset_id" domain="[('website_id', '=', website_id)]"/><field name="featured"/><field name="verified"/><field name="published"/><field name="active"/></group>
+                    </group>
+                    <group string="产品摘要"><field name="summary" nolabel="1"/></group>
+                    <notebook>
+                        <page string="应用与采购"><group><field name="application_scenarios"/><field name="moq_text"/><field name="customization_scope"/></group></page>
+                        <page string="生产与质量"><field name="manufacturing_process" nolabel="1"/></page>
+                        <page string="核实依据"><field name="evidence_note" nolabel="1"/></page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_crm_lead_form_ll_source_website" model="ir.ui.view">
+        <field name="name">crm.lead.form.ll.source.website</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="product_social_content_bridge.view_crm_lead_form_psc_attribution"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='psc_project_id']" position="before">
+                <field name="ll_source_website_id"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_psc_customer_touchpoint_list_ll_website" model="ir.ui.view">
+        <field name="name">psc.customer.touchpoint.list.ll.website</field>
+        <field name="model">psc.customer.touchpoint</field>
+        <field name="inherit_id" ref="product_social_content_bridge.view_psc_customer_touchpoint_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='source_type']" position="after">
+                <field name="website_id" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_psc_customer_touchpoint_form_ll_website" model="ir.ui.view">
+        <field name="name">psc.customer.touchpoint.form.ll.website</field>
+        <field name="model">psc.customer.touchpoint</field>
+        <field name="arch" type="xml">
+            <form string="客户来源触点">
+                <sheet>
+                    <group>
+                        <group string="客户与来源"><field name="lead_id"/><field name="occurred_at"/><field name="event_type"/><field name="source_type"/><field name="website_id"/><field name="verified"/></group>
+                        <group string="归属"><field name="project_id"/><field name="market_id"/><field name="channel_id"/><field name="content_id"/><field name="product_id"/></group>
+                    </group>
+                    <notebook>
+                        <page string="入口与追踪"><group><field name="landing_url" widget="url"/><field name="external_reference"/><field name="utm_source"/><field name="utm_medium"/><field name="utm_campaign"/><field name="utm_content"/><field name="utm_term"/></group></page>
+                        <page string="说明"><field name="notes" nolabel="1"/></page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_ll_factory_capabilities" model="ir.actions.act_window">
+        <field name="name">工厂能力</field>
+        <field name="res_model">ll.website.factory.capability</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_ll_factory_capability_search"/>
+    </record>
+
+    <record id="action_ll_product_presentations" model="ir.actions.act_window">
+        <field name="name">网站产品内容</field>
+        <field name="res_model">ll.website.product.presentation</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_ll_product_presentation_search"/>
+    </record>
+
+    <record id="action_ll_sourcing_product_categories" model="ir.actions.act_window">
+        <field name="domain">[]</field>
+        <field name="context">{}</field>
+    </record>
+
+    <record id="action_ll_sourcing_website_menus" model="ir.actions.act_window">
+        <field name="domain">[('parent_id', '!=', False)]</field>
+        <field name="context">{}</field>
+    </record>
+
+    <record id="action_ll_sourcing_websites" model="ir.actions.act_window">
+        <field name="name">网站运营中心</field>
+        <field name="res_model">website</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[]</field>
+        <field name="search_view_id" ref="view_ll_website_operations_search"/>
+        <field name="views" eval="[(ref('view_ll_website_operations_kanban'), 'kanban'), (ref('view_ll_website_operations_list'), 'list'), (ref('view_ll_website_operations_form'), 'form')]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">创建或选择一个网站开始运营</p>
+            <p>采购代理站和工厂站共享 Odoo 的产品、CRM 与业务数据，公开页面、产品文案、工厂能力和询盘按网站隔离。</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_ll_sourcing_root" name="网站运营中心" parent="product_social_content_bridge.menu_psc_category_web_marketing" action="action_ll_sourcing_websites" sequence="5"/>
+    <menuitem id="menu_ll_sourcing_websites" name="网站总览与切换" parent="menu_ll_sourcing_root" action="action_ll_sourcing_websites" sequence="5"/>
+
+    <menuitem id="menu_ll_site_content" name="页面、导航与素材" parent="menu_ll_sourcing_root" sequence="20"/>
+    <record id="menu_ll_sourcing_website_menus" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_content"/><field name="sequence">10</field></record>
+    <record id="menu_ll_sourcing_content_pages" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_content"/><field name="sequence">20</field></record>
+    <record id="menu_ll_sourcing_assets" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_content"/><field name="sequence">30</field></record>
+    <record id="menu_ll_sourcing_footer_columns" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_content"/><field name="sequence">40</field></record>
+
+    <menuitem id="menu_ll_site_business" name="服务、产品与能力" parent="menu_ll_sourcing_root" sequence="30"/>
+    <record id="menu_ll_sourcing_offerings" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_business"/><field name="sequence">10</field></record>
+    <record id="menu_ll_sourcing_product_categories" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_business"/><field name="sequence">20</field></record>
+    <menuitem id="menu_ll_product_presentations" name="网站产品内容" parent="menu_ll_site_business" action="action_ll_product_presentations" sequence="30"/>
+    <menuitem id="menu_ll_factory_capabilities" name="工厂能力" parent="menu_ll_site_business" action="action_ll_factory_capabilities" sequence="40"/>
+
+    <menuitem id="menu_ll_site_trust" name="信任内容与支付" parent="menu_ll_sourcing_root" sequence="40"/>
+    <record id="menu_ll_sourcing_metrics" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_trust"/><field name="sequence">10</field></record>
+    <record id="menu_ll_sourcing_testimonials" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_trust"/><field name="sequence">20</field></record>
+    <record id="menu_ll_sourcing_payment_methods" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_trust"/><field name="sequence">30</field></record>
+
+    <menuitem id="menu_ll_site_inquiries" name="询盘与来源" parent="menu_ll_sourcing_root" sequence="50"/>
+    <record id="menu_ll_sourcing_inquiries" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_inquiries"/><field name="sequence">10</field></record>
+    <menuitem id="menu_ll_site_touchpoints" name="客户来源触点" parent="menu_ll_site_inquiries" action="product_social_content_bridge.action_psc_customer_touchpoints" sequence="20"/>
+</odoo>
