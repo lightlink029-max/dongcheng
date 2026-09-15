@@ -11,7 +11,7 @@
                 <filter string="采购代理网站" name="sourcing_agency" domain="[('ll_business_type', '=', 'sourcing_agency')]"/>
                 <filter string="工厂网站" name="factory" domain="[('ll_business_type', '=', 'factory')]"/>
                 <filter string="通用企业网站" name="general" domain="[('ll_business_type', '=', 'general')]"/>
-                <group expand="0" string="分组">
+                <group>
                     <filter string="网站类型" name="group_business_type" context="{'group_by': 'll_business_type'}"/>
                     <filter string="公司" name="group_company" context="{'group_by': 'company_id'}"/>
                 </group>
@@ -313,7 +313,7 @@
                 <field name="category"/>
                 <filter string="已发布" name="published" domain="[('published', '=', True)]"/>
                 <filter string="待核实" name="unverified" domain="[('verified', '=', False)]"/>
-                <group expand="0" string="分组"><filter string="网站" name="group_website" context="{'group_by': 'website_id'}"/><filter string="类型" name="group_category" context="{'group_by': 'category'}"/></group>
+                <group><filter string="网站" name="group_website" context="{'group_by': 'website_id'}"/><filter string="类型" name="group_category" context="{'group_by': 'category'}"/></group>
             </search>
         </field>
     </record>
@@ -367,7 +367,7 @@
                 <filter string="重点展示" name="featured" domain="[('featured', '=', True)]"/>
                 <filter string="已发布" name="published" domain="[('published', '=', True)]"/>
                 <filter string="待核实" name="unverified" domain="[('verified', '=', False)]"/>
-                <group expand="0" string="分组"><filter string="网站" name="group_website" context="{'group_by': 'website_id'}"/></group>
+                <group><filter string="网站" name="group_website" context="{'group_by': 'website_id'}"/></group>
             </search>
         </field>
     </record>
