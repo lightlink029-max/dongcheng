@@ -117,8 +117,24 @@ class MarketOperationsWorkflowCase(TransactionCase):
             [item["id"] for item in settings["items"]],
         )
         self.assertIn(
-            self.env.ref("sale.menu_product_template_action").id,
+            self.env.ref("product_social_content_bridge.menu_psc_product_workspace").id,
             [item["id"] for item in procurement["items"]],
+        )
+        duplicate_product_menu_ids = {
+            self.env.ref("sale.menu_product_template_action").id,
+            self.env.ref("product_social_content_bridge.menu_psc_product_categories").id,
+            self.env.ref("product_social_content_bridge.menu_psc_product_attributes").id,
+        }
+        self.assertFalse(
+            duplicate_product_menu_ids.intersection(
+                item["id"] for item in procurement["items"]
+            )
+        )
+        self.assertFalse(
+            self.env.ref("product_social_content_bridge.menu_psc_product_categories").active
+        )
+        self.assertFalse(
+            self.env.ref("product_social_content_bridge.menu_psc_product_attributes").active
         )
 
         managed = self.env["psc.business.hub"].get_managed_sidebar_navigation()

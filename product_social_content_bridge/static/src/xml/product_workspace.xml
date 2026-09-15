@@ -14,8 +14,11 @@
                     <button type="button" class="btn btn-secondary" t-on-click="newCategory">
                         <i class="fa fa-folder-o me-1"/>新建分类
                     </button>
+                    <button type="button" class="btn btn-secondary" t-on-click="manageCategories">
+                        <i class="fa fa-sitemap me-1"/>分类管理
+                    </button>
                     <button type="button" class="btn btn-secondary" t-on-click="manageAttributes">
-                        <i class="fa fa-tags me-1"/>管理属性
+                        <i class="fa fa-tags me-1"/>属性管理
                     </button>
                     <button type="button" class="btn btn-secondary" t-on-click="openProductList">
                         <i class="fa fa-list me-1"/>产品列表/批量导入
@@ -92,7 +95,6 @@
             <div class="o_psc_product_workspace_summary">
                 <strong>找到 <t t-esc="state.total"/> 个产品</strong>
                 <span>当前显示 <t t-esc="state.products.length"/> 个</span>
-                <button type="button" class="btn btn-link" t-on-click="manageCategories">管理全部分类</button>
             </div>
 
             <div class="o_psc_product_loading" t-if="state.loading &amp;&amp; !state.products.length">

@@ -143,4 +143,10 @@
               parent="menu_psc_category_supply_chain" action="product.product_category_action_form" sequence="6"/>
     <menuitem id="menu_psc_product_attributes" name="产品属性"
               parent="menu_psc_category_supply_chain" action="product.attribute_action" sequence="7"/>
+    <record id="menu_psc_product_categories" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+    <record id="menu_psc_product_attributes" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
 </odoo>

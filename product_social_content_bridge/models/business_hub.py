@@ -63,9 +63,6 @@ SIDEBAR_NAVIGATION = (
         (
             ("product_intelligence_hub.menu_product_intelligence_root", "fa-cube"),
             ("product_social_content_bridge.menu_psc_product_workspace", "fa-th-large"),
-            ("product_social_content_bridge.menu_psc_product_categories", "fa-sitemap"),
-            ("product_social_content_bridge.menu_psc_product_attributes", "fa-tags"),
-            ("sale.menu_product_template_action", "fa-cube"),
             ("purchase.menu_purchase_root", "fa-shopping-cart"),
             ("stock.menu_stock_root", "fa-cubes"),
             ("stock_barcode.stock_barcode_menu", "fa-barcode"),
