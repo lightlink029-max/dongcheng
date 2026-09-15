@@ -60,10 +60,10 @@ export class BusinessNavigation extends Component {
             editMode: false,
             canEdit: false,
             categories: [],
-            draggedMenuId: null,
             newCategoryName: "",
             status: "",
         });
+        this.draggedMenuId = null;
         onWillStart(() => this.loadNavigation());
     }
 
@@ -94,7 +94,9 @@ export class BusinessNavigation extends Component {
             return;
         }
         this.state.editMode = !this.state.editMode;
-        this.state.status = this.state.editMode ? "整理模式：拖动图标即可自动保存" : "";
+        this.state.status = this.state.editMode
+            ? "整理模式：可拖动，也可使用移动按钮，调整后自动保存"
+            : "";
     }
 
     isDraggable(item) {
@@ -118,18 +120,20 @@ export class BusinessNavigation extends Component {
     }
 
     onDragStart(event) {
-        if (!this.state.editMode) {
+        if (!this.state.editMode || this.state.saving) {
             event.preventDefault();
             return;
         }
         const menuId = Number(event.currentTarget.dataset.menuId);
-        this.state.draggedMenuId = menuId;
+        this.draggedMenuId = menuId;
+        event.currentTarget.classList.add("is-dragging");
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", String(menuId));
     }
 
-    onDragEnd() {
-        this.state.draggedMenuId = null;
+    onDragEnd(event) {
+        event.currentTarget.classList.remove("is-dragging");
+        this.draggedMenuId = null;
     }
 
     allowDrop(event) {
@@ -161,9 +165,9 @@ export class BusinessNavigation extends Component {
         if (!this.state.editMode || this.state.saving || targetCode === "business") {
             return;
         }
-        const menuId = this.state.draggedMenuId;
+        const menuId = this.draggedMenuId;
         if (menuId === beforeId) {
-            this.state.draggedMenuId = null;
+            this.draggedMenuId = null;
             return;
         }
         let sourceCategory;
@@ -186,7 +190,53 @@ export class BusinessNavigation extends Component {
             ? targetCategory.items.findIndex((candidate) => candidate.id === beforeId)
             : targetCategory.items.length;
         targetCategory.items.splice(targetIndex < 0 ? targetCategory.items.length : targetIndex, 0, item);
-        this.state.draggedMenuId = null;
+        this.draggedMenuId = null;
+        await this.saveLayout();
+    }
+
+    async moveCategory(categoryIndex, offset) {
+        if (!this.state.editMode || this.state.saving) {
+            return;
+        }
+        const targetIndex = categoryIndex + offset;
+        if (targetIndex < 0 || targetIndex >= this.state.categories.length) {
+            return;
+        }
+        const [category] = this.state.categories.splice(categoryIndex, 1);
+        this.state.categories.splice(targetIndex, 0, category);
+        await this.saveLayout();
+    }
+
+    async moveItemWithinCategory(category, itemIndex, offset) {
+        if (!this.state.editMode || this.state.saving) {
+            return;
+        }
+        const targetIndex = itemIndex + offset;
+        if (targetIndex < 0 || targetIndex >= category.items.length) {
+            return;
+        }
+        const [item] = category.items.splice(itemIndex, 1);
+        category.items.splice(targetIndex, 0, item);
+        await this.saveLayout();
+    }
+
+    async moveItemToCategory(sourceCategory, item, event) {
+        const targetCode = event.currentTarget.value;
+        if (!this.state.editMode || this.state.saving || !targetCode) {
+            return;
+        }
+        const targetCategory = this.state.categories.find(
+            (category) => category.code === targetCode
+        );
+        const sourceIndex = sourceCategory.items.findIndex(
+            (candidate) => candidate.id === item.id
+        );
+        if (!targetCategory || targetCategory === sourceCategory || sourceIndex < 0) {
+            event.currentTarget.value = "";
+            return;
+        }
+        sourceCategory.items.splice(sourceIndex, 1);
+        targetCategory.items.push(item);
         await this.saveLayout();
     }
 
@@ -404,6 +454,13 @@ export class BusinessSidebar extends Component {
             return;
         }
         await this.menu.selectMenu(target);
+    }
+
+    onItemKeydown(event, item) {
+        if (!this.state.editMode && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault();
+            this.openMenu(item);
+        }
     }
 }
 

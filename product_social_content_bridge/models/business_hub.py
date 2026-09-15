@@ -759,7 +759,8 @@ class BusinessHub(models.Model):
                 default_layout[code].append(menu.id)
 
         configured_layout = {}
-        custom_categories = []
+        configured_categories = []
+        configured_codes = set()
         raw_layout = self.env["ir.config_parameter"].sudo().get_param(
             SIDEBAR_LAYOUT_PARAMETER, ""
         )
@@ -772,7 +773,6 @@ class BusinessHub(models.Model):
                         for code, menu_ids in values.items()
                     ]
                 configured_ids = set()
-                configured_codes = set()
                 for section in values if isinstance(values, list) else []:
                     if not isinstance(section, dict):
                         continue
@@ -800,14 +800,23 @@ class BusinessHub(models.Model):
                             configured_layout[code].append(menu_id)
                             configured_ids.add(menu_id)
                     if is_custom:
-                        custom_categories.append({
+                        configured_categories.append({
                             "code": code,
                             "name": custom_name[:64],
                             "icon": "fa-folder-o",
+                            "custom": True,
+                        })
+                    else:
+                        configured_categories.append({
+                            "code": code,
+                            "name": category_definitions[code]["name"],
+                            "icon": category_definitions[code]["icon"],
+                            "custom": False,
                         })
             except (TypeError, ValueError):
                 configured_layout = {}
-                custom_categories = []
+                configured_categories = []
+                configured_codes = set()
 
         assigned_ids = {
             menu_id for menu_ids in configured_layout.values() for menu_id in menu_ids
@@ -818,18 +827,15 @@ class BusinessHub(models.Model):
                 menu_id for menu_id in menu_ids if menu_id not in assigned_ids
             )
             assigned_ids.update(menu_ids)
-
-        category_list = [
-            {
-                "code": code,
-                "name": name,
-                "icon": icon,
-                "custom": False,
-            }
-            for code, name, icon, _items in SIDEBAR_NAVIGATION
-        ] + [dict(category, custom=True) for category in custom_categories]
+            if code not in configured_codes:
+                configured_categories.append({
+                    "code": code,
+                    "name": category_definitions[code]["name"],
+                    "icon": category_definitions[code]["icon"],
+                    "custom": False,
+                })
         categories = []
-        for category in category_list:
+        for category in configured_categories:
             code = category["code"]
             items = []
             for menu_id in configured_layout.get(code, []):

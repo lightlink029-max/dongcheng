@@ -414,6 +414,7 @@
         padding: .65rem .4rem;
         background: #f8f9fa;
         color: inherit;
+        cursor: pointer;
         text-align: center;
         transition: border-color .15s ease, background-color .15s ease, transform .15s ease;
 
@@ -461,6 +462,18 @@
         font-size: .875rem;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .o_psc_nav_item_tools {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: .35rem;
+        width: 100%;
+
+        .btn,
+        .form-select {
+            font-size: .72rem;
+        }
     }
 
     .o_psc_nav_drag_hint {

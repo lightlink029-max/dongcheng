@@ -5,7 +5,7 @@
             <div class="o_psc_nav_header">
                 <div>
                     <h2>左侧导航管理</h2>
-                    <p>这里与页面左侧导航完全一致；拖动入口调整分类或顺序后，左侧立即同步。</p>
+                    <p>这里与页面左侧导航完全一致；模块与入口调整后自动保存，左侧立即同步。</p>
                 </div>
                 <div class="o_psc_nav_actions" t-if="state.canEdit">
                     <span class="o_psc_nav_status" t-if="state.status"><t t-esc="state.status"/></span>
@@ -63,6 +63,26 @@
                             />
                         </div>
                         <div class="o_psc_nav_category_tools">
+                            <t t-if="state.editMode">
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-secondary"
+                                    title="模块上移"
+                                    t-att-disabled="category_index === 0 || state.saving"
+                                    t-on-click="() => this.moveCategory(category_index, -1)"
+                                >
+                                    <i class="fa fa-arrow-up"/>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-secondary"
+                                    title="模块下移"
+                                    t-att-disabled="category_index === state.categories.length - 1 || state.saving"
+                                    t-on-click="() => this.moveCategory(category_index, 1)"
+                                >
+                                    <i class="fa fa-arrow-down"/>
+                                </button>
+                            </t>
                             <button
                                 t-if="state.editMode &amp;&amp; category.custom"
                                 type="button"
@@ -76,17 +96,19 @@
                         </div>
                     </header>
                     <div class="o_psc_nav_items">
-                        <button
+                        <div
                             t-foreach="category.items"
                             t-as="item"
                             t-key="item.id"
-                            type="button"
-                            t-att-class="state.draggedMenuId === item.id ? 'o_psc_nav_item is-dragging' : 'o_psc_nav_item'"
+                            class="o_psc_nav_item"
+                            role="button"
+                            t-att-tabindex="state.editMode ? -1 : 0"
                             t-att-draggable="isDraggable(item)"
                             t-att-data-menu-id="item.id"
                             t-att-data-category="category.code"
                             t-att-data-before-id="item.id"
                             t-on-click="() => this.openMenu(item)"
+                            t-on-keydown="(event) => this.onItemKeydown(event, item)"
                             t-on-dragstart="onDragStart"
                             t-on-dragend="onDragEnd"
                             t-on-dragover="allowDrop"
@@ -99,7 +121,44 @@
                             <span class="o_psc_nav_item_name"><t t-esc="item.name"/></span>
                             <i t-if="state.editMode &amp;&amp; !item.locked" class="fa fa-arrows o_psc_nav_drag_hint" aria-label="可拖动"/>
                             <i t-if="item.locked" class="fa fa-lock o_psc_nav_drag_hint" aria-label="固定入口"/>
-                        </button>
+                            <div class="o_psc_nav_item_tools" t-if="state.editMode &amp;&amp; !item.locked">
+                                <div class="btn-group btn-group-sm" role="group" aria-label="调整入口顺序">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        title="入口向前"
+                                        t-att-disabled="item_index === 0 || state.saving"
+                                        t-on-click="() => this.moveItemWithinCategory(category, item_index, -1)"
+                                    >
+                                        <i class="fa fa-arrow-left"/>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        title="入口向后"
+                                        t-att-disabled="item_index === category.items.length - 1 || state.saving"
+                                        t-on-click="() => this.moveItemWithinCategory(category, item_index, 1)"
+                                    >
+                                        <i class="fa fa-arrow-right"/>
+                                    </button>
+                                </div>
+                                <select
+                                    class="form-select form-select-sm"
+                                    aria-label="移动入口到其他模块"
+                                    t-on-change="(event) => this.moveItemToCategory(category, item, event)"
+                                    t-att-disabled="state.saving"
+                                >
+                                    <option value="">移到模块…</option>
+                                    <option
+                                        t-foreach="state.categories"
+                                        t-as="targetCategory"
+                                        t-key="targetCategory.code"
+                                        t-if="targetCategory.code !== category.code"
+                                        t-att-value="targetCategory.code"
+                                    ><t t-esc="targetCategory.name"/></option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="o_psc_nav_empty" t-if="!category.items.length">
                             <i class="fa fa-inbox me-2"/>暂无功能，可把图标拖到这里。
                         </div>

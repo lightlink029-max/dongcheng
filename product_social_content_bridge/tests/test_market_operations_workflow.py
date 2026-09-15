@@ -141,10 +141,15 @@ class MarketOperationsWorkflowCase(TransactionCase):
             "name": "工厂管理",
             "menu_ids": [moved_menu_id],
         })
+        layout = [layout[-1], *layout[:-1]]
 
         saved = hub.save_sidebar_navigation(layout)
         sidebar = hub.get_sidebar_navigation()
         self.assertEqual(saved["categories"], sidebar["categories"])
+        self.assertEqual(
+            [category["code"] for category in sidebar["categories"]],
+            [section["code"] for section in layout],
+        )
         custom = next(
             category for category in sidebar["categories"]
             if category["code"] == "custom_factory_ops"
