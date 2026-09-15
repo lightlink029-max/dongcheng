@@ -15,10 +15,7 @@
                 </header>
                 <sheet>
                     <div class="o_psc_business_layout">
-                        <section class="o_psc_business_nav_column" aria-label="全部功能导航">
-                            <field name="navigation_widget" widget="psc_business_navigation" nolabel="1" readonly="1"/>
-                        </section>
-                        <aside class="o_psc_business_hub_column" aria-label="LightLink 业务中心">
+                        <section class="o_psc_business_hub_column" aria-label="LightLink 业务中心">
                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
                         <div>
                             <h1 class="mb-1">LightLink 业务中心</h1>
@@ -62,7 +59,7 @@
                         <div class="o_psc_hub_card">
                             <div class="border rounded-3 p-4 h-100 shadow-sm">
                                 <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                                    <div><h2 class="h4 mb-1"><i class="fa fa-bullhorn text-primary me-2"/>市场增长</h2><p class="text-muted mb-0">管理运营项目、社媒内容、素材和发布节奏。</p></div>
+                                    <div><h2 class="h4 mb-1"><i class="fa fa-bullhorn text-primary me-2"/>项目与内容</h2><p class="text-muted mb-0">管理运营项目、社媒内容、素材和发布节奏。</p></div>
                                     <div class="text-center"><div class="fs-2 fw-bold"><field name="active_project_count" nolabel="1"/></div><small class="text-muted">运营项目</small></div>
                                 </div>
                                 <div class="d-flex flex-wrap gap-2">
@@ -91,7 +88,7 @@
                         <div class="o_psc_hub_card">
                             <div class="border rounded-3 p-4 h-100 shadow-sm">
                                 <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                                    <div><h2 class="h4 mb-1"><i class="fa fa-truck text-primary me-2"/>供应链交付</h2><p class="text-muted mb-0">集中处理采购、收货、库存、出库和交付。</p></div>
+                                    <div><h2 class="h4 mb-1"><i class="fa fa-truck text-primary me-2"/>采购与交付</h2><p class="text-muted mb-0">集中处理采购、收货、库存、出库和交付。</p></div>
                                     <div class="text-center"><div class="fs-2 fw-bold"><field name="open_purchase_count" nolabel="1"/></div><small class="text-muted">待处理采购</small></div>
                                 </div>
                                 <div class="d-flex flex-wrap gap-2">
@@ -117,7 +114,7 @@
 
                         <div class="o_psc_hub_card">
                             <div class="border rounded-3 p-4 h-100 shadow-sm">
-                                <div class="mb-3"><h2 class="h4 mb-1"><i class="fa fa-cogs text-primary me-2"/>协同与设置</h2><p class="text-muted mb-0">安排日程，维护账号集群、工作节点和系统参数。</p></div>
+                                <div class="mb-3"><h2 class="h4 mb-1"><i class="fa fa-cogs text-primary me-2"/>设置与资源</h2><p class="text-muted mb-0">安排日程，维护账号集群、工作节点和系统参数。</p></div>
                                 <div class="d-flex flex-wrap gap-2">
                                     <button name="action_open_calendar" type="object" string="日历" icon="fa-calendar" class="btn-primary"/>
                                     <button name="action_open_resources" type="object" string="账号集群" icon="fa-users" class="btn-secondary"/>
@@ -126,8 +123,24 @@
                             </div>
                         </div>
                     </div>
-                        </aside>
+                        </section>
                     </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_psc_business_navigation_form" model="ir.ui.view">
+        <field name="name">psc.business.navigation.form</field>
+        <field name="model">psc.business.hub</field>
+        <field name="arch" type="xml">
+            <form string="导航与入口管理" create="false" edit="false" delete="false">
+                <sheet>
+                    <div class="mb-4">
+                        <h1 class="mb-1">导航与入口管理</h1>
+                        <p class="text-muted mb-0">这里集中维护全部应用入口；日常切换请使用固定在页面左侧的六个业务模块。</p>
+                    </div>
+                    <field name="navigation_widget" widget="psc_business_navigation" nolabel="1" readonly="1"/>
                 </sheet>
             </form>
         </field>
@@ -137,6 +150,15 @@
         <field name="name">LightLink 业务中心</field>
         <field name="res_model">psc.business.hub</field>
         <field name="view_mode">form</field>
+        <field name="res_id" ref="business_hub_main"/>
+        <field name="target">current</field>
+    </record>
+
+    <record id="action_psc_navigation_management" model="ir.actions.act_window">
+        <field name="name">导航与入口管理</field>
+        <field name="res_model">psc.business.hub</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_psc_business_navigation_form"/>
         <field name="res_id" ref="business_hub_main"/>
         <field name="target">current</field>
     </record>

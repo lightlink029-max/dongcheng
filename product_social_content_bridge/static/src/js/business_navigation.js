@@ -1,8 +1,50 @@
 /** @odoo-module **/
 
-import { Component, onWillStart, useState } from "@odoo/owl";
+import { Component, onMounted, onWillStart, onWillUnmount, useState } from "@odoo/owl";
+import { browser } from "@web/core/browser/browser";
 import { registry } from "@web/core/registry";
-import { useService } from "@web/core/utils/hooks";
+import { useBus, useService } from "@web/core/utils/hooks";
+
+const SIDEBAR_COLLAPSED_KEY = "psc_business_sidebar_collapsed";
+const SIDEBAR_CATEGORY_KEY = "psc_business_sidebar_category";
+
+function getMenuIcon(menuService, item) {
+    if (item.web_icon) {
+        const separator = item.web_icon.indexOf(",");
+        if (separator > 0) {
+            const moduleName = item.web_icon.slice(0, separator);
+            const iconPath = item.web_icon.slice(separator + 1);
+            return `/${moduleName}/${iconPath}`;
+        }
+    }
+
+    const iconData = menuService.getMenu(item.id)?.webIconData;
+    if (!iconData || typeof iconData !== "string") {
+        return false;
+    }
+    if (iconData.startsWith("data:image") || iconData.startsWith("/")) {
+        return iconData;
+    }
+    const compactIconData = iconData.replace(/\s/g, "");
+    const mimeType = compactIconData.startsWith("P") ? "image/svg+xml" : "image/png";
+    return `data:${mimeType};base64,${compactIconData}`;
+}
+
+function findActionableMenu(menuService, menu) {
+    if (!menu) {
+        return false;
+    }
+    if (menu.actionID) {
+        return menu;
+    }
+    for (const childId of menu.children || []) {
+        const child = findActionableMenu(menuService, menuService.getMenu(childId));
+        if (child) {
+            return child;
+        }
+    }
+    return false;
+}
 
 export class BusinessNavigation extends Component {
     static template = "product_social_content_bridge.BusinessNavigation";
@@ -59,48 +101,14 @@ export class BusinessNavigation extends Component {
     }
 
     getMenuIcon(item) {
-        if (item.web_icon) {
-            const separator = item.web_icon.indexOf(",");
-            if (separator > 0) {
-                const moduleName = item.web_icon.slice(0, separator);
-                const iconPath = item.web_icon.slice(separator + 1);
-                return `/${moduleName}/${iconPath}`;
-            }
-        }
-
-        const iconData = this.menu.getMenu(item.id)?.webIconData;
-        if (!iconData || typeof iconData !== "string") {
-            return false;
-        }
-        if (iconData.startsWith("data:image") || iconData.startsWith("/")) {
-            return iconData;
-        }
-        const compactIconData = iconData.replace(/\s/g, "");
-        const mimeType = compactIconData.startsWith("P") ? "image/svg+xml" : "image/png";
-        return `data:${mimeType};base64,${compactIconData}`;
-    }
-
-    findActionableMenu(menu) {
-        if (!menu) {
-            return false;
-        }
-        if (menu.actionID) {
-            return menu;
-        }
-        for (const childId of menu.children || []) {
-            const child = this.findActionableMenu(this.menu.getMenu(childId));
-            if (child) {
-                return child;
-            }
-        }
-        return false;
+        return getMenuIcon(this.menu, item);
     }
 
     async openMenu(item) {
         if (this.state.editMode) {
             return;
         }
-        const target = this.findActionableMenu(this.menu.getMenu(item.id));
+        const target = findActionableMenu(this.menu, this.menu.getMenu(item.id));
         if (!target) {
             this.notification.add(`“${item.name}”暂时没有可打开的功能入口。`, { type: "warning" });
             return;
@@ -232,9 +240,107 @@ export class BusinessNavigation extends Component {
     }
 }
 
+export class BusinessSidebar extends Component {
+    static template = "product_social_content_bridge.BusinessSidebar";
+    static props = {};
+
+    setup() {
+        this.orm = useService("orm");
+        this.menu = useService("menu");
+        this.notification = useService("notification");
+        this.state = useState({
+            loading: true,
+            categories: [],
+            openCategory: browser.localStorage.getItem(SIDEBAR_CATEGORY_KEY) || "today",
+            collapsed: browser.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1",
+            fullscreen: false,
+        });
+        useBus(this.env.bus, "ACTION_MANAGER:UI-UPDATED", ({ detail: mode }) => {
+            if (mode !== "new") {
+                this.state.fullscreen = mode === "fullscreen";
+                this.syncBodyClasses();
+            }
+        });
+        onWillStart(() => this.loadNavigation());
+        onMounted(() => this.syncBodyClasses());
+        onWillUnmount(() => this.clearBodyClasses());
+    }
+
+    async loadNavigation() {
+        this.state.loading = true;
+        try {
+            const payload = await this.orm.call(
+                "psc.business.hub",
+                "get_sidebar_navigation",
+                []
+            );
+            this.state.categories = payload.categories;
+            if (
+                this.state.categories.length
+                && !this.state.categories.some((category) => category.code === this.state.openCategory)
+            ) {
+                this.state.openCategory = this.state.categories[0].code;
+            }
+        } catch (error) {
+            this.notification.add("左侧功能导航加载失败，请刷新页面后重试。", { type: "danger" });
+            throw error;
+        } finally {
+            this.state.loading = false;
+        }
+    }
+
+    syncBodyClasses() {
+        document.body.classList.toggle("o_psc_has_business_sidebar", !this.state.fullscreen);
+        document.body.classList.toggle(
+            "o_psc_business_sidebar_collapsed",
+            !this.state.fullscreen && this.state.collapsed
+        );
+    }
+
+    clearBodyClasses() {
+        document.body.classList.remove(
+            "o_psc_has_business_sidebar",
+            "o_psc_business_sidebar_collapsed"
+        );
+    }
+
+    toggleCollapsed() {
+        this.state.collapsed = !this.state.collapsed;
+        browser.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, this.state.collapsed ? "1" : "0");
+        this.syncBodyClasses();
+    }
+
+    toggleCategory(category) {
+        if (this.state.collapsed) {
+            this.state.collapsed = false;
+            browser.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "0");
+        }
+        this.state.openCategory = this.state.openCategory === category.code ? "" : category.code;
+        browser.localStorage.setItem(SIDEBAR_CATEGORY_KEY, this.state.openCategory);
+        this.syncBodyClasses();
+    }
+
+    getMenuIcon(item) {
+        return getMenuIcon(this.menu, item);
+    }
+
+    async openMenu(item) {
+        const target = findActionableMenu(this.menu, this.menu.getMenu(item.id));
+        if (!target) {
+            this.notification.add(`“${item.name}”暂时没有可打开的功能入口。`, { type: "warning" });
+            return;
+        }
+        await this.menu.selectMenu(target);
+    }
+}
+
 registry.category("fields").add("psc_business_navigation", {
     component: BusinessNavigation,
     displayName: "LightLink 功能导航",
     supportedTypes: ["char"],
     isEmpty: () => false,
+});
+
+registry.category("main_components").add("product_social_content_bridge.BusinessSidebar", {
+    Component: BusinessSidebar,
 });

@@ -70,4 +70,71 @@
             </div>
         </section>
     </t>
+
+    <t t-name="product_social_content_bridge.BusinessSidebar">
+        <aside
+            t-if="!state.fullscreen"
+            t-att-class="state.collapsed ? 'o_psc_business_sidebar is-collapsed d-none d-lg-flex' : 'o_psc_business_sidebar d-none d-lg-flex'"
+            aria-label="LightLink 工作导航"
+        >
+            <header class="o_psc_sidebar_header">
+                <span class="o_psc_sidebar_brand">
+                    <i class="fa fa-compass"/>
+                    <span class="o_psc_sidebar_label">LightLink 工作导航</span>
+                </span>
+                <button
+                    type="button"
+                    class="o_psc_sidebar_collapse"
+                    t-att-title="state.collapsed ? '展开左侧导航' : '收起左侧导航'"
+                    t-att-aria-label="state.collapsed ? '展开左侧导航' : '收起左侧导航'"
+                    t-on-click="toggleCollapsed"
+                >
+                    <i t-att-class="state.collapsed ? 'fa fa-angle-double-right' : 'fa fa-angle-double-left'"/>
+                </button>
+            </header>
+
+            <div class="o_psc_sidebar_loading" t-if="state.loading">
+                <i class="fa fa-spinner fa-spin"/>
+                <span class="o_psc_sidebar_label">正在加载…</span>
+            </div>
+
+            <nav class="o_psc_sidebar_groups" t-else="" aria-label="业务功能">
+                <section
+                    t-foreach="state.categories"
+                    t-as="category"
+                    t-key="category.code"
+                    t-att-class="state.openCategory === category.code ? 'o_psc_sidebar_group is-open' : 'o_psc_sidebar_group'"
+                >
+                    <button
+                        type="button"
+                        class="o_psc_sidebar_group_button"
+                        t-att-title="category.name"
+                        t-att-aria-expanded="state.openCategory === category.code"
+                        t-on-click="() => this.toggleCategory(category)"
+                    >
+                        <span class="o_psc_sidebar_group_icon"><i t-att-class="'fa ' + category.icon"/></span>
+                        <span class="o_psc_sidebar_label"><t t-esc="category.name"/></span>
+                        <i class="fa fa-angle-down o_psc_sidebar_chevron"/>
+                    </button>
+                    <div class="o_psc_sidebar_items" t-if="!state.collapsed &amp;&amp; state.openCategory === category.code">
+                        <button
+                            t-foreach="category.items"
+                            t-as="item"
+                            t-key="item.id"
+                            type="button"
+                            class="o_psc_sidebar_item"
+                            t-att-title="item.name"
+                            t-on-click="() => this.openMenu(item)"
+                        >
+                            <span class="o_psc_sidebar_item_icon">
+                                <img t-if="getMenuIcon(item)" t-att-src="getMenuIcon(item)" t-att-alt="item.name"/>
+                                <i t-else="" t-att-class="'fa ' + item.fallback_icon"/>
+                            </span>
+                            <span><t t-esc="item.name"/></span>
+                        </button>
+                    </div>
+                </section>
+            </nav>
+        </aside>
+    </t>
 </templates>

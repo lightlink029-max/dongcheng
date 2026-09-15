@@ -86,6 +86,34 @@ class MarketOperationsWorkflowCase(TransactionCase):
         self.assertEqual(workflow.parent_id, root)
         self.assertEqual(performance.parent_id, root)
 
+    def test_sidebar_navigation_is_task_oriented_and_visible(self):
+        payload = self.env["psc.business.hub"].get_sidebar_navigation()
+        categories = payload["categories"]
+        codes = [category["code"] for category in categories]
+
+        self.assertEqual(codes, [
+            "today",
+            "projects_content",
+            "customer_sales",
+            "procurement_delivery",
+            "finance_review",
+            "settings_resources",
+        ])
+        self.assertTrue(all(category["items"] for category in categories))
+
+        today = next(category for category in categories if category["code"] == "today")
+        settings = next(
+            category for category in categories if category["code"] == "settings_resources"
+        )
+        self.assertIn(
+            self.env.ref("product_social_content_bridge.menu_psc_business_hub").id,
+            [item["id"] for item in today["items"]],
+        )
+        self.assertIn(
+            self.env.ref("product_social_content_bridge.menu_psc_navigation_management").id,
+            [item["id"] for item in settings["items"]],
+        )
+
     def test_dashboard_contains_native_operating_data_dashboard(self):
         if not self.env.registry.get("spreadsheet.dashboard"):
             self.skipTest("Dashboards app is not installed")

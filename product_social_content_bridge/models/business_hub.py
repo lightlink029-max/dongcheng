@@ -16,6 +16,84 @@ NAVIGATION_CATEGORIES = (
 )
 
 
+SIDEBAR_NAVIGATION = (
+    (
+        "today",
+        "今日工作台",
+        "fa-check-square-o",
+        (
+            ("product_social_content_bridge.menu_psc_business_hub", "fa-home"),
+            ("product_social_content_bridge.menu_psc_readiness", "fa-list"),
+            ("product_social_content_bridge.menu_psc_ai_cockpit", "fa-magic"),
+        ),
+    ),
+    (
+        "projects_content",
+        "项目与内容",
+        "fa-bullhorn",
+        (
+            ("product_social_content_bridge.menu_psc_projects", "fa-briefcase"),
+            ("product_social_content_bridge.menu_psc_contents", "fa-file-text-o"),
+            ("product_social_content_bridge.menu_psc_assets", "fa-picture-o"),
+            ("product_social_content_bridge.menu_psc_publication_tasks", "fa-paper-plane"),
+            ("website.menu_website_configuration", "fa-globe"),
+            ("social.menu_social_global", "fa-share-alt"),
+            ("mass_mailing.mass_mailing_menu_root", "fa-envelope-o"),
+        ),
+    ),
+    (
+        "customer_sales",
+        "客户与成交",
+        "fa-handshake-o",
+        (
+            ("crm.crm_menu_root", "fa-filter"),
+            ("contacts.menu_contacts", "fa-address-book-o"),
+            ("sale.sale_menu_root", "fa-file-text"),
+            ("helpdesk.menu_helpdesk_root", "fa-life-ring"),
+            ("im_livechat.menu_livechat_root", "fa-comments"),
+            ("whatsapp.whatsapp_menu_main", "fa-whatsapp"),
+            ("appointment.main_menu_appointments", "fa-calendar-check-o"),
+        ),
+    ),
+    (
+        "procurement_delivery",
+        "采购与交付",
+        "fa-cubes",
+        (
+            ("product_intelligence_hub.menu_product_intelligence_root", "fa-cube"),
+            ("purchase.menu_purchase_root", "fa-shopping-cart"),
+            ("stock.menu_stock_root", "fa-cubes"),
+            ("stock_barcode.stock_barcode_menu", "fa-barcode"),
+        ),
+    ),
+    (
+        "finance_review",
+        "财务与复盘",
+        "fa-line-chart",
+        (
+            ("account.menu_finance", "fa-money"),
+            ("product_social_content_bridge.menu_psc_finance_performance", "fa-bar-chart"),
+            ("spreadsheet_dashboard.spreadsheet_dashboard_menu_root", "fa-dashboard"),
+        ),
+    ),
+    (
+        "settings_resources",
+        "设置与资源",
+        "fa-cogs",
+        (
+            ("product_social_content_bridge.menu_psc_social_account_slots", "fa-users"),
+            ("product_social_content_bridge.menu_psc_social_accounts", "fa-user-circle"),
+            ("product_social_content_bridge.menu_psc_local_worker_settings", "fa-wrench"),
+            ("product_social_content_bridge.menu_psc_navigation_management", "fa-sitemap"),
+            ("calendar.mail_menu_calendar", "fa-calendar"),
+            ("knowledge.knowledge_menu_root", "fa-book"),
+            ("base.menu_management", "fa-th-large"),
+            ("base.menu_administration", "fa-cog"),
+        ),
+    ),
+)
+
+
 APP_MENU_GROUPS = {
     "product_social_content_bridge.menu_psc_category_web_marketing": (
         "website.menu_website_configuration",
@@ -655,6 +733,34 @@ class BusinessHub(models.Model):
             "can_edit": self.env.user.has_group("base.group_system"),
             "categories": result,
         }
+
+    @api.model
+    def get_sidebar_navigation(self):
+        """Return the stable task-oriented navigation used by the backend sidebar."""
+        visible_ids = self.env["ir.ui.menu"]._visible_menu_ids()
+        categories = []
+        for code, name, icon, item_definitions in SIDEBAR_NAVIGATION:
+            items = []
+            seen_ids = set()
+            for xmlid, fallback_icon in item_definitions:
+                menu = self.env.ref(xmlid, raise_if_not_found=False)
+                if not menu or menu.id not in visible_ids or menu.id in seen_ids:
+                    continue
+                seen_ids.add(menu.id)
+                items.append({
+                    "id": menu.id,
+                    "name": menu.name,
+                    "web_icon": menu.web_icon or "",
+                    "fallback_icon": fallback_icon,
+                })
+            if items:
+                categories.append({
+                    "code": code,
+                    "name": _(name),
+                    "icon": icon,
+                    "items": items,
+                })
+        return {"categories": categories}
 
     @api.model
     def save_application_navigation(self, layout):
