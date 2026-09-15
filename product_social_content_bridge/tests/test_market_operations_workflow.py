@@ -121,6 +121,40 @@ class MarketOperationsWorkflowCase(TransactionCase):
             [item["id"] for item in procurement["items"]],
         )
 
+        managed = self.env["psc.business.hub"].get_managed_sidebar_navigation()
+        self.assertEqual(managed["categories"], payload["categories"])
+        self.assertTrue(managed["can_edit"])
+
+    def test_sidebar_navigation_layout_is_shared_and_resettable(self):
+        hub = self.env["psc.business.hub"]
+        initial = hub.get_managed_sidebar_navigation()
+        layout = [{
+            "code": category["code"],
+            "menu_ids": [item["id"] for item in category["items"]],
+        } for category in initial["categories"]]
+        procurement = next(
+            section for section in layout if section["code"] == "procurement_delivery"
+        )
+        procurement["menu_ids"] = list(reversed(procurement["menu_ids"]))
+
+        saved = hub.save_sidebar_navigation(layout)
+        sidebar = hub.get_sidebar_navigation()
+        self.assertEqual(saved["categories"], sidebar["categories"])
+        saved_procurement = next(
+            category for category in sidebar["categories"]
+            if category["code"] == "procurement_delivery"
+        )
+        self.assertEqual(
+            [item["id"] for item in saved_procurement["items"]],
+            procurement["menu_ids"],
+        )
+
+        reset = hub.reset_sidebar_navigation()
+        self.assertEqual(
+            [category["code"] for category in reset["categories"]],
+            [category["code"] for category in initial["categories"]],
+        )
+
     def test_dashboard_contains_native_operating_data_dashboard(self):
         if not self.env.registry.get("spreadsheet.dashboard"):
             self.skipTest("Dashboards app is not installed")

@@ -94,6 +94,8 @@ SIDEBAR_NAVIGATION = (
     ),
 )
 
+SIDEBAR_LAYOUT_PARAMETER = "product_social_content_bridge.sidebar_navigation_layout"
+
 
 APP_MENU_GROUPS = {
     "product_social_content_bridge.menu_psc_category_web_marketing": (
@@ -737,31 +739,128 @@ class BusinessHub(models.Model):
 
     @api.model
     def get_sidebar_navigation(self):
-        """Return the stable task-oriented navigation used by the backend sidebar."""
+        """Return the shared task-oriented navigation used by both navigation views."""
         visible_ids = self.env["ir.ui.menu"]._visible_menu_ids()
-        categories = []
-        for code, name, icon, item_definitions in SIDEBAR_NAVIGATION:
-            items = []
-            seen_ids = set()
+        category_codes = {code for code, _name, _icon, _items in SIDEBAR_NAVIGATION}
+        menu_definitions = {}
+        default_layout = {
+            code: [] for code, _name, _icon, _items in SIDEBAR_NAVIGATION
+        }
+        for code, _name, _icon, item_definitions in SIDEBAR_NAVIGATION:
             for xmlid, fallback_icon in item_definitions:
                 menu = self.env.ref(xmlid, raise_if_not_found=False)
-                if not menu or menu.id not in visible_ids or menu.id in seen_ids:
+                if not menu or menu.id in menu_definitions:
                     continue
-                seen_ids.add(menu.id)
+                menu_definitions[menu.id] = (menu, fallback_icon, code)
+                default_layout[code].append(menu.id)
+
+        configured_layout = {}
+        raw_layout = self.env["ir.config_parameter"].sudo().get_param(
+            SIDEBAR_LAYOUT_PARAMETER, ""
+        )
+        if raw_layout:
+            try:
+                values = json.loads(raw_layout)
+                if isinstance(values, dict):
+                    configured_ids = set()
+                    for code, menu_ids in values.items():
+                        if code not in category_codes or not isinstance(menu_ids, list):
+                            continue
+                        configured_layout[code] = []
+                        for menu_id in menu_ids:
+                            if menu_id in menu_definitions and menu_id not in configured_ids:
+                                configured_layout[code].append(menu_id)
+                                configured_ids.add(menu_id)
+            except (TypeError, ValueError):
+                configured_layout = {}
+
+        assigned_ids = {
+            menu_id for menu_ids in configured_layout.values() for menu_id in menu_ids
+        }
+        for code, menu_ids in default_layout.items():
+            configured_layout.setdefault(code, [])
+            configured_layout[code].extend(
+                menu_id for menu_id in menu_ids if menu_id not in assigned_ids
+            )
+            assigned_ids.update(menu_ids)
+
+        categories = []
+        for code, name, icon, _item_definitions in SIDEBAR_NAVIGATION:
+            items = []
+            for menu_id in configured_layout[code]:
+                definition = menu_definitions.get(menu_id)
+                if not definition or menu_id not in visible_ids:
+                    continue
+                menu, fallback_icon, _default_code = definition
                 items.append({
                     "id": menu.id,
                     "name": menu.name,
                     "web_icon": menu.web_icon or "",
                     "fallback_icon": fallback_icon,
+                    "locked": False,
                 })
-            if items:
-                categories.append({
-                    "code": code,
-                    "name": _(name),
-                    "icon": icon,
-                    "items": items,
-                })
+            categories.append({
+                "code": code,
+                "name": _(name),
+                "icon": icon,
+                "items": items,
+            })
         return {"categories": categories}
+
+    @api.model
+    def get_managed_sidebar_navigation(self):
+        payload = self.get_sidebar_navigation()
+        payload["can_edit"] = self.env.user.has_group("base.group_system")
+        return payload
+
+    @api.model
+    def save_sidebar_navigation(self, layout):
+        if not self.env.user.has_group("base.group_system"):
+            raise AccessError(_("只有系统管理员可以调整左侧功能导航。"))
+        if not isinstance(layout, list) or len(layout) > len(SIDEBAR_NAVIGATION):
+            raise ValidationError(_("左侧导航布局格式无效。"))
+
+        valid_codes = {code for code, _name, _icon, _items in SIDEBAR_NAVIGATION}
+        allowed_ids = set()
+        for _code, _name, _icon, item_definitions in SIDEBAR_NAVIGATION:
+            for xmlid, _fallback_icon in item_definitions:
+                menu = self.env.ref(xmlid, raise_if_not_found=False)
+                if menu:
+                    allowed_ids.add(menu.id)
+
+        seen_codes = set()
+        seen_ids = set()
+        normalized = {}
+        for section in layout:
+            if not isinstance(section, dict):
+                raise ValidationError(_("左侧导航分类格式无效。"))
+            code = section.get("code")
+            menu_ids = section.get("menu_ids", [])
+            if code not in valid_codes or code in seen_codes or not isinstance(menu_ids, list):
+                raise ValidationError(_("左侧导航分类格式无效。"))
+            seen_codes.add(code)
+            normalized[code] = []
+            for menu_id in menu_ids:
+                if not isinstance(menu_id, int) or menu_id not in allowed_ids or menu_id in seen_ids:
+                    raise ValidationError(_("左侧导航包含无效或重复的菜单。"))
+                seen_ids.add(menu_id)
+                normalized[code].append(menu_id)
+
+        visible_allowed_ids = allowed_ids & self.env["ir.ui.menu"]._visible_menu_ids()
+        if seen_ids != visible_allowed_ids:
+            raise ValidationError(_("必须保留所有当前可见的左侧功能入口。"))
+        self.env["ir.config_parameter"].sudo().set_param(
+            SIDEBAR_LAYOUT_PARAMETER,
+            json.dumps(normalized),
+        )
+        return self.get_managed_sidebar_navigation()
+
+    @api.model
+    def reset_sidebar_navigation(self):
+        if not self.env.user.has_group("base.group_system"):
+            raise AccessError(_("只有系统管理员可以恢复默认左侧导航。"))
+        self.env["ir.config_parameter"].sudo().set_param(SIDEBAR_LAYOUT_PARAMETER, "")
+        return self.get_managed_sidebar_navigation()
 
     @api.model
     def save_application_navigation(self, layout):

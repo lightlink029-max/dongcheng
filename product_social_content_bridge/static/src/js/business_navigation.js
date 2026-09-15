@@ -71,7 +71,7 @@ export class BusinessNavigation extends Component {
         try {
             const payload = await this.orm.call(
                 "psc.business.hub",
-                "get_application_navigation",
+                "get_managed_sidebar_navigation",
                 []
             );
             this.applyPayload(payload);
@@ -202,11 +202,11 @@ export class BusinessNavigation extends Component {
         try {
             const payload = await this.orm.call(
                 "psc.business.hub",
-                "save_application_navigation",
+                "save_sidebar_navigation",
                 [this.serializeLayout()]
             );
             this.applyPayload(payload);
-            await this.menu.reload();
+            this.env.bus.trigger("PSC:SIDEBAR-NAVIGATION-UPDATED");
             this.state.status = "已自动保存";
         } catch (error) {
             await this.loadNavigation();
@@ -226,11 +226,11 @@ export class BusinessNavigation extends Component {
         try {
             const payload = await this.orm.call(
                 "psc.business.hub",
-                "reset_application_navigation",
+                "reset_sidebar_navigation",
                 []
             );
             this.applyPayload(payload);
-            await this.menu.reload();
+            this.env.bus.trigger("PSC:SIDEBAR-NAVIGATION-UPDATED");
             this.state.status = "已恢复默认布局";
         } catch (error) {
             this.notification.add("恢复默认布局失败，请稍后重试。", { type: "danger" });
@@ -263,6 +263,7 @@ export class BusinessSidebar extends Component {
                 this.syncNavigationState();
             }
         });
+        useBus(this.env.bus, "PSC:SIDEBAR-NAVIGATION-UPDATED", () => this.loadNavigation());
         onWillStart(() => this.loadNavigation());
         onMounted(() => this.syncNavigationState());
         onWillUnmount(() => this.clearBodyClasses());

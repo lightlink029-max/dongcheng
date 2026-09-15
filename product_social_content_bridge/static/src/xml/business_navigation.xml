@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <t t-name="product_social_content_bridge.BusinessNavigation">
-        <section class="o_psc_business_navigation" aria-label="全部功能导航">
+        <section class="o_psc_business_navigation" aria-label="左侧导航管理">
             <div class="o_psc_nav_header">
                 <div>
-                    <h2>全部功能导航</h2>
-                    <p>所有模块按业务功能集中展示，点击直接进入；整理模式下可拖动重新分类和排序。</p>
+                    <h2>左侧导航管理</h2>
+                    <p>这里与页面左侧导航完全一致；拖动入口调整分类或顺序后，左侧立即同步。</p>
                 </div>
                 <div class="o_psc_nav_actions" t-if="state.canEdit">
                     <span class="o_psc_nav_status" t-if="state.status"><t t-esc="state.status"/></span>
