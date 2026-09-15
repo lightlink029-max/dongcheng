@@ -47,7 +47,8 @@ class BusinessHubProductWorkspace(models.Model):
         limit = min(max(int(limit or 24), 1), 60)
 
         keyword = str(filters.get("keyword") or "").strip()[:120]
-        category_id = self._workspace_filter_id(filters.get("category_id"))
+        category_filter = filters.get("category_id")
+        category_id = self._workspace_filter_id(category_filter)
         attribute_value_id = self._workspace_filter_id(
             filters.get("attribute_value_id")
         )
@@ -61,7 +62,9 @@ class BusinessHubProductWorkspace(models.Model):
             domain.append(("active", "=", False))
         elif active_status != "all":
             domain.append(("active", "=", True))
-        if category_id:
+        if category_filter == "uncategorized":
+            domain.append(("categ_id", "=", False))
+        elif category_id:
             domain.append(("categ_id", "child_of", category_id))
         if attribute_value_id:
             domain.append(("attribute_line_ids.value_ids", "in", [attribute_value_id]))
@@ -111,7 +114,11 @@ class BusinessHubProductWorkspace(models.Model):
                 "name": product.name,
                 "default_code": product.default_code or "",
                 "barcode": product.barcode or "",
-                "category": product.categ_id.complete_name or product.categ_id.name,
+                "category": (
+                    product.categ_id.complete_name
+                    or product.categ_id.name
+                    or _("未分类")
+                ),
                 "attributes": attribute_summary,
                 "tags": product.product_tag_ids.mapped("name")[:6],
                 "keywords": product.psc_procurement_keywords or "",

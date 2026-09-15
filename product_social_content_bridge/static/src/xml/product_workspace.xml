@@ -38,6 +38,7 @@
                     <select id="psc_product_category" class="form-select"
                             t-model="state.filters.category_id" t-on-change="applyFilters">
                         <option value="">全部分类</option>
+                        <option value="uncategorized">未分类（待整理）</option>
                         <option t-foreach="state.options.categories" t-as="category" t-key="category.id"
                                 t-att-value="category.id"><t t-esc="category.name"/></option>
                     </select>
