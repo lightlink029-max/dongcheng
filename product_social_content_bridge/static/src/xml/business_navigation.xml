@@ -93,6 +93,18 @@
                 </button>
             </header>
 
+            <button
+                type="button"
+                class="o_psc_sidebar_back"
+                title="返回上一级"
+                aria-label="返回上一级"
+                t-att-disabled="!state.canGoBack"
+                t-on-click="goBack"
+            >
+                <i class="fa fa-arrow-left"/>
+                <span class="o_psc_sidebar_label">返回上一级</span>
+            </button>
+
             <div class="o_psc_sidebar_loading" t-if="state.loading">
                 <i class="fa fa-spinner fa-spin"/>
                 <span class="o_psc_sidebar_label">正在加载…</span>

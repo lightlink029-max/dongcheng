@@ -247,6 +247,7 @@ export class BusinessSidebar extends Component {
     setup() {
         this.orm = useService("orm");
         this.menu = useService("menu");
+        this.action = useService("action");
         this.notification = useService("notification");
         this.state = useState({
             loading: true,
@@ -254,16 +255,23 @@ export class BusinessSidebar extends Component {
             openCategory: browser.localStorage.getItem(SIDEBAR_CATEGORY_KEY) || "today",
             collapsed: browser.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1",
             fullscreen: false,
+            canGoBack: false,
         });
         useBus(this.env.bus, "ACTION_MANAGER:UI-UPDATED", ({ detail: mode }) => {
             if (mode !== "new") {
                 this.state.fullscreen = mode === "fullscreen";
-                this.syncBodyClasses();
+                this.syncNavigationState();
             }
         });
         onWillStart(() => this.loadNavigation());
-        onMounted(() => this.syncBodyClasses());
+        onMounted(() => this.syncNavigationState());
         onWillUnmount(() => this.clearBodyClasses());
+    }
+
+    syncNavigationState() {
+        const breadcrumbs = this.action.currentController?.config?.breadcrumbs || [];
+        this.state.canGoBack = breadcrumbs.length > 1;
+        this.syncBodyClasses();
     }
 
     async loadNavigation() {
@@ -308,6 +316,13 @@ export class BusinessSidebar extends Component {
         this.state.collapsed = !this.state.collapsed;
         browser.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, this.state.collapsed ? "1" : "0");
         this.syncBodyClasses();
+    }
+
+    async goBack() {
+        if (!this.state.canGoBack) {
+            return;
+        }
+        await this.action.restore();
     }
 
     toggleCategory(category) {

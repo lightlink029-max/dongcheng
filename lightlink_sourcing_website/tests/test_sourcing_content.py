@@ -175,6 +175,24 @@ class TestSourcingContent(TransactionCase):
         })
         self.assertEqual(lead.ll_source_website_id, factory_website)
 
+    def test_operations_navigation_keeps_site_context(self):
+        website = self.env["website"].create({
+            "name": "Operations navigation website",
+            "ll_business_type": "factory",
+            "homepage_url": "/factory-home",
+        })
+
+        related_action = website.action_ll_open_pages()
+        self.assertEqual(related_action["target"], "current")
+        self.assertIn(website.display_name, related_action["name"])
+        self.assertEqual(related_action["context"]["default_website_id"], website.id)
+        self.assertEqual(related_action["domain"], [("website_id", "=", website.id)])
+
+        public_action = website.action_ll_open_public_site()
+        self.assertEqual(public_action["target"], "new")
+        self.assertIn("/website/force/%s?" % website.id, public_action["url"])
+        self.assertIn("path=%2Ffactory-home", public_action["url"])
+
     def test_factory_claim_requires_evidence_before_publication(self):
         factory_website = self.env["website"].create({
             "name": "Unverified Factory Website",

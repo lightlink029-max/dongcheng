@@ -1,4 +1,5 @@
 import re
+from urllib.parse import urlencode
 
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
@@ -122,11 +123,12 @@ class Website(models.Model):
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",
-            "name": name,
+            "name": "%s · %s" % (self.display_name, name),
             "res_model": model,
             "view_mode": "list,form",
             "domain": domain or [("website_id", "=", self.id)],
             "context": {"default_website_id": self.id},
+            "target": "current",
         }
 
     def action_ll_open_projects(self):
@@ -150,8 +152,17 @@ class Website(models.Model):
     def action_ll_open_public_site(self):
         self.ensure_one()
         base_url = (self.domain or self.get_base_url()).rstrip("/")
-        path = "/sourcing" if self.ll_business_type == "sourcing_agency" else "/"
-        return {"type": "ir.actions.act_url", "url": "%s%s" % (base_url, path), "target": "new"}
+        path = self.homepage_url or (
+            "/sourcing" if self.ll_business_type == "sourcing_agency" else "/"
+        )
+        if not path.startswith("/"):
+            path = "/%s" % path
+        switch_url = "%s/website/force/%s?%s" % (
+            base_url,
+            self.id,
+            urlencode({"path": path}),
+        )
+        return {"type": "ir.actions.act_url", "url": switch_url, "target": "new"}
 
     @api.model
     def initialize_lightlink_sourcing_site(self):

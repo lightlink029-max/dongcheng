@@ -30,6 +30,10 @@
             justify-content: center;
             padding-inline: .75rem;
         }
+
+        .o_psc_sidebar_back {
+            justify-content: center;
+        }
     }
 }
 
@@ -84,6 +88,34 @@
     align-items: center;
     padding: 1rem;
     color: #6b7b80;
+}
+
+.o_psc_sidebar_back {
+    display: flex;
+    flex: 0 0 auto;
+    gap: .65rem;
+    align-items: center;
+    min-height: 42px;
+    margin: .55rem .55rem 0;
+    border: 1px solid #dbe8e7;
+    border-radius: .55rem;
+    padding: .5rem .75rem;
+    background: #f7fafa;
+    color: #0c5250;
+    font-weight: 650;
+    text-align: left;
+
+    &:hover:not(:disabled),
+    &:focus-visible:not(:disabled) {
+        border-color: #9bc7c4;
+        background: #e8f3f2;
+        outline: none;
+    }
+
+    &:disabled {
+        cursor: default;
+        opacity: .42;
+    }
 }
 
 .o_psc_sidebar_groups {

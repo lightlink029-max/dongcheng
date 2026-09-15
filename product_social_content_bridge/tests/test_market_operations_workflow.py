@@ -105,6 +105,9 @@ class MarketOperationsWorkflowCase(TransactionCase):
         settings = next(
             category for category in categories if category["code"] == "settings_resources"
         )
+        procurement = next(
+            category for category in categories if category["code"] == "procurement_delivery"
+        )
         self.assertIn(
             self.env.ref("product_social_content_bridge.menu_psc_business_hub").id,
             [item["id"] for item in today["items"]],
@@ -112,6 +115,10 @@ class MarketOperationsWorkflowCase(TransactionCase):
         self.assertIn(
             self.env.ref("product_social_content_bridge.menu_psc_navigation_management").id,
             [item["id"] for item in settings["items"]],
+        )
+        self.assertIn(
+            self.env.ref("sale.menu_product_template_action").id,
+            [item["id"] for item in procurement["items"]],
         )
 
     def test_dashboard_contains_native_operating_data_dashboard(self):
