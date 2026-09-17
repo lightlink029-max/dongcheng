@@ -259,20 +259,20 @@ class LightLinkSourcingWebsite(http.Controller):
 
                 def update_anchor(match):
                     inner = match.group(2)
-                    if category.image_1920:
-                        image = (
-                            '<img class="ll-managed-category-icon" '
-                            'src="%s" alt="%s" width="76" height="76" '
-                            'style="width:76px;height:76px;object-fit:contain"/>'
-                            % (
-                                self._category_image_url(category, "image_128"),
-                                escape(category.name),
-                            )
+                    image = (
+                        '<img class="ll-managed-category-icon" '
+                        'src="%s" alt="%s" width="76" height="76" '
+                        'loading="lazy" decoding="async" '
+                        'style="width:76px;height:76px;object-fit:contain"/>'
+                        % (
+                            self._category_image_url(category, "image_128"),
+                            escape(category.name),
                         )
-                        inner = re.sub(
-                            r"<svg\b.*?</svg>", image, inner, count=1,
-                            flags=re.IGNORECASE | re.DOTALL,
-                        )
+                    )
+                    inner = re.sub(
+                        r"<svg\b.*?</svg>", image, inner, count=1,
+                        flags=re.IGNORECASE | re.DOTALL,
+                    )
                     inner = re.sub(
                         r'(<span\b[^>]*class=["\'][^"\']*elementor-cta__title'
                         r'[^"\']*["\'][^>]*>).*?(</span>)',
@@ -326,10 +326,10 @@ class LightLinkSourcingWebsite(http.Controller):
                     body,
                     1,
                 )
-            if category.sourcing_source_image_path and category.image_1920:
+            if category.sourcing_source_image_path:
                 body = body.replace(
                     'src="%s"' % category.sourcing_source_image_path,
-                    'src="%s"' % self._category_image_url(category, "image_1920"),
+                    'src="%s"' % self._category_image_url(category, "image_512"),
                     1,
                 )
         return body

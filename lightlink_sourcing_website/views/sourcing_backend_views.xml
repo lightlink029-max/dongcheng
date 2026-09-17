@@ -401,7 +401,6 @@
         <field name="arch" type="xml">
             <list string="产品分类落地页">
                 <field name="sequence" widget="handle"/>
-                <field name="image_128" widget="image"/>
                 <field name="name"/>
                 <field name="parent_id"/>
                 <field name="sourcing_hero_subtitle" optional="show"/>
