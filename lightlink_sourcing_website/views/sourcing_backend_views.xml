@@ -326,9 +326,8 @@
                 <field name="summary"/>
                 <filter string="已发布" name="published" domain="[('published', '=', True)]"/>
                 <filter string="本地镜像" name="mirror" domain="[('imported_from_mirror', '=', True)]"/>
-                <group expand="0" string="分组">
-                    <filter string="页面类型" name="group_page_type" context="{'group_by': 'page_type'}"/>
-                </group>
+                <separator/>
+                <filter string="按页面类型分组" name="group_page_type" context="{'group_by': 'page_type'}"/>
             </search>
         </field>
     </record>
