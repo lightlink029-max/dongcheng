@@ -196,8 +196,37 @@ class LightLinkSourcingWebsite(http.Controller):
             })
         return result
 
+    @staticmethod
+    def _mirror_page(source_path):
+        website = LightLinkSourcingWebsite._sourcing_website()
+        normalized = "/" + str(source_path or "").strip("/")
+        if normalized == "//":
+            normalized = "/"
+        return request.env["ll.sourcing.content.page"].sudo().search([
+            ("website_id", "=", website.id),
+            ("source_path", "=", normalized),
+            ("imported_from_mirror", "=", True),
+            ("active", "=", True),
+            ("published", "=", True),
+        ], limit=1)
+
+    def _render_mirror_page(self, source_path):
+        page = self._mirror_page(source_path)
+        if not page:
+            return request.not_found()
+        return request.render(
+            "lightlink_sourcing_website.sourcing_mirror_page",
+            self._base_values(mirror_page=page),
+        )
+
     @http.route("/sourcing", type="http", auth="public", website=True, sitemap=True)
     def sourcing_home(self, **kwargs):
+        mirror_page = self._mirror_page("/")
+        if mirror_page:
+            return request.render(
+                "lightlink_sourcing_website.sourcing_mirror_page",
+                self._base_values(mirror_page=mirror_page),
+            )
         website = self._sourcing_website()
         products = request.env["product.template"].sudo().search(
             website.sale_product_domain(), limit=8, order="website_sequence, id desc"
@@ -207,8 +236,16 @@ class LightLinkSourcingWebsite(http.Controller):
             self._base_values(featured_products=products),
         )
 
+    @http.route(
+        ["/sourcing/site", "/sourcing/site/<path:source_path>"],
+        type="http", auth="public", website=True, sitemap=True,
+    )
+    def sourcing_mirror_page(self, source_path="", **kwargs):
+        return self._render_mirror_page(source_path)
+
     @http.route("/sourcing/products", type="http", auth="public", website=True, sitemap=True)
     def sourcing_products(self, category=None, search=None, page=0, **kwargs):
+        return request.redirect("/sourcing/site/our-products", code=302)
         website = self._sourcing_website()
         Product = request.env["product.template"].sudo()
         catalog_domain = website.sale_product_domain()
@@ -274,6 +311,7 @@ class LightLinkSourcingWebsite(http.Controller):
         sitemap=True,
     )
     def sourcing_product_category(self, category_id, **kwargs):
+        return request.redirect("/sourcing/site/our-products", code=302)
         website = self._sourcing_website()
         Category = request.env["product.public.category"].sudo()
         Product = request.env["product.template"].sudo()
@@ -315,9 +353,7 @@ class LightLinkSourcingWebsite(http.Controller):
 
     @http.route("/sourcing/services", type="http", auth="public", website=True, sitemap=True)
     def sourcing_services(self, **kwargs):
-        return request.render(
-            "lightlink_sourcing_website.sourcing_services", self._base_values()
-        )
+        return self._render_mirror_page("pricing")
 
     @http.route(
         "/sourcing/<string:kind>/<string:slug>",
@@ -327,6 +363,18 @@ class LightLinkSourcingWebsite(http.Controller):
         sitemap=False,
     )
     def sourcing_offering(self, kind, slug, **kwargs):
+        legacy_paths = {
+            "sourcing-purchasing": "pricing",
+            "dropshipping-fulfillment": "dropshipping",
+            "packaging-graphic-design": "graphics-and-design-service",
+            "private-label-customization": "private-label-packaging-service",
+            "product-development": "product-development",
+            "consolidation-shipping": "shipping-and-cargo-consolidation-service",
+            "marketplace-fba-preparation": "amazon-fba-prep-service",
+            "quality-inspection": "quality-control-service",
+        }
+        if slug in legacy_paths:
+            return self._render_mirror_page(legacy_paths[slug])
         offering_kind = _OFFERING_KINDS.get(kind)
         if not offering_kind:
             return request.not_found()
@@ -346,15 +394,11 @@ class LightLinkSourcingWebsite(http.Controller):
 
     @http.route("/sourcing/solutions", type="http", auth="public", website=True, sitemap=True)
     def sourcing_solutions(self, **kwargs):
-        return request.render(
-            "lightlink_sourcing_website.sourcing_solutions", self._base_values()
-        )
+        return self._render_mirror_page("business-modes-supported")
 
     @http.route("/sourcing/pricing", type="http", auth="public", website=True, sitemap=True)
     def sourcing_pricing(self, **kwargs):
-        return request.render(
-            "lightlink_sourcing_website.sourcing_pricing", self._base_values()
-        )
+        return self._render_mirror_page("pricing")
 
     def _render_content_page(self, code):
         website = self._sourcing_website()
@@ -399,37 +443,37 @@ class LightLinkSourcingWebsite(http.Controller):
 
     @http.route("/sourcing/about", type="http", auth="public", website=True, sitemap=True)
     def sourcing_about(self, **kwargs):
-        return self._render_content_page("about-us")
+        return self._render_mirror_page("about-us")
 
     @http.route("/sourcing/payment", type="http", auth="public", website=True, sitemap=True)
     def sourcing_payment(self, **kwargs):
-        return self._render_content_page("payment-information")
+        return self._render_mirror_page("payment")
 
     @http.route("/sourcing/founder", type="http", auth="public", website=True, sitemap=True)
     def sourcing_founder(self, **kwargs):
-        return self._render_content_page("founder")
+        return self._render_mirror_page("jing")
 
     @http.route("/sourcing/resources", type="http", auth="public", website=True, sitemap=True)
     def sourcing_resources(self, **kwargs):
-        return self._render_content_page("resources")
+        return self._render_mirror_page("blog")
 
     @http.route(
         "/sourcing/resources/importing-from-china",
         type="http", auth="public", website=True, sitemap=True,
     )
     def sourcing_importing_guide(self, **kwargs):
-        return self._render_content_page("importing-from-china")
+        return self._render_mirror_page("blog/c-import-from-china-guide")
 
     @http.route(
         "/sourcing/resources/sourcing-agent-guide",
         type="http", auth="public", website=True, sitemap=True,
     )
     def sourcing_agent_guide(self, **kwargs):
-        return self._render_content_page("sourcing-agent-guide")
+        return self._render_mirror_page("find-china-sourcing-agents-company")
 
     @http.route("/sourcing/yiwu-china", type="http", auth="public", website=True, sitemap=True)
     def sourcing_visit_yiwu(self, **kwargs):
-        return self._render_content_page("visit-yiwu")
+        return self._render_mirror_page("yiwu-china")
 
     @http.route(
         "/sourcing/yiwu-china/<string:slug>",

@@ -57,7 +57,8 @@
     </template>
 
     <template id="sourcing_footer" name="Sourcing Website Footer">
-        <footer class="ll-sourcing-footer">
+        <div t-if="sourcing_website.sourcing_mirror_footer_html" class="ll-mirror-footer" t-field="sourcing_website.sourcing_mirror_footer_html"/>
+        <footer t-else="" class="ll-sourcing-footer">
             <div class="container">
                 <div class="row g-5">
                     <div t-foreach="sourcing_footer_columns" t-as="column" class="col-6 col-lg">
@@ -76,6 +77,16 @@
                 </div>
             </div>
         </footer>
+    </template>
+
+    <template id="sourcing_mirror_page" name="LightLink Imported Sourcing Page">
+        <t t-call="lightlink_sourcing_website.sourcing_layout">
+            <t t-set="additional_title" t-value="mirror_page.name"/>
+            <div id="wrap" class="oe_structure ll-sourcing-site ll-mirror-page">
+                <link t-foreach="(mirror_page.source_stylesheets or '').splitlines()" t-as="stylesheet_url" rel="stylesheet" t-att-href="stylesheet_url"/>
+                <div class="ll-mirror-body" t-field="mirror_page.body_html"/>
+            </div>
+        </t>
     </template>
 
     <template id="sourcing_layout" name="Sourcing Website Layout">

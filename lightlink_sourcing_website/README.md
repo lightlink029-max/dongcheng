@@ -1,56 +1,53 @@
 # LightLink Global Sourcing 网站
 
-本模块把采购服务获客站作为独立 Odoo Website 和独立运营项目运行。公开网站只负责内容、产品入口和结构化询盘；CRM、销售、采购、库存、交付、博客和多语言继续复用 Odoo 标准模块。
+本模块把采购代理网站作为独立 Odoo Website 运行，并绑定到“LightLink 全球采购服务运营项目”。公开页面来自用户提供的私有本地网站镜像，但不是把静态目录直接挂到线上：构建工具会去重、移除脚本和跟踪代码、重写内部链接与素材路径，再把页面正文和元数据导入 Odoo 数据库。
 
-## 首次安装或升级后
+## 安装或升级结果
 
-- 自动建立 `LightLink Global Sourcing` 独立网站，首页为 `/sourcing`。
-- 自动建立 `LightLink 全球采购服务运营项目`，网站询盘直接归属该项目。
-- 初始化 9 个可替换图片资产位、12 类服务、5 类客户方案、2 类服务方案和 20 个 Odoo 原生网站产品分类。
-- 英文作为默认语言；若简体中文已启用，则同时加入网站语言。
-- 初始化网站固定文案和内容记录的简体中文翻译，后续可继续使用 OdooTranslate 维护。
-- 独立网站菜单不会出现在原网站中。
+- 独立网站类型固定为“采购代理网站”，首页为 `/sourcing`。
+- 网站绑定运营项目 ID 5，结构化询盘继续进入 Odoo CRM 与采购需求。
+- 本地镜像的有效页面按规范网址去重后导入为 `ll.sourcing.content.page` 记录。
+- 页面标题、公开路径、正文、发布状态与页脚可在后台编辑。
+- 头部导航保持本地参考站的栏目层级，链接到数据库页面。
+- 页面内的旧品牌名称在构建阶段统一为 `LightLink Global Sourcing`。
+- 原采购站演示服务、图片资产、指标、评价、付款和页脚记录在迁移时删除；产品、CRM、采购、销售和项目数据不删除。
+- 英文为默认语言，简体中文继续使用 Odoo 原生翻译和 OdooTranslate 管理。
 
-正式公开前，需要在“LightLink 业务中心 → 网站与营销 → 采购服务项目 → 独立网站设置”中配置独立域名、服务邮箱和 WhatsApp 链接。
+## 后台维护入口
 
-## 日常维护入口
+进入“网站运营中心 → 采购与工厂网站管理”：
 
-- **独立网站设置**：品牌名、标语、域名、服务邮箱、WhatsApp、询盘运营项目。
-- **服务与解决方案**：网站卡片、详情页、图标、主图、核心能力、交付步骤和默认询盘类型。
-- **网站图片资产**：替换首页、开发、质检、物流、履约、拍摄、包装、仓储和审核场景图；保留资产位代码即可自动更新引用页面。
-- **网站页面与指南**：维护关于、付款说明、资源中心、进口指南、采购代理指南，以及可排序的指南章节和详情链接。
-- **可信经营数据**：只有填写核实依据并标记“已核实”的数据才能发布。
-- **客户评价**：只有记录公开授权、核实状态和说明后才能发布。
-- **付款方式**：维护实际可用的付款方法、费用说明和防诈骗核验提示；初始记录为未发布草稿。
-- **网站页脚**：维护主菜单、服务、解决方案、联系方式和工作时间栏目；联系方式和工作时间初始为未发布草稿。
-- **采购询盘**：查看表单生成的 CRM 线索和结构化采购需求。
+- “网站总览与切换”：维护网站身份、语言、域名、项目绑定和页脚源码。
+- “网站头部导航”：维护菜单名称、层级、顺序和链接。
+- “镜像页面内容”：按标题、公开路径或页面类型检索页面，编辑正文并控制发布。
+- “采购询盘”：查看公开表单生成的 CRM 线索和结构化采购需求。
 
-服务和方案内容字段均支持 Odoo 翻译。网站语言切换继续使用 Odoo 原生多网站、多语言与 OdooTranslate，不建立第二套翻译数据。
+页面正文使用 Odoo HTML 编辑器保存。修改后的记录不会因为日常访问而被本地文件覆盖；只有显式执行新的版本迁移或手动调用镜像同步方法才会重新导入。
 
-## 页面与业务闭环
+## 公开路由
 
-访客路径：`首页 / 服务 / 客户方案 / 产品或博客 → 结构化采购表单 → CRM 线索 → 采购需求 → 报价 / 采购 / 库存 / 交付`。
+- 首页：`/sourcing`
+- 镜像页面：`/sourcing/site/<原始路径>`
+- 采购需求：`/sourcing/request`
 
-主要页面：
+例如：
 
-- `/sourcing`
-- `/sourcing/services`
-- `/sourcing/services/<slug>`
-- `/sourcing/solutions`
-- `/sourcing/solutions/<slug>`
-- `/sourcing/about`
-- `/sourcing/products`
-- `/sourcing/payment`
-- `/sourcing/founder`
-- `/sourcing/resources`
-- `/sourcing/resources/importing-from-china`
-- `/sourcing/resources/sourcing-agent-guide`
-- `/sourcing/request`
+- `/sourcing/site/our-products`
+- `/sourcing/site/our-products/bags-sourcing`
+- `/sourcing/site/blog/c-import-from-china-guide`
+- `/sourcing/site/find-china-sourcing-agents-company`
+- `/sourcing/site/yiwu-china`
 
-产品页复用 Odoo 的 `product.template` 与“网站产品分类”。产品发布、图片、分类或多语言名称在 Odoo 中调整后，采购产品页自动更新；询盘按钮继续进入结构化采购需求。
+旧的 `/sourcing/products`、`/sourcing/about` 等入口保留兼容跳转，避免历史链接失效。
 
-## 内容与素材来源
+## 重新生成数据包
 
-网站的信息架构参考主流综合采购服务站点，所有公开文案均按 LightLink 的 Odoo 业务闭环重新编写。没有导入第三方商标、客户评价、业绩数字、价格承诺或网页原文。
+在开发机运行：
 
-模块内 9 张初始业务图片由 OpenAI 图像生成工具为 LightLink 原创建，不包含 JingSourcing 商标、客户照片、案例素材或原站图片。Font Awesome 图标由 Odoo 前端资产提供，后台通过图标名称维护。
+```powershell
+python lightlink_sourcing_website/tools/build_local_mirror_bundle.py `
+  "D:\Codex\2026-09-09\lightlink-recovery\research\jingsourcing\mirror\jingsourcing.com" `
+  "D:\Codex\2026-08-27\wo\work\product-hub-production2\lightlink_sourcing_website"
+```
+
+生成内容包括 `data/mirror_pages.json.gz` 和 `static/mirror/`。不要在生产服务器直接抓取外部网站。

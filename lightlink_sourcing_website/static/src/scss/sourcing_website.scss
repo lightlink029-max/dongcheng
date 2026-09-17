@@ -6,6 +6,49 @@ $ll-sand: #f6f2e9;
 $ll-amber: #efaa42;
 $ll-nav-accent: #ff7a1a;
 
+.ll-mirror-page {
+    min-height: 60vh;
+
+    .ll-mirror-body > main {
+        margin: 0;
+    }
+
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .elementor-invisible {
+        visibility: visible !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+
+    .elementor-tab-title,
+    .elementor-toggle-title {
+        cursor: pointer;
+    }
+
+    [hidden] {
+        display: none !important;
+    }
+}
+
+.ll-imported-brand {
+    color: $ll-ink;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.ll-mirror-footer {
+    overflow: hidden;
+
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+}
+
 .ll-sourcing-site {
     color: $ll-ink;
     background: #fff;

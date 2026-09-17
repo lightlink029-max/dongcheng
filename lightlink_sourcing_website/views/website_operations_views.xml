@@ -170,25 +170,18 @@
                                     <list>
                                         <field name="sequence" widget="handle"/>
                                         <field name="name"/>
-                                        <field name="code"/>
+                                        <field name="page_type" widget="badge"/>
+                                        <field name="source_path"/>
                                         <field name="published"/>
                                         <field name="active"/>
                                     </list>
                                 </field>
                             </group>
-                            <group string="网站页脚">
-                                <field name="sourcing_footer_column_ids" context="{'default_website_id': id}">
-                                    <list>
-                                        <field name="sequence" widget="handle"/>
-                                        <field name="name"/>
-                                        <field name="column_type"/>
-                                        <field name="published"/>
-                                        <field name="active"/>
-                                    </list>
-                                </field>
+                            <group string="网站页脚源码">
+                                <field name="sourcing_mirror_footer_html" widget="html" nolabel="1"/>
                             </group>
                         </page>
-                        <page string="图片素材" name="website_assets">
+                        <page string="图片素材" name="website_assets" invisible="True">
                             <field name="sourcing_asset_ids" context="{'default_website_id': id}">
                                 <list>
                                     <field name="sequence" widget="handle"/>
@@ -200,7 +193,7 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="采购服务与方案" name="sourcing_services" invisible="ll_business_type != 'sourcing_agency'">
+                        <page string="采购服务与方案" name="sourcing_services" invisible="True">
                             <field name="sourcing_offering_ids" context="{'default_website_id': id}">
                                 <list>
                                     <field name="sequence" widget="handle"/>
@@ -253,7 +246,7 @@
                                 </field>
                             </group>
                         </page>
-                        <page string="信任内容与支付" name="trust_payment">
+                        <page string="信任内容与支付" name="trust_payment" invisible="True">
                             <group string="已核实经营数据">
                                 <field name="sourcing_metric_ids" context="{'default_website_id': id}">
                                     <list><field name="sequence" widget="handle"/><field name="value_text"/><field name="label"/><field name="verified"/><field name="published"/></list>
@@ -519,19 +512,10 @@
     <menuitem id="menu_ll_site_content" name="页面、导航与素材" parent="menu_ll_sourcing_root" sequence="20"/>
     <record id="menu_ll_sourcing_website_menus" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_content"/><field name="sequence">10</field></record>
     <record id="menu_ll_sourcing_content_pages" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_content"/><field name="sequence">20</field></record>
-    <record id="menu_ll_sourcing_assets" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_content"/><field name="sequence">30</field></record>
-    <record id="menu_ll_sourcing_footer_columns" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_content"/><field name="sequence">40</field></record>
 
     <menuitem id="menu_ll_site_business" name="服务、产品与能力" parent="menu_ll_sourcing_root" sequence="30"/>
-    <record id="menu_ll_sourcing_offerings" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_business"/><field name="sequence">10</field></record>
-    <record id="menu_ll_sourcing_product_categories" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_business"/><field name="sequence">20</field></record>
     <menuitem id="menu_ll_product_presentations" name="网站产品内容" parent="menu_ll_site_business" action="action_ll_product_presentations" sequence="30"/>
     <menuitem id="menu_ll_factory_capabilities" name="工厂能力" parent="menu_ll_site_business" action="action_ll_factory_capabilities" sequence="40"/>
-
-    <menuitem id="menu_ll_site_trust" name="信任内容与支付" parent="menu_ll_sourcing_root" sequence="40"/>
-    <record id="menu_ll_sourcing_metrics" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_trust"/><field name="sequence">10</field></record>
-    <record id="menu_ll_sourcing_testimonials" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_trust"/><field name="sequence">20</field></record>
-    <record id="menu_ll_sourcing_payment_methods" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_trust"/><field name="sequence">30</field></record>
 
     <menuitem id="menu_ll_site_inquiries" name="询盘与来源" parent="menu_ll_sourcing_root" sequence="50"/>
     <record id="menu_ll_sourcing_inquiries" model="ir.ui.menu"><field name="parent_id" ref="menu_ll_site_inquiries"/><field name="sequence">10</field></record>

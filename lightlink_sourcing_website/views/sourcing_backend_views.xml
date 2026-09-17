@@ -307,11 +307,29 @@
             <list string="采购网站内容页面">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
-                <field name="code"/>
+                <field name="page_type" widget="badge"/>
+                <field name="source_path"/>
                 <field name="website_id"/>
+                <field name="imported_from_mirror"/>
                 <field name="published"/>
                 <field name="active"/>
             </list>
+        </field>
+    </record>
+    <record id="view_ll_sourcing_content_page_search" model="ir.ui.view">
+        <field name="name">ll.sourcing.content.page.search</field>
+        <field name="model">ll.sourcing.content.page</field>
+        <field name="arch" type="xml">
+            <search string="搜索采购网站页面">
+                <field name="name"/>
+                <field name="source_path"/>
+                <field name="summary"/>
+                <filter string="已发布" name="published" domain="[('published', '=', True)]"/>
+                <filter string="本地镜像" name="mirror" domain="[('imported_from_mirror', '=', True)]"/>
+                <group expand="0" string="分组">
+                    <filter string="页面类型" name="group_page_type" context="{'group_by': 'page_type'}"/>
+                </group>
+            </search>
         </field>
     </record>
     <record id="view_ll_sourcing_content_page_form" model="ir.ui.view">
@@ -322,13 +340,14 @@
                 <sheet>
                     <div class="oe_title"><h1><field name="name"/></h1></div>
                     <group>
-                        <group><field name="code"/><field name="website_id" options="{'no_create': True}"/><field name="image_asset_id" domain="[('website_id', '=', website_id)]"/></group>
-                        <group><field name="sequence"/><field name="published"/><field name="active"/></group>
+                        <group><field name="code"/><field name="source_path"/><field name="page_type"/><field name="website_id" options="{'no_create': True}"/></group>
+                        <group><field name="sequence"/><field name="imported_from_mirror" readonly="1"/><field name="source_file" readonly="1"/><field name="source_hash" readonly="1"/><field name="published"/><field name="active"/></group>
                     </group>
                     <group><field name="kicker"/><field name="summary"/></group>
                     <notebook>
                         <page string="页面正文"><field name="body_html" widget="html" nolabel="1"/></page>
-                        <page string="指南章节">
+                        <page string="导入样式"><field name="source_stylesheets" readonly="1" nolabel="1"/></page>
+                        <page string="指南章节" invisible="imported_from_mirror">
                             <field name="chapter_ids" context="{'default_page_id': id}">
                                 <list editable="bottom">
                                     <field name="sequence" widget="handle"/><field name="name"/><field name="summary"/><field name="reading_time"/><field name="video_time"/><field name="target_url"/><field name="published"/><field name="active"/>
@@ -495,16 +514,9 @@
         <field name="views" eval="[(ref('view_ll_sourcing_website_menu_list'), 'list'), (ref('view_ll_sourcing_website_menu_form'), 'form')]"/>
     </record>
 
-    <menuitem id="menu_ll_sourcing_root" name="采购服务项目" parent="product_social_content_bridge.menu_psc_category_web_marketing" sequence="5"/>
+    <menuitem id="menu_ll_sourcing_root" name="采购代理网站" parent="product_social_content_bridge.menu_psc_category_web_marketing" sequence="5"/>
     <menuitem id="menu_ll_sourcing_websites" name="独立网站设置" parent="menu_ll_sourcing_root" action="action_ll_sourcing_websites" sequence="10"/>
-    <menuitem id="menu_ll_sourcing_offerings" name="服务与解决方案" parent="menu_ll_sourcing_root" action="action_ll_sourcing_offerings" sequence="20"/>
-    <menuitem id="menu_ll_sourcing_product_categories" name="产品分类落地页" parent="menu_ll_sourcing_root" action="action_ll_sourcing_product_categories" sequence="25"/>
     <menuitem id="menu_ll_sourcing_website_menus" name="网站头部导航" parent="menu_ll_sourcing_root" action="action_ll_sourcing_website_menus" sequence="30"/>
-    <menuitem id="menu_ll_sourcing_content_pages" name="网站页面与指南" parent="menu_ll_sourcing_root" action="action_ll_sourcing_content_pages" sequence="40"/>
-    <menuitem id="menu_ll_sourcing_assets" name="网站图片资产" parent="menu_ll_sourcing_root" action="action_ll_sourcing_assets" sequence="45"/>
-    <menuitem id="menu_ll_sourcing_metrics" name="可信经营数据" parent="menu_ll_sourcing_root" action="action_ll_sourcing_metrics" sequence="50"/>
-    <menuitem id="menu_ll_sourcing_testimonials" name="客户评价" parent="menu_ll_sourcing_root" action="action_ll_sourcing_testimonials" sequence="60"/>
-    <menuitem id="menu_ll_sourcing_payment_methods" name="付款方式" parent="menu_ll_sourcing_root" action="action_ll_sourcing_payment_methods" sequence="70"/>
-    <menuitem id="menu_ll_sourcing_footer_columns" name="网站页脚" parent="menu_ll_sourcing_root" action="action_ll_sourcing_footer_columns" sequence="80"/>
+    <menuitem id="menu_ll_sourcing_content_pages" name="镜像页面内容" parent="menu_ll_sourcing_root" action="action_ll_sourcing_content_pages" sequence="40"/>
     <menuitem id="menu_ll_sourcing_inquiries" name="采购询盘" parent="menu_ll_sourcing_root" action="product_social_content_bridge.action_psc_customer_requirements" sequence="90"/>
 </odoo>

@@ -1,8 +1,12 @@
+import gzip
+import hashlib
+import json
 import re
 from urllib.parse import urlencode
 
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
+from odoo.modules.module import get_module_resource
 
 
 REQUEST_TYPES = [
@@ -65,6 +69,12 @@ class Website(models.Model):
     )
     sourcing_footer_column_ids = fields.One2many(
         "ll.sourcing.footer.column", "website_id", string="网站页脚",
+    )
+    sourcing_mirror_footer_html = fields.Html(
+        string="采购网站页脚源码",
+        sanitize=False,
+        translate=True,
+        help="由本地采购网站镜像初始化，可在后台继续编辑。",
     )
     ll_factory_capability_ids = fields.One2many(
         "ll.website.factory.capability", "website_id", string="工厂能力",
@@ -327,6 +337,112 @@ class Website(models.Model):
         return True
 
     @api.model
+    def sync_lightlink_sourcing_mirror(self):
+        """Replace the unused demo website content with the local mirror bundle."""
+        website = self.env.ref(
+            "lightlink_sourcing_website.website_global_sourcing", raise_if_not_found=False,
+        )
+        bundle_path = get_module_resource(
+            "lightlink_sourcing_website", "data", "mirror_pages.json.gz",
+        )
+        if not website or not bundle_path:
+            return False
+        with gzip.open(bundle_path, "rt", encoding="utf-8") as archive:
+            payload = json.load(archive)
+        if payload.get("schema_version") != 1 or not payload.get("pages"):
+            raise ValidationError(_("采购网站镜像数据包无效或为空。"))
+
+        # These records belonged only to the pre-launch demo website.  Project,
+        # CRM, product, purchase and sales records are deliberately untouched.
+        for model_name in (
+            "ll.sourcing.content.page",
+            "ll.sourcing.offering",
+            "ll.sourcing.metric",
+            "ll.sourcing.testimonial",
+            "ll.sourcing.payment.method",
+            "ll.sourcing.footer.column",
+            "ll.sourcing.asset",
+        ):
+            self.env[model_name].search([("website_id", "=", website.id)]).unlink()
+
+        # Remove only the public categories seeded by the retired demo site.
+        # User-created categories and every product record remain untouched.
+        demo_categories = self.env["product.public.category"]
+        for xmlid in (
+            "product_category_apparel",
+            "product_category_furniture",
+            "product_category_bags_cases",
+            "product_category_bags_handbags",
+            "product_category_bags_backpacks",
+            "product_category_bags_toiletry",
+            "product_category_bags_travel",
+            "product_category_bags_pouches",
+            "product_category_bags_special",
+            "product_category_beauty",
+            "product_category_toys",
+            "product_category_sports",
+            "product_category_home",
+            "product_category_garden_tools",
+            "product_category_electronics",
+            "product_category_pet",
+            "product_category_mother_kids",
+            "product_category_hardware",
+            "product_category_office",
+            "product_category_automotive",
+            "product_category_industrial",
+            "product_category_packaging",
+            "product_category_outdoors",
+            "product_category_jewelry",
+            "product_category_lighting",
+            "product_category_other",
+        ):
+            category = self.env.ref(
+                "lightlink_sourcing_website.%s" % xmlid,
+                raise_if_not_found=False,
+            )
+            if category:
+                demo_categories |= category
+        demo_categories.unlink()
+
+        Page = self.env["ll.sourcing.content.page"].with_context(lang="en_US")
+        values = []
+        for item in payload["pages"]:
+            source_path = item["path"]
+            code_suffix = hashlib.sha1(source_path.encode("utf-8")).hexdigest()[:16]
+            values.append({
+                "name": item["title"],
+                "code": "mirror-%s" % code_suffix,
+                "website_id": website.id,
+                "kicker": "LightLink Global Sourcing",
+                "summary": item.get("description") or item["title"],
+                "body_html": item["body_html"],
+                "source_path": source_path,
+                "source_file": item.get("source_file"),
+                "source_hash": item["source_hash"],
+                "source_stylesheets": "\n".join(item.get("stylesheets") or []),
+                "page_type": item.get("page_type") or "page",
+                "imported_from_mirror": True,
+                "published": True,
+                "active": True,
+            })
+        for start in range(0, len(values), 25):
+            Page.create(values[start:start + 25])
+
+        website.write({
+            "sourcing_enabled": True,
+            "ll_business_type": "sourcing_agency",
+            "homepage_url": "/sourcing",
+            "sourcing_mirror_footer_html": payload.get("footer_html") or False,
+        })
+        project = self.env["psc.publishing.project"].browse(5).exists()
+        if project:
+            project.write({
+                "website_id": website.id,
+                "website_inquiry_enabled": True,
+            })
+        return len(values)
+
+    @api.model
     def _cleanup_lightlink_sourcing_bootstrap_menus(self):
         """Remove menus copied by Odoo when the dedicated website is created."""
         website = self.env.ref(
@@ -495,7 +611,24 @@ class SourcingContentPage(models.Model):
     )
     kicker = fields.Char(string="栏目眉题", translate=True)
     summary = fields.Text(string="页面摘要", required=True, translate=True)
-    body_html = fields.Html(string="页面正文", required=True, translate=True)
+    body_html = fields.Html(
+        string="页面正文", required=True, translate=True, sanitize=False,
+        help="本地镜像初始化后的页面正文；管理员可在后台直接编辑。",
+    )
+    source_path = fields.Char(string="公开路径", index=True)
+    source_file = fields.Char(string="本地来源文件", readonly=True)
+    source_hash = fields.Char(string="来源版本", readonly=True, index=True)
+    source_stylesheets = fields.Text(string="页面样式资源", readonly=True)
+    page_type = fields.Selection([
+        ("home", "首页"),
+        ("service", "服务页"),
+        ("product_index", "产品总览"),
+        ("product_category", "产品分类"),
+        ("archive", "内容目录"),
+        ("article", "文章"),
+        ("page", "普通页面"),
+    ], string="页面类型", required=True, default="page", index=True)
+    imported_from_mirror = fields.Boolean(string="本地镜像导入", default=False, index=True)
     image_asset_id = fields.Many2one("ll.sourcing.asset", string="主图")
     chapter_ids = fields.One2many(
         "ll.sourcing.guide.chapter", "page_id", string="指南章节",
@@ -506,6 +639,9 @@ class SourcingContentPage(models.Model):
 
     _website_code_unique = models.Constraint(
         "UNIQUE(website_id, code)", "同一网站的页面代码不能重复。",
+    )
+    _website_source_path_unique = models.Constraint(
+        "UNIQUE(website_id, source_path)", "同一网站的公开路径不能重复。",
     )
 
     @api.constrains("code")
