@@ -1,4 +1,5 @@
 import math
+import re
 import threading
 import time
 from collections import defaultdict, deque
@@ -6,7 +7,7 @@ from urllib.parse import urlencode
 
 from markupsafe import escape
 
-from odoo import http
+from odoo import http, tools
 from odoo.fields import Domain
 from odoo.http import request
 from odoo.tools import email_split
@@ -242,6 +243,28 @@ class LightLinkSourcingWebsite(http.Controller):
     )
     def sourcing_mirror_page(self, source_path="", **kwargs):
         return self._render_mirror_page(source_path)
+
+    @http.route(
+        "/sourcing/styles/<string:style_hash>.css",
+        type="http", auth="public", website=True, sitemap=False,
+    )
+    def sourcing_mirror_style(self, style_hash, **kwargs):
+        if not re.fullmatch(r"[0-9a-f]{64}", style_hash or ""):
+            return request.not_found()
+        try:
+            style_path = tools.file_path(
+                "lightlink_sourcing_website/static/mirror_styles/%s.css.gz"
+                % style_hash
+            )
+            with open(style_path, "rb") as stream:
+                payload = stream.read()
+        except (FileNotFoundError, OSError):
+            return request.not_found()
+        return request.make_response(payload, headers=[
+            ("Content-Type", "text/css; charset=utf-8"),
+            ("Content-Encoding", "gzip"),
+            ("Cache-Control", "public, max-age=31536000, immutable"),
+        ])
 
     @http.route("/sourcing/products", type="http", auth="public", website=True, sitemap=True)
     def sourcing_products(self, category=None, search=None, page=0, **kwargs):

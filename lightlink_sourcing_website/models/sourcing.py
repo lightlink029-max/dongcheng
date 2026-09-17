@@ -422,6 +422,7 @@ class Website(models.Model):
                 "source_file": item.get("source_file"),
                 "source_hash": item["source_hash"],
                 "source_stylesheets": "\n".join(item.get("stylesheets") or []),
+                "source_style_hash": item.get("style_hash") or False,
                 "page_type": item.get("page_type") or "page",
                 "imported_from_mirror": True,
                 "published": True,
@@ -621,6 +622,7 @@ class SourcingContentPage(models.Model):
     source_file = fields.Char(string="本地来源文件", readonly=True)
     source_hash = fields.Char(string="来源版本", readonly=True, index=True)
     source_stylesheets = fields.Text(string="页面样式资源", readonly=True)
+    source_style_hash = fields.Char(string="页面内联样式版本", readonly=True, index=True)
     page_type = fields.Selection([
         ("home", "首页"),
         ("service", "服务页"),

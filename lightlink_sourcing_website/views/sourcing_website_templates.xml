@@ -84,6 +84,7 @@
             <t t-set="additional_title" t-value="mirror_page.name"/>
             <div id="wrap" class="oe_structure ll-sourcing-site ll-mirror-page">
                 <link t-foreach="(mirror_page.source_stylesheets or '').splitlines()" t-as="stylesheet_url" rel="stylesheet" t-att-href="stylesheet_url"/>
+                <link t-if="mirror_page.source_style_hash" rel="stylesheet" t-att-href="'/sourcing/styles/%s.css' % mirror_page.source_style_hash"/>
                 <div class="ll-mirror-body" t-field="mirror_page.body_html"/>
             </div>
         </t>

@@ -126,6 +126,7 @@ class MirrorBuilder:
         self.source_root = source_root.resolve()
         self.module_root = module_root.resolve()
         self.static_root = self.module_root / "static" / "mirror"
+        self.style_root = self.module_root / "static" / "mirror_styles"
         self.bundle_path = self.module_root / "data" / "mirror_pages.json.gz"
         self.assets: set[Path] = set()
 
@@ -261,6 +262,32 @@ class MirrorBuilder:
                 result.append(url)
         return result
 
+    def _write_page_styles(self, source_file: Path, document: str) -> str:
+        """Persist the page's inline CSS without inflating the database bundle."""
+        blocks = re.findall(
+            r"<style\b[^>]*>(.*?)</style\s*>", document, flags=re.I | re.S,
+        )
+        css = "\n".join(block.strip() for block in blocks if block.strip())
+        if not css:
+            return ""
+
+        def replace_url(match):
+            quote = match.group(1) or ""
+            raw = match.group(2).strip()
+            rewritten = self._asset_url(source_file, raw)
+            return f"url({quote}{rewritten}{quote})"
+
+        css = re.sub(r"url\((['\"]?)([^)'\"]+)\1\)", replace_url, css, flags=re.I)
+        digest = hashlib.sha256(css.encode("utf-8")).hexdigest()
+        target = self.style_root / f"{digest}.css.gz"
+        if not target.exists():
+            with target.open("wb") as raw:
+                with gzip.GzipFile(
+                    filename="", mode="wb", fileobj=raw, compresslevel=9, mtime=0,
+                ) as archive:
+                    archive.write(css.encode("utf-8"))
+        return digest
+
     @staticmethod
     def _extract_element(document: str, tag: str) -> str:
         start = re.search(rf"<{tag}\b", document, flags=re.I)
@@ -319,6 +346,9 @@ class MirrorBuilder:
         if self.static_root.is_dir():
             shutil.rmtree(self.static_root)
         self.static_root.mkdir(parents=True, exist_ok=True)
+        if self.style_root.is_dir():
+            shutil.rmtree(self.style_root)
+        self.style_root.mkdir(parents=True, exist_ok=True)
         page_candidates: dict[str, tuple[tuple[int, int, str], dict]] = {}
         root_footer = ""
         for source_file in sorted(self.source_root.rglob("index.html")):
@@ -355,6 +385,10 @@ class MirrorBuilder:
                     root_footer = self._rewrite_html(source_file, source_path, footer)
 
         pages = [value[1] for value in sorted(page_candidates.values(), key=lambda item: item[1]["path"])]
+        for item in pages:
+            source_file = self.source_root / item["source_file"]
+            document = source_file.read_text(encoding="utf-8", errors="ignore")
+            item["style_hash"] = self._write_page_styles(source_file, document)
         known_paths = {item["path"] for item in pages}
 
         def repair_link(match):

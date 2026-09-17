@@ -1,3 +1,6 @@
+import gzip
+
+from odoo import tools
 from odoo.tests import tagged
 from odoo.tests.common import TransactionCase
 from odoo.exceptions import ValidationError
@@ -17,6 +20,13 @@ class TestSourcingContent(TransactionCase):
         self.assertEqual(len(home), 1)
         self.assertTrue(home.body_html)
         self.assertTrue(home.source_stylesheets)
+        self.assertTrue(home.source_style_hash)
+        style_path = tools.file_path(
+            "lightlink_sourcing_website/static/mirror_styles/%s.css.gz"
+            % home.source_style_hash
+        )
+        with gzip.open(style_path, "rt", encoding="utf-8") as archive:
+            self.assertIn(".elementor-", archive.read())
         self.assertTrue(website.sourcing_mirror_footer_html)
         home.body_html = home.body_html + "<p>Editable test</p>"
         self.assertIn("Editable test", home.body_html)
