@@ -9,6 +9,12 @@ $ll-nav-accent: #ff7a1a;
 .ll-mirror-page {
     min-height: 60vh;
 
+    .ll-mirror-body {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
     .ll-mirror-body > main {
         margin: 0;
     }
@@ -18,10 +24,8 @@ $ll-nav-accent: #ff7a1a;
         height: auto;
     }
 
-    // The offline Elementor pages size icon SVGs in page-level inline CSS.
-    // That CSS is intentionally not imported into editable Odoo content, so
-    // retain the equivalent font-icon sizing here instead of letting an SVG
-    // expand to its intrinsic viewBox dimensions.
+    // Keep a defensive limit even though imported page CSS normally sizes the
+    // icon. It prevents a missing or stale page stylesheet from expanding SVGs.
     svg.e-font-icon-svg {
         width: 1em !important;
         height: 1em !important;
