@@ -1,3 +1,4 @@
+import base64
 import math
 import re
 import threading
@@ -226,9 +227,45 @@ class LightLinkSourcingWebsite(http.Controller):
     @staticmethod
     def _category_image_url(category, size):
         token = int(category.write_date.timestamp()) if category.write_date else category.id
-        return "/web/image/product.public.category/%s/%s?unique=%s" % (
+        return "/sourcing/catalog/image/%s/%s/%s" % (
             category.id, size, token,
         )
+
+    @http.route(
+        "/sourcing/catalog/image/<int:category_id>/<string:size>/<int:version>",
+        type="http", auth="public", website=True, sitemap=False,
+        save_session=False,
+    )
+    def sourcing_catalog_image(self, category_id, size, version, **kwargs):
+        if size not in {"image_128", "image_512"}:
+            return request.not_found()
+        website = self._sourcing_website()
+        category = request.env["product.public.category"].sudo().browse(
+            category_id
+        ).exists()
+        if (
+            not category
+            or category.website_id != website
+            or not category.sourcing_imported_from_mirror
+        ):
+            return request.not_found()
+        encoded = category[size]
+        if not encoded:
+            return request.not_found()
+        raw = base64.b64decode(encoded)
+        if raw.startswith(b"\x89PNG"):
+            mimetype = "image/png"
+        elif raw.startswith(b"RIFF") and raw[8:12] == b"WEBP":
+            mimetype = "image/webp"
+        elif raw.startswith((b"GIF87a", b"GIF89a")):
+            mimetype = "image/gif"
+        else:
+            mimetype = "image/jpeg"
+        return request.make_response(raw, headers=[
+            ("Content-Type", mimetype),
+            ("Cache-Control", "public, max-age=31536000, immutable"),
+            ("X-Content-Type-Options", "nosniff"),
+        ])
 
     def _managed_catalog_html(self, page):
         """Overlay editable category fields without changing the imported layout."""
@@ -259,20 +296,21 @@ class LightLinkSourcingWebsite(http.Controller):
 
                 def update_anchor(match):
                     inner = match.group(2)
-                    image = (
-                        '<img class="ll-managed-category-icon" '
-                        'src="%s" alt="%s" width="76" height="76" '
-                        'loading="lazy" decoding="async" '
-                        'style="width:76px;height:76px;object-fit:contain"/>'
-                        % (
-                            self._category_image_url(category, "image_128"),
-                            escape(category.name),
+                    if category.sourcing_image_customized:
+                        image = (
+                            '<img class="ll-managed-category-icon" '
+                            'src="%s" alt="%s" width="76" height="76" '
+                            'loading="lazy" decoding="async" '
+                            'style="width:76px;height:76px;object-fit:contain"/>'
+                            % (
+                                self._category_image_url(category, "image_128"),
+                                escape(category.name),
+                            )
                         )
-                    )
-                    inner = re.sub(
-                        r"<svg\b.*?</svg>", image, inner, count=1,
-                        flags=re.IGNORECASE | re.DOTALL,
-                    )
+                        inner = re.sub(
+                            r"<svg\b.*?</svg>", image, inner, count=1,
+                            flags=re.IGNORECASE | re.DOTALL,
+                        )
                     inner = re.sub(
                         r'(<span\b[^>]*class=["\'][^"\']*elementor-cta__title'
                         r'[^"\']*["\'][^>]*>).*?(</span>)',
@@ -326,7 +364,10 @@ class LightLinkSourcingWebsite(http.Controller):
                     body,
                     1,
                 )
-            if category.sourcing_source_image_path:
+            if (
+                category.sourcing_source_image_path
+                and category.sourcing_image_customized
+            ):
                 body = body.replace(
                     'src="%s"' % category.sourcing_source_image_path,
                     'src="%s"' % self._category_image_url(category, "image_512"),

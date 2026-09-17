@@ -632,11 +632,24 @@ class ProductPublicCategory(models.Model):
     sourcing_imported_from_mirror = fields.Boolean(
         string="本地镜像导入", default=False, index=True, readonly=True, copy=False,
     )
+    sourcing_image_customized = fields.Boolean(
+        string="已替换原始图片", default=False, readonly=True, copy=False,
+        help="管理员上传新图片后自动启用；前台会改用带版本号的缓存图片。",
+    )
 
     _website_sourcing_source_key_unique = models.Constraint(
         "UNIQUE(website_id, sourcing_source_key)",
         "同一网站不能重复导入同一个镜像产品分类。",
     )
+
+    def write(self, values):
+        if (
+            "image_1920" in values
+            and "sourcing_image_customized" not in values
+            and any(self.mapped("sourcing_imported_from_mirror"))
+        ):
+            values = dict(values, sourcing_image_customized=True)
+        return super().write(values)
 
 
 class SourcingAsset(models.Model):

@@ -427,6 +427,7 @@
                             <field name="sourcing_source_path"/>
                         </group>
                         <group string="落地页主视觉">
+                            <field name="sourcing_image_customized"/>
                             <field name="sourcing_image_asset_id" domain="[('website_id', '=', website_id)]"/>
                             <field name="sourcing_hero_subtitle"/>
                             <field name="sourcing_inquiry_heading"/>
