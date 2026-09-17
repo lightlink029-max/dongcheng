@@ -4,9 +4,8 @@ import json
 import re
 from urllib.parse import urlencode
 
-from odoo import _, api, fields, models
+from odoo import _, api, fields, models, tools
 from odoo.exceptions import ValidationError
-from odoo.modules.module import get_module_resource
 
 
 REQUEST_TYPES = [
@@ -342,9 +341,12 @@ class Website(models.Model):
         website = self.env.ref(
             "lightlink_sourcing_website.website_global_sourcing", raise_if_not_found=False,
         )
-        bundle_path = get_module_resource(
-            "lightlink_sourcing_website", "data", "mirror_pages.json.gz",
-        )
+        try:
+            bundle_path = tools.file_path(
+                "lightlink_sourcing_website/data/mirror_pages.json.gz"
+            )
+        except FileNotFoundError:
+            bundle_path = False
         if not website or not bundle_path:
             return False
         with gzip.open(bundle_path, "rt", encoding="utf-8") as archive:
