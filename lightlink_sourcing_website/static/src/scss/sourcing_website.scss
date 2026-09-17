@@ -18,6 +18,19 @@ $ll-nav-accent: #ff7a1a;
         height: auto;
     }
 
+    // The offline Elementor pages size icon SVGs in page-level inline CSS.
+    // That CSS is intentionally not imported into editable Odoo content, so
+    // retain the equivalent font-icon sizing here instead of letting an SVG
+    // expand to its intrinsic viewBox dimensions.
+    svg.e-font-icon-svg {
+        width: 1em !important;
+        height: 1em !important;
+        max-width: 1em !important;
+        max-height: 1em !important;
+        flex: 0 0 auto;
+        fill: currentColor;
+    }
+
     .elementor-invisible {
         visibility: visible !important;
         opacity: 1 !important;
