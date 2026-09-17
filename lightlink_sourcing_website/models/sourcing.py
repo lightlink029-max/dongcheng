@@ -1,5 +1,7 @@
+import base64
 import gzip
 import hashlib
+import html
 import json
 import re
 from urllib.parse import urlencode
@@ -446,6 +448,100 @@ class Website(models.Model):
         return len(values)
 
     @api.model
+    def seed_lightlink_sourcing_catalog(self):
+        """Create editable categories and images represented by the mirror pages."""
+        website = self.env.ref(
+            "lightlink_sourcing_website.website_global_sourcing",
+            raise_if_not_found=False,
+        )
+        if not website:
+            return 0
+        catalog_path = tools.file_path(
+            "lightlink_sourcing_website/data/mirror_catalog.json"
+        )
+        with open(catalog_path, encoding="utf-8") as stream:
+            payload = json.load(stream)
+        if payload.get("schema_version") != 1:
+            raise ValidationError(_("采购网站产品分类数据包无效。"))
+
+        Category = self.env["product.public.category"].with_context(
+            active_test=False, lang="en_US",
+        )
+        created = 0
+
+        def image_value(relative_path):
+            if not relative_path:
+                return False
+            module_path = relative_path.lstrip("/")
+            if not module_path.startswith("lightlink_sourcing_website/"):
+                module_path = "lightlink_sourcing_website/%s" % module_path
+            try:
+                with tools.file_open(module_path, "rb") as stream:
+                    return base64.b64encode(stream.read())
+            except (FileNotFoundError, OSError):
+                return False
+
+        def create_if_missing(item, parent=False, sequence=10):
+            nonlocal created
+            source_key = item["source_key"]
+            category = Category.search([
+                ("website_id", "=", website.id),
+                ("sourcing_source_key", "=", source_key),
+            ], limit=1)
+            if category:
+                return category
+            description = item.get("description") or ""
+            values = {
+                "name": item["name"],
+                "website_id": website.id,
+                "parent_id": parent.id if parent else False,
+                "sequence": sequence,
+                "website_description": (
+                    "<p>%s</p>" % html.escape(description) if description else False
+                ),
+                "sourcing_source_key": source_key,
+                "sourcing_source_path": item["source_path"],
+                "sourcing_source_name": item["name"],
+                "sourcing_source_image_path": item.get("image_path") or False,
+                "sourcing_imported_from_mirror": True,
+            }
+            image = image_value(item.get("image_path"))
+            if image:
+                values["image_1920"] = image
+            category = Category.create(values)
+            created += 1
+            translated = {}
+            if item.get("name_zh"):
+                translated["name"] = item["name_zh"]
+            if item.get("description_zh"):
+                translated["website_description"] = (
+                    "<p>%s</p>" % html.escape(item["description_zh"])
+                )
+            if translated:
+                category.with_context(lang="zh_CN").write(translated)
+            return category
+
+        for root_sequence, item in enumerate(payload.get("categories", []), 1):
+            root_item = {
+                "source_key": item["path"],
+                "source_path": item["path"],
+                "name": item["name"],
+                "name_zh": item.get("name_zh"),
+                "image_path": item.get("icon_path"),
+            }
+            root = create_if_missing(root_item, sequence=root_sequence * 10)
+            for child_sequence, child in enumerate(item.get("children", []), 1):
+                child_item = dict(child)
+                child_item.update({
+                    "source_key": "%s#%s" % (item["path"], child["key"]),
+                    "source_path": item["path"],
+                })
+                create_if_missing(
+                    child_item, parent=root, sequence=child_sequence * 10,
+                )
+        return created
+
+    @api.model
     def _cleanup_lightlink_sourcing_bootstrap_menus(self):
         """Remove menus copied by Odoo when the dedicated website is created."""
         website = self.env.ref(
@@ -520,6 +616,26 @@ class ProductPublicCategory(models.Model):
     sourcing_highlight_3 = fields.Char(string="分类亮点 3", translate=True)
     sourcing_inquiry_heading = fields.Char(
         string="询盘表单标题", translate=True,
+    )
+    sourcing_source_key = fields.Char(
+        string="镜像分类标识", index=True, readonly=True, copy=False,
+    )
+    sourcing_source_path = fields.Char(
+        string="对应公开页面", index=True, readonly=True, copy=False,
+    )
+    sourcing_source_name = fields.Char(
+        string="原始分类名称", readonly=True, copy=False,
+    )
+    sourcing_source_image_path = fields.Char(
+        string="原始图片路径", readonly=True, copy=False,
+    )
+    sourcing_imported_from_mirror = fields.Boolean(
+        string="本地镜像导入", default=False, index=True, readonly=True, copy=False,
+    )
+
+    _website_sourcing_source_key_unique = models.Constraint(
+        "UNIQUE(website_id, sourcing_source_key)",
+        "同一网站不能重复导入同一个镜像产品分类。",
     )
 
 

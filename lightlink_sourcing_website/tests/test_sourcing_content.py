@@ -64,6 +64,18 @@ class TestSourcingContent(TransactionCase):
                 ("published", "=", True),
             ]), 1)
 
+        categories = self.env["product.public.category"].search([
+            ("website_id", "=", website.id),
+            ("sourcing_imported_from_mirror", "=", True),
+        ])
+        self.assertEqual(len(categories.filtered(lambda item: not item.parent_id)), 20)
+        self.assertEqual(len(categories.filtered("parent_id")), 122)
+        self.assertTrue(all(categories.mapped("image_1920")))
+        bags = categories.filtered(
+            lambda item: item.sourcing_source_key == "/our-products/bags-sourcing"
+        )
+        self.assertEqual(len(bags.child_id), 6)
+
         custom_menu = self.env["website.menu"].create({
             "name": "Custom maintained link",
             "url": "/custom-maintained-link",

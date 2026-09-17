@@ -1,0 +1,909 @@
+{
+  "schema_version": 1,
+  "categories": [
+    {
+      "path": "/our-products/apparel-sourcing",
+      "name": "Apparel",
+      "icon_path": "static/src/img/catalog/apparel-sourcing.png",
+      "children": [
+        {
+          "key": "apparel",
+          "name": "Apparel",
+          "description": "China produces almost 60% of clothes in the world. We print logos and patterns to customize your clothes even with a low MOQ. We also offer different kinds of clothing in stock at factory-direct prices.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/apparel1-11.jpg"
+        },
+        {
+          "key": "clothes-accessories",
+          "name": "Clothes Accessories",
+          "description": "We help you wholesale and customize all kinds of clothing accessories, like gloves, hats, belts, scarves, watches, sunglasses, ties, pins, belts, etc. Tell us what you need if you can’t find them in the list.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/apparel1-1.jpg"
+        },
+        {
+          "key": "undergarments",
+          "name": "Undergarments",
+          "description": "We’re experienced in producing and designing types of undergarments in diverse fabrics. No matter seamless fabric, daily wear, or sexy style, we help you wholesale or customize any you want.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/undergarment.jpg"
+        },
+        {
+          "key": "jewelry",
+          "name": "Jewelry",
+          "description": "With 10+ years of experience in the jewelry business, we’ve got over 35 jewelry factories with long-term cooperation. We help create brand-new designs or improve existing styles as per your needs.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/jewelry1-1.jpg"
+        },
+        {
+          "key": "socks",
+          "name": "Socks",
+          "description": "We help you find several sock factories even with a low MOQ (only $500). You can get the latest styles like traditional knitted styles or custom 3D-printed ones from us.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/socks1-1.jpg"
+        },
+        {
+          "key": "shoes",
+          "name": "Shoes",
+          "description": "Zhejiang is one of the shoe manufacturing centers in China. We’ve sourced a wide range of fashion shoes like casual shoes, kids’ shoes, boots, and shoe accessories.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/shoes1-1.jpg"
+        }
+      ],
+      "name_zh": "服饰"
+    },
+    {
+      "path": "/our-products/furniture-sourcing",
+      "name": "Furniture",
+      "icon_path": "static/src/img/catalog/furniture-sourcing.png",
+      "children": [
+        {
+          "key": "outdoor-furniture",
+          "name": "Outdoor Furniture",
+          "description": "We had a wide selection of outdoor options, from garden sets to outdoor dining sets, and pool furniture. We offer different materials for outdoor furniture including wooden, metal, plastic, stainless steel, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/61CWp411AjL-1024x1024-1-1024x1024.jpg"
+        },
+        {
+          "key": "home-furniture",
+          "name": "Home Furniture",
+          "description": "The home furniture is a necessity in people’s daily life. Whether you’re selling high-end or low-cost, classic or contemporary, wood or synthetics, we offer a wide selection at competitive prices.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/home-furniture.jpg"
+        },
+        {
+          "key": "office-furniture",
+          "name": "Office Furniture",
+          "description": "If you are in the office furniture market, importing from China will be wise. We offer a great diversity of office desks, storage, and tables in creative design.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/office-furniture-1.jpg"
+        },
+        {
+          "key": "kid-s-furniture",
+          "name": "Kid's Furniture",
+          "description": "We offer children’s furniture suites, school desks, etc. We will provide you with relative certificates of kid’s furniture, such as CPSIA in the USA, CE in the European market, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/kids-furniture-3.jpg"
+        },
+        {
+          "key": "bathroom-furniture",
+          "name": "Bathroom Furniture",
+          "description": "Well-designed bathroom furniture is aesthetical and functional. We have a wide selection of bathroom shelves, shower chairs, and cabinets, from traditional to modern styles for customers.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/bathroom-shelves-1.jpg"
+        },
+        {
+          "key": "bedroom-furniture",
+          "name": "Bedroom Furniture",
+          "description": "Bedroom furniture materials are increasingly rich. Wood, glass, metal, bamboo, and rattan furniture produced in China all have large export to the US, and European countries.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/bedroom-furniture-1.jpg"
+        }
+      ],
+      "name_zh": "家具"
+    },
+    {
+      "path": "/our-products/bags-sourcing",
+      "name": "Bags & Cases",
+      "icon_path": "static/src/img/catalog/bags-sourcing.png",
+      "children": [
+        {
+          "key": "handbags",
+          "name": "Handbags",
+          "description": "We help customize handbag styles that are very popular on Pinterest. We also offer stock handbags 10%-35% cheaper than Alibaba. PU leather is the most popular material among consumers.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/handbags.jpg",
+          "name_zh": "手提包",
+          "description_zh": "我们提供定制服务，帮您打造在 Pinterest 上非常流行的手袋款式。我们也提供现货手袋，价格比阿里巴巴便宜 10%-35%。PU 皮革是消费者最喜爱的材质。"
+        },
+        {
+          "key": "backpacks",
+          "name": "Backpacks",
+          "description": "Common backpacks are made of cotton, polyester, PU leather, oxford. The materials determine the cost, and durability. We provide private-label solutions to differentiate your product from competitors.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/backpacks.jpg",
+          "name_zh": "背包",
+          "description_zh": "常见的背包材质包括棉、涤纶、PU 革和牛津布。材质决定了背包的成本和耐用性。我们提供贴牌生产解决方案，帮助您的产品在竞争中脱颖而出。"
+        },
+        {
+          "key": "toiletry-bags",
+          "name": "Toiletry Bags",
+          "description": "Typically, toiletry bags are made of waterproof materials. Nylon, leather, or faux leather are durable fabrics; while plastic is a good option to produce clear bags.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/toiletry-bags.jpg",
+          "name_zh": "洗漱包",
+          "description_zh": "通常，洗漱包由防水材料制成。尼龙、皮革或人造革都是耐用的面料；而塑料则是制作透明包的理想选择。"
+        },
+        {
+          "key": "travel-bags",
+          "name": "Travel Bags",
+          "description": "Our travel bags include insulated bags for picnics, storage bags for luggage, etc. Popular fabrics are polyester, nylon, rattan, oxford, and cloth.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/travel-bags.jpg",
+          "name_zh": "旅行包",
+          "description_zh": "我们的旅行包包括野餐保温袋、行李收纳袋等。常用面料有涤纶、尼龙、藤条、牛津布和布料。"
+        },
+        {
+          "key": "pouches",
+          "name": "Pouches",
+          "description": "Most pouches are made of cotton, polyester, mesh, or plastic. They are made for different purposes, like for shopping, storage, or protection. They’re low-cost and high-margin.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/pouches.jpg",
+          "name_zh": "小袋",
+          "description_zh": "大多数收纳袋由棉布、涤纶、网布或塑料制成。它们用途各异，例如购物、收纳或保护。成本低，利润高。"
+        },
+        {
+          "key": "special-bags",
+          "name": "Special Bags",
+          "description": "A bag can be used for different purposes. And there are also some bags with specific functions. For example, we also offer first aid bags, bicycle bags, storage bags, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/other-bags-1.jpg",
+          "name_zh": "特殊包装袋",
+          "description_zh": "包的用途多种多样，有些包还具有特殊功能。例如，我们还提供急救包、自行车包、收纳包等。"
+        }
+      ],
+      "name_zh": "箱包"
+    },
+    {
+      "path": "/our-products/beauty-supplies-sourcing",
+      "name": "Beauty",
+      "icon_path": "static/src/img/catalog/beauty-supplies-sourcing.png",
+      "children": [
+        {
+          "key": "makeup",
+          "name": "Makeup",
+          "description": "We’ve sourced and customized different makeups like eyeshadow, lipstick, mask, nail glue, eyelashes, etc., according to clients’ needs.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/makeup1.jpg"
+        },
+        {
+          "key": "tools-accessories",
+          "name": "Tools & Accessories",
+          "description": "There are many types of makeup tools for new or veteran importers. Cosmetic tools include brushes, mirrors, nail clippers, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/makeup-tools.jpg"
+        },
+        {
+          "key": "personal-care",
+          "name": "Personal Care",
+          "description": "Our personal care tools mainly refer to oral, lips, skin, and body care tools, such as facial cleansers, electric toothbrushes, soap, ear candles, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/personal-care.jpg"
+        },
+        {
+          "key": "medical-supplies",
+          "name": "Medical Supplies",
+          "description": "Due to the COVID-19 pandemic, medical supplies are still in high demand these years. Our supplies include detection devices, face masks, gloves, first aid kits, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/medical-products.jpg"
+        },
+        {
+          "key": "hair-supplies-wigs",
+          "name": "Hair Supplies & Wigs",
+          "description": "We offer products like wigs, hair bands, clips, electric hair curlers, combs, scissors, hair dryers, and more. Wigs are especially popular in the American, and African markets.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/haircare-and-wigs.jpg"
+        },
+        {
+          "key": "bags-cases",
+          "name": "Bags & Cases",
+          "description": "We help wholesale cosmetics packaging, including jars, bottles, tubes, and bags in different materials like plastic, glass, fabrics, and acrylic. It’s a good category for private labels.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/makeup-packaging.jpg"
+        }
+      ],
+      "name_zh": "美丽"
+    },
+    {
+      "path": "/our-products/toys-sourcing",
+      "name": "Toys",
+      "icon_path": "static/src/img/catalog/toys-sourcing.png",
+      "children": [
+        {
+          "key": "classic-toys",
+          "name": "Classic Toys",
+          "description": "Classic toys always have great and stable demand every year. We gather the most complete toy categories in different materials like plush, wooden toys, puzzles, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/classic-toys-2-1.jpg"
+        },
+        {
+          "key": "outdoor-toys",
+          "name": "Outdoor Toys",
+          "description": "Outdoor toys like flying balls, climbing rocks, bubble guns, and golf toys are trending in the US and European markets. We ensure safe and durable play equipment for clients.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/outdoor-toys.jpg"
+        },
+        {
+          "key": "games",
+          "name": "Games",
+          "description": "You can find kids’ and family board games, card games, simple or complicated electronic games, and more here.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/games.jpg"
+        },
+        {
+          "key": "party-supplies",
+          "name": "Party supplies",
+          "description": "Party supplies add fun to your parties. It’s a profitable business to sell them because party goods are always needed.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/party-toys.jpg"
+        },
+        {
+          "key": "funny-novelty",
+          "name": "Funny & Novelty",
+          "description": "Cool and funny stuff attracts people. We can develop funny and unique toys from 0 to make you stand out from your competitors.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/funny-and-novel-toys.jpg"
+        },
+        {
+          "key": "educational-toys",
+          "name": "Educational Toys",
+          "description": "Different from general toys, educational toys are designed to stimulate children’s learning. They’re usually suitable for toddlers.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/classic-toys.jpg"
+        }
+      ],
+      "name_zh": "玩具"
+    },
+    {
+      "path": "/our-products/sport-supplies-sourcing",
+      "name": "Sports",
+      "icon_path": "static/src/img/catalog/sport-supplies-sourcing.png",
+      "children": [
+        {
+          "key": "fitness-equipment",
+          "name": "Fitness Equipment",
+          "description": "There are numerous items available for fitness enthusiasts. We offer fitness equipment for gyms or homes. Home exercise gear is hot, especially in the US market.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/fitness.jpg"
+        },
+        {
+          "key": "clothing",
+          "name": "Clothing",
+          "description": "We provide all gym clothing like yoga suits, t-shirts, bike shorts, etc. If you have your own design, we also help make it a reality every step of the way.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/sports-clothing.jpg"
+        },
+        {
+          "key": "yoga",
+          "name": "Yoga",
+          "description": "Our yoga products include mats, yoga wears, exercise balls, and other accessories. We help you create private-label yoga products by printing a logo, customizing packaging, and more.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/yoga-products.jpg"
+        },
+        {
+          "key": "sports-games",
+          "name": "Sports & Games",
+          "description": "There are sporting goods and outdoor games fun for both kids and adults, such as balls, climbing walls, kid’s scooters, etc. People can enjoy themselves, and at the same time exercise.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/sports.jpg"
+        },
+        {
+          "key": "footwear",
+          "name": "Footwear",
+          "description": "Athletic footwear is designed for exercising, sports, and some recreational activity. Different from general wear, they’re usually more sweat-wicking, breathable, and more durable.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/athletic-socks.jpg"
+        },
+        {
+          "key": "accessories",
+          "name": "Accessories",
+          "description": "There are also some exercise accessories helping to protect people from hurt during exercise such as muscle tape, waist belts, massage guns, etc. It’s a huge niche market for e-commerce businesses.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/sports-accessories.jpg"
+        }
+      ],
+      "name_zh": "运动的"
+    },
+    {
+      "path": "/our-products/home-supplies-sourcing",
+      "name": "Home Supplies",
+      "icon_path": "static/src/img/catalog/home-supplies-sourcing.png",
+      "children": [
+        {
+          "key": "home-decor",
+          "name": "Home Decor",
+          "description": "There is a wide variety of niches to choose from when it comes to selling home decor. Popular home decor categories are wall art, lamps, scented candles, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/home-decro.jpg"
+        },
+        {
+          "key": "appliance",
+          "name": "Appliance",
+          "description": "The margins of home and kitchen appliances are higher than the standard products. Make sure to meet the regulations in different countries before importing.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/appliances.jpg"
+        },
+        {
+          "key": "lighting",
+          "name": "Lighting",
+          "description": "We help source and customize household, outdoor, commercial, and smart lighting for you. Except for LED lighting, we also provide candles and accessories.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/lighting.jpg"
+        },
+        {
+          "key": "sundries",
+          "name": "Sundries",
+          "description": "There are hundreds of sundry categories to select from. Find a niche market from these general products to narrow your competition and make profits.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/household-sundries.jpg"
+        },
+        {
+          "key": "bath",
+          "name": "Bath",
+          "description": "This category ranges from sanitary supplies to shower products and small appliances. It’s profitable to sell on private labels, like building your own brand or adjusting the items.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/bathroom-supplies.jpg"
+        },
+        {
+          "key": "bedding",
+          "name": "Bedding",
+          "description": "Our bedding selections include pillows, blankets, sleeping masks, bed sheets, etc. Common materials include fiber, cotton, plush, polyester, wool, and more.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/bedding.jpg"
+        },
+        {
+          "key": "kitchen-dining",
+          "name": "Kitchen & Dining",
+          "description": "There is a wide selection of kitchen utensils. Popular materials include metal, silicone, wood, glass, and synthetic utensils. And make sure that utensils are all passed the required certificates.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/kitchenware.jpg"
+        },
+        {
+          "key": "smoking-accessories",
+          "name": "Smoking Accessories",
+          "description": "Water pipes, Hookah are hot-selling especially in the Arab States, USA, and European markets. Customizing these tools in different shapes, colors, and patterns would be a good way to increase sales.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/smoking-accessories-1.jpg"
+        }
+      ],
+      "name_zh": "家居用品"
+    },
+    {
+      "path": "/our-products/garden-supplies-sourcing",
+      "name": "Garden & Tools",
+      "icon_path": "static/src/img/catalog/garden-supplies-sourcing.png",
+      "children": [
+        {
+          "key": "gardening-tools",
+          "name": "Gardening Tools",
+          "description": "Essential tools include shovels, saws, buckets, blades, yard carts, etc. And nowadays, electrical equipment would be more efficient for gardeners.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/gardening-tools.jpg"
+        },
+        {
+          "key": "fake-plants-flowers",
+          "name": "Fake Plants & Flowers",
+          "description": "We’re in Yiwu, one of the artificial plants & flower clusters in China. The main materials are silk, velvet fabric, foam, plastic, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/fake-flowers.jpg"
+        },
+        {
+          "key": "plant-pots",
+          "name": "Plant Pots",
+          "description": "We help you customize plant and flowerpots in different materials like ceramic, metal, wooden, plastic, cloth, and paper.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/plant-pots.jpg"
+        },
+        {
+          "key": "growing-supplies",
+          "name": "Growing Supplies",
+          "description": "Growing supplies help indoor plants grow faster. They are designed with controllable lights so the plants can always be in the best environment.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/plant-growing-supplies.jpg"
+        },
+        {
+          "key": "garden-wear",
+          "name": "Garden Wear",
+          "description": "Common clothing and footwear in the garden include cut-resistant gloves, boots, hooded shirts, etc. These products are made of waterproof, durable materials.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/garden-wear.jpg"
+        },
+        {
+          "key": "garden-accessories",
+          "name": "Garden Accessories",
+          "description": "Garden accessories are items to decorate, organize and protect your garden. We offer products like simulated birds, anti-insect nets, wooden pot shelves, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/garden-supplies.jpg"
+        }
+      ],
+      "name_zh": "园艺工具"
+    },
+    {
+      "path": "/our-products/electronics-sourcing",
+      "name": "Electronics",
+      "icon_path": "static/src/img/catalog/electronics-sourcing.png",
+      "children": [
+        {
+          "key": "small-appliance",
+          "name": "Small Appliance",
+          "description": "Electronic appliances have higher profit margins than consumer products generally. Cool and unique designs are a good marketing strategy to appeal to consumers.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/small-appliance.jpg"
+        },
+        {
+          "key": "speaker-headphone",
+          "name": "Speaker & Headphone",
+          "description": "Adding your logo, using unique patterns, or designing your own packaging are common ways of customization. Remember to meet the regulations like FCC, CE, ROHS.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/Speaker-Headphone.jpg"
+        },
+        {
+          "key": "computer-accessories",
+          "name": "Computer & Accessories",
+          "description": "The computer industry is mainly concentrated in China’s southern areas like Guangdong province. We help you find different suppliers of computers and accessories there.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/computer-accessories.jpg"
+        },
+        {
+          "key": "phone-accessories",
+          "name": "Phone & Accessories",
+          "description": "Smartphones are essential for consumers in the world, which increases the demand for phone accessories. It can be a competitive and also profitable business.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/phone-accessories.jpg"
+        },
+        {
+          "key": "gps-device",
+          "name": "GPS Device",
+          "description": "Major products are GPS trackers, device holders, etc. The devices require licenses like WPC and BIS.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/GPS-device.jpg"
+        },
+        {
+          "key": "electronic-components",
+          "name": "Electronic Components",
+          "description": "The components mainly include conductive slip rings, semiconductor laser diode, capacitor, fuses tubes.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/Electronic-Components.jpg"
+        }
+      ],
+      "name_zh": "电子"
+    },
+    {
+      "path": "/our-products/pet-supplies-sourcing",
+      "name": "Pet Supplies",
+      "icon_path": "static/src/img/catalog/pet-supplies-sourcing.png",
+      "children": [
+        {
+          "key": "pet-toys",
+          "name": "Pet Toys",
+          "description": "Toys for pets are always in high demand. All types of our pet toys are produced in hypoallergenic materials, safe for pets’ health.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/pet-toys.jpg"
+        },
+        {
+          "key": "grooming-tools",
+          "name": "Grooming Tools",
+          "description": "Gloves, shower heads, toothbrushes, combs, paw cleaners, and more are common supplies for pet grooming.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/grooming-tools.jpg"
+        },
+        {
+          "key": "pet-accessories",
+          "name": "Pet Accessories",
+          "description": "We’ve sourced and customized types of pet beds, carriers, wearing, feeding bowls, etc. Our products are all certified based on different countries’ policies.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/pet-feeders-1.jpg"
+        },
+        {
+          "key": "collar-harness",
+          "name": "Collar & Harness",
+          "description": "Collars and harnesses are must-have parts for pets to go out. The main materials in production are leather, nylon, canvas, and other water-repellent fabrics.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/Collar-Harness.jpg"
+        },
+        {
+          "key": "pet-beds",
+          "name": "Pet Beds",
+          "description": "Choosing comfortable and durable pet bed materials is a crucial consideration for pet owners. The commonly-used materials include faux fur, polyester, cotton, plush, leather, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/pet-accessories.jpg"
+        },
+        {
+          "key": "pet-carriers",
+          "name": "Pet Carriers",
+          "description": "Pet owners prefer to take their dogs or cats out of the house. In that case, a safe pet transportation solution is vital. Products like comfy car seats for dogs, and cat backpacks are all in high demand.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/pet-carriers-1.jpg"
+        }
+      ],
+      "name_zh": "宠物用品"
+    },
+    {
+      "path": "/our-products/mom-baby-supplies-sourcing",
+      "name": "Mother & Kids",
+      "icon_path": "static/src/img/catalog/mom-baby-supplies-sourcing.png",
+      "children": [
+        {
+          "key": "baby-feeding",
+          "name": "Baby Feeding",
+          "description": "Baby feeding utensils, pacifiers, and bottles popularly come in food-grade materials like silicone, plastic, stainless steel, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/baby-feeding.jpg"
+        },
+        {
+          "key": "travel-gear",
+          "name": "Travel Gear",
+          "description": "Comfort and safety are important to design strollers for your brand. We also offer other custom gears like strap, umbrella, hanger, bags.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/travel-gear.jpg"
+        },
+        {
+          "key": "bibs-diapering",
+          "name": "Bibs & Diapering",
+          "description": "Baby care items are used to keep the baby stay clean. Usually, these items sell in sets as one is not enough for a baby. Using diverse colors or patterns helps make your products stand out.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/Bibs-Diapering.jpg"
+        },
+        {
+          "key": "baby-safety",
+          "name": "Baby Safety",
+          "description": "Kids grow really fast so new safety problems can arise constantly. Corner guards, mosquito repellent things, anti-lost rope, and more are all beneficial items for selling.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/baby-safety.jpg"
+        },
+        {
+          "key": "baby-toys",
+          "name": "Baby Toys",
+          "description": "Things infants can reach for, hold, suck on, shake, and make noise with are good toys for a baby. It’s vital to focus on the toy design and regulations during selling.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/baby-toys.jpg"
+        },
+        {
+          "key": "baby-accessories",
+          "name": "Baby Accessories",
+          "description": "Except for basic accessories like bibs and bottles, parents also love purchasing customized items like tooth boxes, footprint pads, and milestone blankets for memories.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/baby-accessories-1.jpg"
+        }
+      ],
+      "name_zh": "母亲和孩子"
+    },
+    {
+      "path": "/our-products/hardware-sourcing",
+      "name": "Hardware",
+      "icon_path": "static/src/img/catalog/hardware-sourcing.png",
+      "children": [
+        {
+          "key": "basic-tools",
+          "name": "Basic Tools",
+          "description": "There are hundreds of basic must-have tools such as tweezers, hammers, pliers, wrenches, etc. It’s profitable to sell them in sets.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/basic-tools.jpg"
+        },
+        {
+          "key": "electric-air-tools",
+          "name": "Electric/Air Tools",
+          "description": "This category covers drill brushes, electronic test pens, polishing brushes, cutting discs, drill bits, and foam pads.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/Electric-Air-Tools.jpg"
+        },
+        {
+          "key": "hardware-accessories",
+          "name": "Hardware Accessories",
+          "description": "Hardware accessories are a broad category. General accessories we sell include fasteners, bearings, springs, seals, rigging, gears, molds, and abrasives.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/hardware-accessories.jpg"
+        },
+        {
+          "key": "lock-keys",
+          "name": "Lock & Keys",
+          "description": "Besides general locks and keys, we also customize accessories like keychains and no-touch door openers, which are usually made of stainless steel, zinc, silver, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/lock-keys.jpg"
+        },
+        {
+          "key": "building-materials",
+          "name": "Building Materials",
+          "description": "China is a good source of building materials, providing with all kinds of items—from tiles and wood flooring to fixtures and furniture, and so much more.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/building-materials.jpg"
+        },
+        {
+          "key": "heating-cooling",
+          "name": "Heating & Cooling",
+          "description": "Heated products made in China like electric blankets and heated scarves are trending especially in the European market. They are usually affordable and energy-saving.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/heating-and-cooling-supplies-1.jpg"
+        }
+      ],
+      "name_zh": "硬件"
+    },
+    {
+      "path": "/our-products/office-supplies-sourcing",
+      "name": "Office Supplies",
+      "icon_path": "static/src/img/catalog/office-supplies-sourcing.png",
+      "children": [
+        {
+          "key": "general-supplies",
+          "name": "General Supplies",
+          "description": "Consumable office supplies like paper, pens, tapes, ink, and more are still needed daily. Due to lower prices and the latest production technology, China would be a good place to import such supplies.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/office-essentials.jpg"
+        },
+        {
+          "key": "office-appliances",
+          "name": "Office Appliances",
+          "description": "Office appliance get work done efficiently. We provide cameras, laser spirit level, projectors, laser engraving machines, and more that will offer you the latest and advanced technology.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/office-appliance.jpg"
+        },
+        {
+          "key": "collaboration-tools",
+          "name": "Collaboration Tools",
+          "description": "We offer a wide range of products, including paper products, writing instruments, envelopes, labels, folders, binders, staplers, scissors, tape, and more.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/office-board.jpg"
+        },
+        {
+          "key": "mail-supplies",
+          "name": "Mail Supplies",
+          "description": "Mail supplies mean the packaging and accessories to pack and ship documents, such as stamps, envelopes, boxes, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/office-shipping-tools-1.jpg"
+        },
+        {
+          "key": "storage",
+          "name": "Storage",
+          "description": "To keep the office organized, desk organizers, bookends, shelves and more are needed in an office. The commonly-used materials are wood or metal.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/office-supplies.jpg"
+        },
+        {
+          "key": "decor",
+          "name": "Decor",
+          "description": "Office decorations can create a pleasant environment and promote productivity. Customized curtains, wall art, pictures, and plants are all trending in the office.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/office-decor.jpg"
+        }
+      ],
+      "name_zh": "办公用品"
+    },
+    {
+      "path": "/our-products/automotive-supplies-sourcing",
+      "name": "Automotive",
+      "icon_path": "static/src/img/catalog/automotive-supplies-sourcing.png",
+      "children": [
+        {
+          "key": "car-parts",
+          "name": "Car Parts",
+          "description": "Auto parts come in varying shapes, designs, and brands. We offer custom car parts that can be used in most modern cars. Most Chinese auto part makers are able to replicate some branded auto parts.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/car-exterior-accessories.jpg"
+        },
+        {
+          "key": "bicycle-accessories",
+          "name": "Bicycle Accessories",
+          "description": "Proper supplies are vital for riders. Cycling bags, gloves, helmets, locks, and glasses are some essentials. You can add some special designs to make them more appealing to consumers.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/Bicycle-Accessories.jpg"
+        },
+        {
+          "key": "cleaning-items",
+          "name": "Cleaning Items",
+          "description": "There are kinds of cleaning items for the car interior and exterior. We help you wholesale kinds of items like brushes and electrical cleaners like handheld vacuum cleaners.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/car-cleaning-supplies.jpg"
+        },
+        {
+          "key": "security-devices",
+          "name": "Security Devices",
+          "description": "Such products are not only related to the vehicle itself but also to the drivers and passengers. The relative products include anti-theft devices, alcohol breath testers, safety belts, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/car-security-1.jpg"
+        },
+        {
+          "key": "exterior-accessories",
+          "name": "Exterior Accessories",
+          "description": "Car stickers, sunshades, or wraps help improve cars’ exterior look and functions. Adding unique and cool patterns to these items would be welcome for consumers.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/car-parts.jpg"
+        },
+        {
+          "key": "interior-accessories",
+          "name": "Interior Accessories",
+          "description": "These accessories are mainly for storage, decoration, and protection. Car owners like to personalize their vehicles from mats to covers to keychains.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/car-accessories.jpg"
+        }
+      ],
+      "name_zh": "汽车"
+    },
+    {
+      "path": "/our-products/adult-products-sourcing",
+      "name": "Adult Products",
+      "icon_path": "static/src/img/catalog/adult-products-sourcing.png",
+      "children": [
+        {
+          "key": "adult-toys",
+          "name": "Adult Toys",
+          "description": "Hot-selling sex toys are sucking eggs, massage vibrators, exercise balls, etc. You can customize them in different shapes and colors.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/sex-toys1.jpg"
+        },
+        {
+          "key": "sexy-apparel",
+          "name": "Sexy Apparel",
+          "description": "The common types of costumes are night dresses and lingerie. Usually, the popular styles are made of silk, nylon mesh, and sheer fabrics.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/sexy-wearing-1.jpg"
+        },
+        {
+          "key": "bondage-gear",
+          "name": "Bondage Gear",
+          "description": "Popular bondage gears include restraints, chastity devices, gags and muzzles, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/Bondage-Gear.jpg"
+        },
+        {
+          "key": "sensual-delights",
+          "name": "Sensual Delights",
+          "description": "Such sensual delight items include erotic massage, bath items, and edible items.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/Sensual-Delights-1.jpg"
+        },
+        {
+          "key": "novelties",
+          "name": "Novelties",
+          "description": "Some items made in shapes of sex elements are trending. For example, a vase of a female body looks very elegant and attractive to consumers.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/Sexual-novelties.jpg"
+        },
+        {
+          "key": "sex-accessories",
+          "name": "Sex Accessories",
+          "description": "The accessories include ramps, cushions, swings, and bedding. Such items add more fun for users and are popular in the market.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/sex-accessories.jpg"
+        }
+      ],
+      "name_zh": "成人用品"
+    },
+    {
+      "path": "/our-products/industrial-supplies-sourcing",
+      "name": "Industrial",
+      "icon_path": "static/src/img/catalog/industrial-supplies-sourcing.png",
+      "children": [
+        {
+          "key": "electric-tools",
+          "name": "Electric Tools",
+          "description": "Our electric tools include small items like angle clamps, wheels, and detectors for testing in different industries.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/industrial-supplies-tiny.jpg"
+        },
+        {
+          "key": "equipment",
+          "name": "Equipment",
+          "description": "There are different machines like compost turner machines, juice grind machines, etc. They’re available for household or commercial usage.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/industrial-parts-1.jpg"
+        },
+        {
+          "key": "storage",
+          "name": "Storage",
+          "description": "For businesses that store their cargo, pallets would be a necessity. Such storage products usually feature in wooden and plastic.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/wooden-pallet.jpg"
+        },
+        {
+          "key": "measurement",
+          "name": "Measurement",
+          "description": "There are different measurement tools for calculating the distance, length, angle, speed, etc. They’re available for different industries.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/measurement-tools.jpg"
+        },
+        {
+          "key": "shipping",
+          "name": "Shipping",
+          "description": "These supplies in the warehouse or office are used to ship and organize packages or heavy items, such as pedal-lifting platforms, foldable fences, and so on.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/industrial-shipping-equipment.jpg"
+        },
+        {
+          "key": "parts-and-components",
+          "name": "Parts and Components",
+          "description": "Except for general tools and machines, parts like warning tapes, plastic tubes, PVC sheets, and wooden pallets are good sellers in the industrial department.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/industrial-equipment.jpg"
+        }
+      ],
+      "name_zh": "工业的"
+    },
+    {
+      "path": "/our-products/packaging-sourcing",
+      "name": "Packaging",
+      "icon_path": "static/src/img/catalog/packaging-sourcing.png",
+      "children": [
+        {
+          "key": "paper-packaging",
+          "name": "Paper Packaging",
+          "description": "The price of our custom paper packaging will be lower than your local packaging factory’s. They’re made of ordinary paperboard. They can be designed in variable shapes and patterns inside & outside.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/paper-box-1.jpg"
+        },
+        {
+          "key": "glass-packaging",
+          "name": "Glass Packaging",
+          "description": "Many industries require glass packaging for their products, such as the beverage or food industry. We help you to customize different types of glass containers like bottles, jars, flasks, tins, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/glass-packaging4-1.jpg"
+        },
+        {
+          "key": "plastic-packaging",
+          "name": "Plastic Packaging",
+          "description": "Plastic packaging is used in a wide range of products. There are many forms of plastic packaging, which can be rigid or flexible. PET is a common plastic for packaging. It’s recyclable and BPA-free.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/plastic-packaging-1.jpg"
+        },
+        {
+          "key": "metal-packaging",
+          "name": "Metal Packaging",
+          "description": "Aluminum, tinplate, and stainless steel are the main materials for metal packaging. They’re good for preserving a food or cosmetic product. They’re usually made into cans, tubes, boxes, trays, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/metal-packaging.jpg"
+        },
+        {
+          "key": "corrugated-boxes",
+          "name": "Corrugated Boxes",
+          "description": "Corrugated cartons are made up of a few layers of material rather than just a single sheet like cardboard. Thus, They’re often stronger and more durable for packing, shipping, and storing industrial parts.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/paper-packaging1.jpg"
+        },
+        {
+          "key": "exquisite-gift-box",
+          "name": "Exquisite Gift Box",
+          "description": "These gift boxes are made of expensive cardboard with multiple inserts inside and processed with more complicated printing techniques. It’s available for high-end products like wine, jewelry, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/gift-boxes.jpg"
+        }
+      ],
+      "name_zh": "包装"
+    },
+    {
+      "path": "/our-products/outdoor-supplies-sourcing",
+      "name": "Outdoors",
+      "icon_path": "static/src/img/catalog/outdoor-supplies-sourcing.png",
+      "children": [
+        {
+          "key": "fishing",
+          "name": "Fishing",
+          "description": "Fishing equipment is a niche product that serves fishing lovers. Generally, consumers will pay attention to the appearance and function of products.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/fishing-rods.jpg"
+        },
+        {
+          "key": "cycling",
+          "name": "Cycling",
+          "description": "The vital supplies for cyclists are the bike itself, a helmet, proper shoes, and clothing. These products aim to improve comfort and performance.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/cycling-accessories.jpg"
+        },
+        {
+          "key": "emergency-kits",
+          "name": "Emergency Kits",
+          "description": "Emergency supplies are a must for outdoor enthusiasts. These emergency items are sold in a set to meet consumers’ every need. A kit usually consists of an emergency blanket, a compass, a knife, etc.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/emergency-tools.jpg"
+        },
+        {
+          "key": "camping-hiking",
+          "name": "Camping & Hiking",
+          "description": "From a sleeping pad to a headlamp to trekking poles, there is a wide assortment of camping products for adventurers. Especially in the USA, the camping market is rapidly increasing these years.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/outdoor-items.jpg"
+        },
+        {
+          "key": "traveling",
+          "name": "Traveling",
+          "description": "Travel items make trips easier and more comfortable. Things like tents, storage bags, and pillows are all in high demand for travelers.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/travel.jpg"
+        },
+        {
+          "key": "umbrella-sunshade",
+          "name": "Umbrella/ Sunshade",
+          "description": "We offer custom and tailor-made umbrellas and sun caps. There are golf umbrellas, transparent umbrellas, and folding umbrellas.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/umbrella.jpg"
+        }
+      ],
+      "name_zh": "户外"
+    },
+    {
+      "path": "/our-products/jewelry-sourcing",
+      "name": "Jewelry",
+      "icon_path": "static/src/img/catalog/jewelry-sourcing.png",
+      "children": [
+        {
+          "key": "gold-plated-jewelry",
+          "name": "Gold Plated Jewelry",
+          "description": "Cheap base metals plated with 14k or 18k gold are trending these 2 years due to their low-cost and elegant appearance. The commonly-used base metals are stainless steel, silver, copper, and brass.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/gold-plated-jewelry-1.jpg"
+        },
+        {
+          "key": "stainless-steel-jewelry",
+          "name": "Stainless Steel Jewelry",
+          "description": "Stainless steel jewelry is tarnish-resistant, durable, and unisex. In the current market, 304 and 316L stainless steel are the most commonly used.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/stainless-steel-jewelry-1.jpg"
+        },
+        {
+          "key": "copper-jewelry",
+          "name": "Copper Jewelry",
+          "description": "Compared to gold or silver jewelry, copper jewelry has a vintage style. Copper is soft and durable. And copper alloys like brass and bronze are also popular in the jewelry industry.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/copper-jewelry-1.jpg"
+        },
+        {
+          "key": "pearl-jewelry",
+          "name": "Pearl Jewelry",
+          "description": "Pearls are popular elements for fashion jewelry. Freshwater and baroque pearl jewelry matched with gold plating or stainless steel elements are especially favored by customers nowadays.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/pearl-jewelry.jpg"
+        },
+        {
+          "key": "silver-jewelry",
+          "name": "Silver Jewelry",
+          "description": "Sterling silver jewelry in the market is usually made of 925 silver. It looks high-graded and is affordable for consumers.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/silver-jewelry-1.jpg"
+        },
+        {
+          "key": "gemstone-jewelry",
+          "name": "Gemstone Jewelry",
+          "description": "K-gold jewelry inlaid with various gemstones and zircon is suitable for many occasions. Different gem-setting crafts can make different jewelry styles for consumers.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/Gemstone-Jewelry1.jpg"
+        }
+      ],
+      "name_zh": "珠宝"
+    },
+    {
+      "path": "/our-products/lighting-sourcing",
+      "name": "Lighting",
+      "icon_path": "static/src/img/catalog/lighting-sourcing.png",
+      "children": [
+        {
+          "key": "indoor-lighting",
+          "name": "Indoor Lighting",
+          "description": "Lighting is one of the most important elements of your home’s design. Indoor lighting is made in different forms like ceiling lighting, wall sconces, pendants, etc. LED bulbs are the most commonly-used materials.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/indoor-lights.jpg"
+        },
+        {
+          "key": "decorative-lights",
+          "name": "Decorative Lights",
+          "description": "Besides brightening functions, decorative lights are usually designed in changeable colors and styles. Festival lights are also popular during the holiday, especially in the US and EU markets.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/decorative-lighting.jpg"
+        },
+        {
+          "key": "special-lighting",
+          "name": "Special Lighting",
+          "description": "We provide some special lighting equipment like UV sterilization lamps, grow lights for cultivation, etc. Different from traditional LED bulbs, they have specific functions.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/special-lights.jpg"
+        },
+        {
+          "key": "outdoor-lighting",
+          "name": "Outdoor Lighting",
+          "description": "Outdoor Lighting includes wall wash lights, lawn lights, garden lights, floodlights, underwater lights, street lights, etc. These lighting items should be waterproof and dustproof.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/outdoor-lights.jpg"
+        },
+        {
+          "key": "candle",
+          "name": "Candle",
+          "description": "Scented candles are niche products with low production costs and high profits. The most popular ones in the market are jar candles and special-shaped candles. Customizing special packaging is also a good strategy for marketing.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/candles.jpg"
+        },
+        {
+          "key": "smart-lighting",
+          "name": "Smart Lighting",
+          "description": "Smart lighting devices need to connect to the internet. They enable consumers to save energy and control the lighting remotely or by voice. They have higher requirements for materials so the production cost would be higher.",
+          "image_path": "/lightlink_sourcing_website/static/mirror/wp-content/uploads/2023/08/smart-lighting.jpg"
+        }
+      ],
+      "name_zh": "灯光"
+    }
+  ]
+}

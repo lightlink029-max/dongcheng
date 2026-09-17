@@ -240,8 +240,10 @@
                                 <field name="ll_product_category_ids" context="{'default_website_id': id}">
                                     <list>
                                         <field name="sequence" widget="handle"/>
+                                        <field name="image_128" widget="image"/>
                                         <field name="name"/>
                                         <field name="parent_id"/>
+                                        <field name="sourcing_source_path" optional="hide"/>
                                     </list>
                                 </field>
                             </group>

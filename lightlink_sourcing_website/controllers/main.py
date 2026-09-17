@@ -5,7 +5,7 @@ import time
 from collections import defaultdict, deque
 from urllib.parse import urlencode
 
-from markupsafe import escape
+from markupsafe import Markup, escape
 
 from odoo import http, tools
 from odoo.fields import Domain
@@ -217,17 +217,128 @@ class LightLinkSourcingWebsite(http.Controller):
             return request.not_found()
         return request.render(
             "lightlink_sourcing_website.sourcing_mirror_page",
-            self._base_values(mirror_page=page),
+            self._base_values(
+                mirror_page=page,
+                mirror_body_html=Markup(self._managed_catalog_html(page)),
+            ),
         )
+
+    @staticmethod
+    def _category_image_url(category, size):
+        token = int(category.write_date.timestamp()) if category.write_date else category.id
+        return "/web/image/product.public.category/%s/%s?unique=%s" % (
+            category.id, size, token,
+        )
+
+    def _managed_catalog_html(self, page):
+        """Overlay editable category fields without changing the imported layout."""
+        body = str(page.body_html or "")
+        if page.source_path != "/our-products" and not page.source_path.startswith(
+            "/our-products/"
+        ):
+            return body
+        website = self._sourcing_website()
+        Category = request.env["product.public.category"].sudo().with_context(
+            lang=request.env.lang,
+        )
+        domain = [
+            ("website_id", "=", website.id),
+            ("sourcing_imported_from_mirror", "=", True),
+        ]
+        if page.source_path == "/our-products":
+            categories = Category.search(domain + [("parent_id", "=", False)])
+            for category in categories:
+                source_path = category.sourcing_source_path
+                if not source_path:
+                    continue
+                anchor_pattern = re.compile(
+                    r'(<a\b[^>]*href=["\'][^"\']*%s/?["\'][^>]*>)(.*?)(</a>)'
+                    % re.escape(source_path),
+                    re.IGNORECASE | re.DOTALL,
+                )
+
+                def update_anchor(match):
+                    inner = match.group(2)
+                    if category.image_1920:
+                        image = (
+                            '<img class="ll-managed-category-icon" '
+                            'src="%s" alt="%s" width="76" height="76" '
+                            'style="width:76px;height:76px;object-fit:contain"/>'
+                            % (
+                                self._category_image_url(category, "image_128"),
+                                escape(category.name),
+                            )
+                        )
+                        inner = re.sub(
+                            r"<svg\b.*?</svg>", image, inner, count=1,
+                            flags=re.IGNORECASE | re.DOTALL,
+                        )
+                    inner = re.sub(
+                        r'(<span\b[^>]*class=["\'][^"\']*elementor-cta__title'
+                        r'[^"\']*["\'][^>]*>).*?(</span>)',
+                        lambda title: "%s%s%s" % (
+                            title.group(1), escape(category.name), title.group(2),
+                        ),
+                        inner,
+                        count=1,
+                        flags=re.IGNORECASE | re.DOTALL,
+                    )
+                    return "%s%s%s" % (match.group(1), inner, match.group(3))
+
+                body = anchor_pattern.sub(update_anchor, body)
+            return body
+
+        parent = Category.search(
+            domain + [("sourcing_source_key", "=", page.source_path)], limit=1,
+        )
+        if not parent:
+            return body
+        for category in parent.child_id.with_context(lang=request.env.lang):
+            if category.sourcing_source_image_path:
+                heading_pattern = re.compile(
+                    r'(<img\b[^>]*src=["\']%s["\'][^>]*>.*?'
+                    r'<h2\b[^>]*>).*?(</h2>)'
+                    % re.escape(category.sourcing_source_image_path),
+                    re.IGNORECASE | re.DOTALL,
+                )
+                body = heading_pattern.sub(
+                    lambda heading: "%s%s%s" % (
+                        heading.group(1), escape(category.name), heading.group(2),
+                    ),
+                    body,
+                    1,
+                )
+            if category.sourcing_source_image_path and category.website_description:
+                description_pattern = re.compile(
+                    r'(<img\b[^>]*src=["\']%s["\'][^>]*>.*?'
+                    r'<div\b[^>]*class=["\'][^"\']*elementor-widget-text-editor'
+                    r'[^"\']*["\'][^>]*>\s*<div\b[^>]*class=["\']'
+                    r'elementor-widget-container["\'][^>]*>).*?(</div>\s*</div>)'
+                    % re.escape(category.sourcing_source_image_path),
+                    re.IGNORECASE | re.DOTALL,
+                )
+                body = description_pattern.sub(
+                    lambda description: "%s%s%s" % (
+                        description.group(1),
+                        str(category.website_description),
+                        description.group(2),
+                    ),
+                    body,
+                    1,
+                )
+            if category.sourcing_source_image_path and category.image_1920:
+                body = body.replace(
+                    'src="%s"' % category.sourcing_source_image_path,
+                    'src="%s"' % self._category_image_url(category, "image_1920"),
+                    1,
+                )
+        return body
 
     @http.route("/sourcing", type="http", auth="public", website=True, sitemap=True)
     def sourcing_home(self, **kwargs):
         mirror_page = self._mirror_page("/")
         if mirror_page:
-            return request.render(
-                "lightlink_sourcing_website.sourcing_mirror_page",
-                self._base_values(mirror_page=mirror_page),
-            )
+            return self._render_mirror_page("/")
         website = self._sourcing_website()
         products = request.env["product.template"].sudo().search(
             website.sale_product_domain(), limit=8, order="website_sequence, id desc"
