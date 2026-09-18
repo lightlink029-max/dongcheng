@@ -59,7 +59,7 @@
     </template>
 
     <template id="sourcing_footer" name="Sourcing Website Footer">
-        <div t-if="sourcing_website.sourcing_mirror_footer_html" class="ll-mirror-footer" t-field="sourcing_website.sourcing_mirror_footer_html"/>
+        <div t-if="use_mirror_footer and sourcing_website.sourcing_mirror_footer_html" class="ll-mirror-footer" t-field="sourcing_website.sourcing_mirror_footer_html"/>
         <footer t-else="" class="ll-sourcing-footer">
             <div class="container">
                 <div class="row g-5">

@@ -163,6 +163,7 @@ class LightLinkSourcingWebsite(http.Controller):
             "sourcing_metrics": metrics,
             "sourcing_testimonials": testimonials,
             "sourcing_footer_columns": footer_columns,
+            "use_mirror_footer": False,
             "sourcing_service_email": (
                 project.website_service_email if project and project.website_service_email
                 else website.sourcing_service_email
@@ -232,6 +233,9 @@ class LightLinkSourcingWebsite(http.Controller):
             self._base_values(
                 mirror_page=page,
                 mirror_body_html=Markup(self._managed_catalog_html(page)),
+                use_mirror_footer=bool(
+                    page.source_style_hash or page.source_stylesheets
+                ),
             ),
         )
 
