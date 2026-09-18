@@ -93,6 +93,7 @@
         <t t-call="website.layout">
             <t t-set="head">
                 <meta name="google-site-verification" content="Cjn3FI0nFKvXX4pWbR0AhBLuanlDNTdMCKuZrj-FV2Q"/>
+                <meta name="google-site-verification" content="VAqFMKnHtscsPl4XbgB6dmkR5LmXQPxlRYV8zyd1Np4"/>
             </t>
             <t t-set="no_header" t-value="True"/>
             <t t-set="no_footer" t-value="True"/>
