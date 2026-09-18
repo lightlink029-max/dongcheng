@@ -91,6 +91,9 @@
 
     <template id="sourcing_layout" name="Sourcing Website Layout">
         <t t-call="website.layout">
+            <t t-set="head">
+                <meta name="google-site-verification" content="Cjn3FI0nFKvXX4pWbR0AhBLuanlDNTdMCKuZrj-FV2Q"/>
+            </t>
             <t t-set="no_header" t-value="True"/>
             <t t-set="no_footer" t-value="True"/>
             <t t-call="lightlink_sourcing_website.sourcing_subnav"/>
