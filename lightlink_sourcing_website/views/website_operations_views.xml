@@ -131,6 +131,7 @@
                             <field name="ll_business_type"/>
                             <field name="domain" placeholder="例如 https://factory.example.com"/>
                             <field name="sourcing_brand_name" string="网站品牌名"/>
+                            <field name="sourcing_logo" string="网站 Logo" widget="image" options="{'size': [160, 160]}"/>
                             <field name="sourcing_tagline" string="网站标语"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>

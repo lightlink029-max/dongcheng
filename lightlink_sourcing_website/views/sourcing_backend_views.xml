@@ -152,6 +152,7 @@
                             <field name="sourcing_enabled"/>
                             <field name="domain" placeholder="例如 https://sourcing.example.com"/>
                             <field name="sourcing_brand_name"/>
+                            <field name="sourcing_logo" widget="image" options="{'size': [160, 160]}"/>
                             <field name="sourcing_tagline"/>
                         </group>
                         <group string="客户联系">

@@ -408,6 +408,14 @@ class LightLinkSourcingWebsite(http.Controller):
         return self._render_mirror_page(source_path)
 
     @http.route(
+        ["/sourcing/privacy-policy", "/sourcing/terms-of-service"],
+        type="http", auth="public", website=True, sitemap=True,
+    )
+    def sourcing_legal_page(self, **kwargs):
+        source_path = request.httprequest.path.rsplit("/", 1)[-1]
+        return self._render_mirror_page(source_path)
+
+    @http.route(
         "/sourcing/styles/<string:style_hash>.css",
         type="http", auth="public", website=True, sitemap=False,
     )

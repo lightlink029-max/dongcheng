@@ -28,6 +28,17 @@ class TestSourcingContent(TransactionCase):
         with gzip.open(style_path, "rt", encoding="utf-8") as archive:
             self.assertIn(".elementor-", archive.read())
         self.assertTrue(website.sourcing_mirror_footer_html)
+        self.assertTrue(website.sourcing_logo)
+        legal_pages = self.env["ll.sourcing.content.page"].search([
+            ("website_id", "=", website.id),
+            ("source_path", "in", ("/privacy-policy", "/terms-of-service")),
+            ("published", "=", True),
+        ])
+        self.assertEqual(len(legal_pages), 2)
+        privacy = legal_pages.filtered(
+            lambda page: page.source_path == "/privacy-policy"
+        )
+        self.assertIn("Google API Services User Data Policy", privacy.body_html)
         home.body_html = home.body_html + "<p>Editable test</p>"
         self.assertIn("Editable test", home.body_html)
 

@@ -988,11 +988,20 @@ $ll-nav-accent: #ff7a1a;
 }
 
 .ll-sourcing-brand {
+    display: inline-flex;
+    align-items: center;
     color: $ll-teal-dark;
     font-size: 1.1rem;
     font-weight: 850;
     text-decoration: none;
     white-space: normal;
+}
+
+.ll-sourcing-logo {
+    display: block;
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
 }
 
 .ll-sourcing-links {
@@ -1096,6 +1105,106 @@ $ll-nav-accent: #ff7a1a;
     gap: 1rem;
     border-top: 1px solid rgba(255, 255, 255, .15);
     font-size: .82rem;
+}
+
+.ll-sourcing-legal-bar {
+    padding: 1.25rem 0;
+    color: #dce9e6;
+    background: #102a2d;
+
+    .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+    }
+
+    p {
+        max-width: 780px;
+        margin: 0;
+        font-size: .88rem;
+        line-height: 1.6;
+    }
+
+    nav {
+        display: flex;
+        flex: 0 0 auto;
+        gap: 1rem;
+    }
+
+    a {
+        color: #fff;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+}
+
+.ll-legal-page {
+    width: min(940px, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: 5rem 0 6rem;
+    color: #17363a;
+    font-size: 1.05rem;
+    line-height: 1.75;
+
+    .ll-legal-hero {
+        margin-bottom: 1.5rem;
+        padding: 3rem;
+        border-radius: 1rem;
+        background: #f4f8f7;
+
+        h1 {
+            margin: .35rem 0 1rem;
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+        }
+
+        p {
+            max-width: 760px;
+            margin-bottom: .5rem;
+        }
+    }
+
+    .ll-legal-kicker {
+        color: $ll-teal;
+        font-size: .82rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .1em;
+    }
+
+    .ll-legal-updated {
+        color: #617476;
+        font-size: .9rem;
+    }
+
+    .ll-legal-nav {
+        display: flex;
+        margin: 0 0 2rem;
+        padding: 1rem 0;
+        gap: 1.5rem;
+        border-bottom: 1px solid #dce5e2;
+
+        a {
+            color: $ll-teal-dark;
+            font-weight: 750;
+        }
+    }
+
+    section {
+        padding: 1.25rem 0;
+
+        h2 {
+            margin-bottom: .65rem;
+            font-size: 1.5rem;
+        }
+    }
+
+    .ll-legal-highlight {
+        margin: 1rem 0;
+        padding: 1.5rem 2rem;
+        border-left: 4px solid $ll-teal;
+        background: #eef8f5;
+    }
 }
 
 .ll-metrics-section {
@@ -1842,7 +1951,20 @@ $ll-nav-accent: #ff7a1a;
     }
 
     .ll-footer-bottom,
-    .ll-payment-safe-note {
+    .ll-payment-safe-note,
+    .ll-sourcing-legal-bar .container {
         flex-direction: column;
+    }
+
+    .ll-sourcing-legal-bar .container {
+        align-items: flex-start;
+    }
+
+    .ll-legal-page {
+        padding: 2.5rem 0 4rem;
+
+        .ll-legal-hero {
+            padding: 1.5rem;
+        }
     }
 }

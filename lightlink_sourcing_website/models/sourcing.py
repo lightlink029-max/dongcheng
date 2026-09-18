@@ -42,6 +42,12 @@ class Website(models.Model):
     sourcing_brand_name = fields.Char(
         string="网站品牌名", translate=True,
     )
+    sourcing_logo = fields.Image(
+        string="网站 Logo",
+        max_width=1024,
+        max_height=1024,
+        help="显示在采购网站页眉，可在后台直接上传替换。",
+    )
     sourcing_tagline = fields.Char(
         string="网站标语", translate=True,
     )
@@ -486,6 +492,128 @@ class Website(models.Model):
                 "website_inquiry_enabled": True,
             })
         return len(values)
+
+    @api.model
+    def seed_lightlink_sourcing_legal_pages(self):
+        """Create editable legal disclosures required by the public OAuth app."""
+        website = self.env.ref(
+            "lightlink_sourcing_website.website_global_sourcing",
+            raise_if_not_found=False,
+        )
+        if not website:
+            return False
+
+        privacy_html = """
+<article class="ll-legal-page">
+  <header class="ll-legal-hero">
+    <p class="ll-legal-kicker">Legal &amp; privacy</p>
+    <h1>Privacy Policy</h1>
+    <p>This policy explains how LightLink Global Sourcing ("LightLink", "we", "us") collects, uses, stores, and shares information when you use our sourcing website, inquiry tools, account features, and connected services.</p>
+    <p class="ll-legal-updated">Last updated: September 18, 2026</p>
+  </header>
+  <nav class="ll-legal-nav" aria-label="Legal pages">
+    <a href="/sourcing/privacy-policy" aria-current="page">Privacy Policy</a>
+    <a href="/sourcing/terms-of-service">Terms of Service</a>
+  </nav>
+  <section><h2>1. Scope and service</h2><p>LightLink provides tools and services for China sourcing, supplier discovery, product development, quotation and inquiry management, quality and delivery coordination, and related customer communication. This policy applies to information processed through the public website and any LightLink account or Google-connected feature associated with this service.</p></section>
+  <section><h2>2. Information we collect</h2><ul><li><strong>Contact and account information:</strong> name, business email, phone or WhatsApp number, company, country, account identifier, and profile details you provide.</li><li><strong>Sourcing and transaction information:</strong> product requirements, quantities, target prices, delivery destinations, supplier or order details, support messages, and files you upload.</li><li><strong>Google account information:</strong> when you choose Google sign-in or connect a Google service, we receive only the account data and permissions shown on the Google consent screen. This may include your name, email address, profile image, Google account identifier, and data required for a connected feature you explicitly authorize.</li><li><strong>Technical information:</strong> IP address, browser and device information, timestamps, referring and visited pages, security events, cookies, and similar diagnostics.</li></ul></section>
+  <section><h2>3. How we use information</h2><p>We use information to authenticate users, respond to sourcing requests, identify appropriate suppliers or services, prepare quotations, coordinate sourcing workflows, provide requested Google-connected features, communicate service updates, prevent fraud and abuse, maintain security, meet legal obligations, and improve user-facing functionality.</p></section>
+  <section class="ll-legal-highlight"><h2>4. Google user data and Limited Use</h2><p>LightLink's use and transfer of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener noreferrer" target="_blank">Google API Services User Data Policy</a>, including the Limited Use requirements.</p><ul><li>We request the minimum Google permissions needed for the feature you choose.</li><li>We use Google user data only to provide or improve that user-facing feature.</li><li>We do not sell Google user data, use it for targeted advertising, or use it to build or train generalized artificial-intelligence or machine-learning models.</li><li>We do not allow human access to Google user data except with your affirmative consent for support, when necessary for security or legal compliance, or when the data has been aggregated and anonymized for internal operations.</li></ul></section>
+  <section><h2>5. How information is shared</h2><p>We may share information with service providers that host, secure, analyze, or support the service; with suppliers, logistics providers, inspectors, and other partners only as needed to fulfill a request you submit; with professional advisers; or when required by law or necessary to protect users and the service. Service providers are required to process information only for contracted purposes. Google user data is not transferred for advertising or unrelated purposes.</p></section>
+  <section><h2>6. Storage, security, and international processing</h2><p>We apply reasonable administrative, technical, and organizational safeguards, including access controls and security monitoring. Information may be processed in countries where LightLink, its infrastructure providers, or sourcing partners operate. No transmission or storage method is completely secure, but we work to protect information in proportion to its sensitivity.</p></section>
+  <section><h2>7. Retention and deletion</h2><p>We retain information only while needed to provide the service, maintain business and security records, resolve disputes, and satisfy legal obligations. Retention periods vary by data type and relationship. When you disconnect a Google account, we stop new access through that connection. You may request deletion of stored Google user data or other personal information through our <a href="/sourcing/request">contact form</a>; write "Privacy request" in the requirements field. We will delete or anonymize eligible information unless retention is legally required.</p></section>
+  <section><h2>8. Your choices and rights</h2><p>You may decline optional information, manage cookies in your browser, revoke LightLink access from your Google Account permissions, and request access, correction, export, restriction, objection, or deletion where applicable. Revoking access may disable the connected feature but does not automatically delete information already retained for lawful purposes, so contact us if deletion is also required.</p></section>
+  <section><h2>9. Cookies and analytics</h2><p>We use essential cookies for sessions, security, language, and form operation. We may use limited analytics to understand performance and usage. You can restrict nonessential cookies through browser controls, although some functions may no longer work correctly.</p></section>
+  <section><h2>10. Children and third-party links</h2><p>The service is intended for businesses and is not directed to children under 13 or the minimum age required in their jurisdiction. Our pages may link to third-party services; their privacy practices are governed by their own policies.</p></section>
+  <section><h2>11. Changes and contact</h2><p>We may update this policy as the service or legal requirements change. The current version and effective date will remain published here. For privacy questions or requests, use the <a href="/sourcing/request">LightLink contact form</a> and identify the message as a privacy request.</p></section>
+</article>
+"""
+        terms_html = """
+<article class="ll-legal-page">
+  <header class="ll-legal-hero">
+    <p class="ll-legal-kicker">Legal &amp; service</p>
+    <h1>Terms of Service</h1>
+    <p>These terms govern your access to the LightLink Global Sourcing website, inquiry tools, account features, and connected services.</p>
+    <p class="ll-legal-updated">Last updated: September 18, 2026</p>
+  </header>
+  <nav class="ll-legal-nav" aria-label="Legal pages">
+    <a href="/sourcing/privacy-policy">Privacy Policy</a>
+    <a href="/sourcing/terms-of-service" aria-current="page">Terms of Service</a>
+  </nav>
+  <section><h2>1. Acceptance</h2><p>By accessing or using the service, you agree to these Terms of Service and our <a href="/sourcing/privacy-policy">Privacy Policy</a>. If you use the service for a company or other organization, you represent that you have authority to bind that organization.</p></section>
+  <section><h2>2. What LightLink provides</h2><p>LightLink supports supplier discovery, sourcing inquiries, product development coordination, quotation and order communication, quality and delivery coordination, and related workflow features. Website information is general and does not itself constitute a binding quotation, purchase order, certification, warranty, or guarantee of supplier performance. Specific commercial commitments apply only when documented in an accepted quotation, order, statement of work, or other written service agreement.</p></section>
+  <section><h2>3. Accounts and Google-connected features</h2><p>You are responsible for maintaining the security of your account and for activity performed through it. If you use Google sign-in or connect a Google service, you authorize LightLink to access only the permissions displayed on Google's consent screen for the feature you select. You may revoke that access through your Google Account settings. Our handling of Google user data is described in the Privacy Policy.</p></section>
+  <section><h2>4. Your responsibilities</h2><ul><li>Provide accurate contact, business, product, compliance, and delivery information.</li><li>Ensure you have rights to submit specifications, images, trademarks, designs, files, and personal information.</li><li>Use the service lawfully and comply with import, export, sanctions, product-safety, intellectual-property, tax, and marketplace requirements that apply to your business.</li><li>Review samples, specifications, quotations, inspection criteria, and shipping instructions before approval.</li><li>Do not misuse the service, interfere with security, introduce malicious code, scrape at harmful scale, impersonate others, or use the service for fraudulent or prohibited products.</li></ul></section>
+  <section><h2>5. Quotes, orders, suppliers, and payments</h2><p>Prices, lead times, minimum order quantities, shipping estimates, and availability may change until confirmed in writing. Suppliers and logistics providers may be independent third parties. Payment terms, inspection standards, remedies, and delivery responsibilities are governed by the applicable quotation or order documents. You are responsible for reviewing those documents before payment or production approval.</p></section>
+  <section><h2>6. Content and intellectual property</h2><p>LightLink and its licensors retain rights in the website, software, branding, and original content. We grant you a limited, revocable, non-transferable right to use the service for legitimate business sourcing. You retain ownership of materials you submit and grant LightLink permission to host, process, reproduce, translate, and share them only as needed to provide the requested service, comply with law, and protect the service.</p></section>
+  <section><h2>7. Confidentiality and privacy</h2><p>Each party should use reasonable care with nonpublic business information. Do not submit information that you are not authorized to disclose. Personal information and Google user data are handled under our <a href="/sourcing/privacy-policy">Privacy Policy</a>.</p></section>
+  <section><h2>8. Third-party services</h2><p>The service may link to or integrate with Google, suppliers, payment providers, logistics providers, marketplaces, and other third parties. Their services are governed by their own terms and policies. LightLink is not responsible for third-party systems outside our reasonable control.</p></section>
+  <section><h2>9. Availability and disclaimers</h2><p>We work to keep the service reliable, but it may be interrupted or changed. To the maximum extent permitted by law, the service and general website content are provided "as is" and "as available." We do not guarantee that every supplier, product, price, certification, timeline, or outcome will meet your requirements unless expressly agreed in a signed written commitment.</p></section>
+  <section><h2>10. Limitation of liability</h2><p>To the maximum extent permitted by applicable law, LightLink will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, revenue, data, goodwill, or business opportunities arising from use of the general website or free account features. Any liability associated with paid sourcing services is governed by the applicable written service or order agreement. Nothing in these terms excludes liability that cannot legally be excluded.</p></section>
+  <section><h2>11. Suspension and termination</h2><p>You may stop using the service at any time. We may restrict or suspend access when reasonably necessary to address security, unlawful conduct, material breach, nonpayment under an applicable agreement, or risk to users or the service. Provisions that by their nature should survive termination will continue to apply.</p></section>
+  <section><h2>12. Changes, governing terms, and contact</h2><p>We may update these terms by publishing a revised version and effective date. Material commercial work remains governed by the written agreement accepted for that work. Applicable law and dispute provisions, if required, will be identified in that agreement. Questions about these terms can be submitted through the <a href="/sourcing/request">LightLink contact form</a>.</p></section>
+</article>
+"""
+        Page = self.env["ll.sourcing.content.page"].sudo().with_context(lang="en_US")
+        legal_pages = (
+            {
+                "name": "Privacy Policy",
+                "code": "privacy-policy",
+                "summary": "How LightLink Global Sourcing collects, uses, stores, shares, and deletes personal and Google user data.",
+                "source_path": "/privacy-policy",
+                "body_html": privacy_html,
+                "sequence": 980,
+            },
+            {
+                "name": "Terms of Service",
+                "code": "terms-of-service",
+                "summary": "Terms governing the LightLink Global Sourcing website, account, and connected services.",
+                "source_path": "/terms-of-service",
+                "body_html": terms_html,
+                "sequence": 990,
+            },
+        )
+        records = Page
+        for values in legal_pages:
+            page = Page.search([
+                ("website_id", "=", website.id),
+                ("source_path", "=", values["source_path"]),
+            ], limit=1)
+            common_values = dict(
+                values,
+                website_id=website.id,
+                kicker="LightLink Global Sourcing",
+                source_file=False,
+                source_hash=False,
+                source_stylesheets=False,
+                source_style_hash=False,
+                page_type="page",
+                imported_from_mirror=True,
+                published=True,
+                active=True,
+            )
+            if page:
+                page.write(common_values)
+            else:
+                page = Page.create(common_values)
+            records |= page
+        return records
+
+    @api.model
+    def seed_lightlink_sourcing_logo(self):
+        """Install the supplied logo once while preserving later backend edits."""
+        website = self.env.ref(
+            "lightlink_sourcing_website.website_global_sourcing",
+            raise_if_not_found=False,
+        )
+        if not website or website.sourcing_logo:
+            return website
+        with tools.file_open(
+            "lightlink_sourcing_website/static/src/img/lightlink-global-logo.png",
+            "rb",
+        ) as logo_file:
+            website.sudo().sourcing_logo = base64.b64encode(logo_file.read())
+        return website
 
     @api.model
     def seed_lightlink_sourcing_catalog(self):
