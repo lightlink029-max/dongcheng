@@ -70,6 +70,8 @@ class TestSourcingContent(TransactionCase):
         ])
         self.assertEqual(len(categories.filtered(lambda item: not item.parent_id)), 20)
         self.assertEqual(len(categories.filtered("parent_id")), 122)
+        self.assertEqual(website.ll_root_product_category_count, 20)
+        self.assertEqual(website.ll_child_product_category_count, 122)
         self.assertTrue(all(categories.mapped("image_1920")))
         self.assertFalse(any(categories.mapped("sourcing_image_customized")))
         bags = categories.filtered(
@@ -78,6 +80,12 @@ class TestSourcingContent(TransactionCase):
         self.assertEqual(len(bags.child_id), 6)
         bags.child_id[0].write({"image_1920": bags.child_id[0].image_1920})
         self.assertTrue(bags.child_id[0].sourcing_image_customized)
+
+        root_action = website.action_ll_open_root_product_categories()
+        self.assertIn(("website_id", "=", website.id), root_action["domain"])
+        self.assertIn(("parent_id", "=", False), root_action["domain"])
+        child_action = website.action_ll_open_child_product_categories()
+        self.assertIn(("parent_id", "!=", False), child_action["domain"])
 
         custom_menu = self.env["website.menu"].create({
             "name": "Custom maintained link",

@@ -106,6 +106,12 @@
                         <button name="action_ll_open_product_presentations" type="object" class="oe_stat_button" icon="fa-cube">
                             <field name="ll_product_presentation_count" widget="statinfo" string="产品内容"/>
                         </button>
+                        <button name="action_ll_open_root_product_categories" type="object" class="oe_stat_button" icon="fa-sitemap" invisible="ll_business_type != 'sourcing_agency'">
+                            <field name="ll_root_product_category_count" widget="statinfo" string="一级分类"/>
+                        </button>
+                        <button name="action_ll_open_child_product_categories" type="object" class="oe_stat_button" icon="fa-list-ul" invisible="ll_business_type != 'sourcing_agency'">
+                            <field name="ll_child_product_category_count" widget="statinfo" string="二级分类"/>
+                        </button>
                         <button name="action_ll_open_factory_capabilities" type="object" class="oe_stat_button" icon="fa-industry" invisible="ll_business_type != 'factory'">
                             <field name="ll_factory_capability_count" widget="statinfo" string="工厂能力"/>
                         </button>
@@ -237,12 +243,17 @@
                                 </field>
                             </group>
                             <group string="网站产品分类">
-                                <field name="ll_product_category_ids" context="{'default_website_id': id}">
-                                    <list>
-                                        <field name="sequence" widget="handle"/>
+                                <div class="alert alert-info" role="alert">
+                                    这里只展示一级分类。点击分类可维护它的图片、介绍和二级分类；也可打开完整分类管理进行搜索和筛选。
+                                    <button name="action_ll_open_product_categories" type="object" string="打开完整分类管理" class="btn-primary ms-3" icon="fa-sitemap"/>
+                                </div>
+                                <field name="ll_product_category_ids" nolabel="1" domain="[('parent_id', '=', False)]" context="{'default_website_id': id}">
+                                    <list create="0" delete="0" default_order="sequence, name">
+                                        <field name="image_128" widget="image" string="图片" options="{'size': [64, 64]}"/>
                                         <field name="name"/>
-                                        <field name="parent_id"/>
-                                        <field name="sourcing_source_path" optional="hide"/>
+                                        <field name="sourcing_child_count" string="二级分类数"/>
+                                        <field name="sourcing_hero_subtitle" optional="show"/>
+                                        <field name="sourcing_source_path" optional="show"/>
                                     </list>
                                 </field>
                             </group>

@@ -108,6 +108,12 @@ class Website(models.Model):
     ll_product_presentation_count = fields.Integer(
         string="产品内容", compute="_compute_ll_operations_counts",
     )
+    ll_root_product_category_count = fields.Integer(
+        string="一级分类", compute="_compute_ll_operations_counts",
+    )
+    ll_child_product_category_count = fields.Integer(
+        string="二级分类", compute="_compute_ll_operations_counts",
+    )
 
     def _compute_ll_operations_counts(self):
         for website in self:
@@ -117,6 +123,13 @@ class Website(models.Model):
             website.ll_inquiry_count = len(website.ll_source_requirement_ids)
             website.ll_factory_capability_count = len(website.ll_factory_capability_ids)
             website.ll_product_presentation_count = len(website.ll_product_presentation_ids)
+            categories = website.ll_product_category_ids
+            website.ll_root_product_category_count = len(
+                categories.filtered(lambda category: not category.parent_id)
+            )
+            website.ll_child_product_category_count = len(
+                categories.filtered(lambda category: category.parent_id)
+            )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -159,6 +172,33 @@ class Website(models.Model):
 
     def action_ll_open_product_presentations(self):
         return self._ll_open_related("ll.website.product.presentation", _("网站产品内容"))
+
+    def _ll_open_product_categories(self, level=None):
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id(
+            "lightlink_sourcing_website.action_ll_sourcing_product_categories"
+        )
+        domain = [("website_id", "=", self.id)]
+        if level == "root":
+            domain.append(("parent_id", "=", False))
+            action["name"] = _("一级产品分类")
+        elif level == "child":
+            domain.append(("parent_id", "!=", False))
+            action["name"] = _("二级产品分类")
+        else:
+            action["name"] = _("产品分类管理")
+        action["domain"] = domain
+        action["context"] = {"default_website_id": self.id}
+        return action
+
+    def action_ll_open_product_categories(self):
+        return self._ll_open_product_categories()
+
+    def action_ll_open_root_product_categories(self):
+        return self._ll_open_product_categories("root")
+
+    def action_ll_open_child_product_categories(self):
+        return self._ll_open_product_categories("child")
 
     def action_ll_open_public_site(self):
         self.ensure_one()
@@ -600,6 +640,16 @@ class Website(models.Model):
 class ProductPublicCategory(models.Model):
     _inherit = "product.public.category"
 
+    sourcing_category_level = fields.Selection(
+        [("root", "一级分类"), ("child", "二级分类")],
+        string="分类层级",
+        compute="_compute_sourcing_hierarchy",
+    )
+    sourcing_child_count = fields.Integer(
+        string="二级分类数量",
+        compute="_compute_sourcing_hierarchy",
+    )
+
     sourcing_image_asset_id = fields.Many2one(
         "ll.sourcing.asset",
         string="采购分类页图片",
@@ -641,6 +691,12 @@ class ProductPublicCategory(models.Model):
         "UNIQUE(website_id, sourcing_source_key)",
         "同一网站不能重复导入同一个镜像产品分类。",
     )
+
+    @api.depends("parent_id", "child_id")
+    def _compute_sourcing_hierarchy(self):
+        for category in self:
+            category.sourcing_category_level = "child" if category.parent_id else "root"
+            category.sourcing_child_count = len(category.child_id)
 
     def write(self, values):
         if (
