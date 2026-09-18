@@ -15,7 +15,7 @@
         <nav class="navbar navbar-expand-lg ll-sourcing-nav" aria-label="Sourcing website navigation">
             <div class="container">
                 <a class="navbar-brand ll-sourcing-brand" href="/sourcing" t-field="sourcing_website.sourcing_brand_name"/>
-                <button class="navbar-toggler ll-sourcing-nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#llSourcingNavigation" aria-controls="llSourcingNavigation" aria-expanded="false" aria-label="Toggle navigation">
+                <button class="navbar-toggler ll-sourcing-nav-toggle" type="button" aria-controls="llSourcingNavigation" aria-expanded="false" aria-label="Toggle navigation" onclick="var menu=document.getElementById('llSourcingNavigation');var open=menu.classList.toggle('show');this.setAttribute('aria-expanded',open?'true':'false');return false;">
                     <span class="navbar-toggler-icon"/>
                 </button>
                 <div class="collapse navbar-collapse ll-sourcing-links" id="llSourcingNavigation">
@@ -24,7 +24,7 @@
                             <t t-if="nav_item.id not in (sourcing_home_menu.id, sourcing_cta_menu.id)">
                                 <t t-set="visible_children" t-value="nav_item.child_id.filtered('is_visible').sorted('sequence')"/>
                                 <div t-if="visible_children" class="nav-item dropdown">
-                                    <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" t-field="nav_item.name"/>
+                                    <button class="nav-link dropdown-toggle" type="button" aria-expanded="false" onclick="var menu=this.nextElementSibling;var open=menu.classList.toggle('show');this.setAttribute('aria-expanded',open?'true':'false');return false;" t-field="nav_item.name"/>
                                     <ul class="dropdown-menu">
                                         <li t-foreach="visible_children" t-as="child_menu">
                                             <a class="dropdown-item" t-att-href="child_menu.url or '#'" t-att-target="'_blank' if child_menu.new_window else None" t-field="child_menu.name"/>
