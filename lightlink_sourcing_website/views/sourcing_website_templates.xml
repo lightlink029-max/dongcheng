@@ -36,7 +36,6 @@
                         </t>
                     </div>
                     <div class="ll-sourcing-actions">
-                        <t t-call="portal.language_selector" _div_classes="'dropdown ll-sourcing-language'" _btn_class="'btn ll-sourcing-language-toggle'"/>
                         <a t-att-href="sourcing_cta_menu.url or '/sourcing/request'" class="btn btn-primary ll-sourcing-nav-cta" t-field="sourcing_cta_menu.name"/>
                     </div>
                 </div>

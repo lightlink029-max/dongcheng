@@ -1039,20 +1039,6 @@ $ll-nav-accent: #ff7a1a;
     border-left: 1px solid #dce5e2;
 }
 
-.ll-sourcing-language-toggle {
-    padding: .55rem .7rem;
-    color: $ll-ink;
-    border: 0;
-    font-weight: 700;
-    background: transparent;
-
-    &:hover,
-    &:focus {
-        color: $ll-teal;
-        background: $ll-mint;
-    }
-}
-
 .ll-sourcing-nav-toggle {
     border-color: #cbd7d4;
 
