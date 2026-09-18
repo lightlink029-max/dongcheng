@@ -58,6 +58,12 @@ _VALUE_SERVICE_SLUGS = {
 
 class LightLinkSourcingWebsite(http.Controller):
     @staticmethod
+    def _force_english_context():
+        """Keep the English-only mirror coherent and browser-translatable."""
+        if request.env.lang != "en_US":
+            request.update_context(lang="en_US")
+
+    @staticmethod
     def _clean(value, limit=500):
         return str(value or "").strip()[:limit]
 
@@ -83,13 +89,18 @@ class LightLinkSourcingWebsite(http.Controller):
     @staticmethod
     def _sourcing_website():
         """Use the dedicated site even before its standalone domain is assigned."""
+        LightLinkSourcingWebsite._force_english_context()
         if request.website.sourcing_enabled:
-            return request.website
+            return request.website.with_context(lang="en_US")
         website = request.env.ref(
             "lightlink_sourcing_website.website_global_sourcing",
             raise_if_not_found=False,
         )
-        return website.sudo() if website else request.website
+        return (
+            website.sudo().with_context(lang="en_US")
+            if website
+            else request.website.with_context(lang="en_US")
+        )
 
     @staticmethod
     def _active_project():
