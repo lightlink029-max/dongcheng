@@ -1081,12 +1081,4 @@ class ResConfigSettings(models.TransientModel):
         }
 
     def action_prepare_medical_test_data(self):
-        project = self._upsert_medical_test_data()
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("医疗综合采购测试项目"),
-            "res_model": "psc.publishing.project",
-            "res_id": project.id,
-            "view_mode": "form",
-            "target": "current",
-        }
+        raise UserError(_("医疗测试数据入口已从生产环境停用。"))

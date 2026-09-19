@@ -1,3 +1,4 @@
+from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase
 
 from ..models.res_config_settings import (
@@ -15,16 +16,16 @@ class MedicalTestDataCase(TransactionCase):
     def test_initializer_is_complete_and_idempotent(self):
         settings = self.env["res.config.settings"].create({})
 
-        first_action = settings.action_prepare_medical_test_data()
-        second_action = settings.action_prepare_medical_test_data()
+        first_project = settings._upsert_medical_test_data()
+        second_project = settings._upsert_medical_test_data()
 
         projects = self.env["psc.publishing.project"].search([
             ("name", "=", MEDICAL_TEST_PROJECT_NAME),
         ])
         self.assertEqual(len(projects), 1)
         project = projects.ensure_one()
-        self.assertEqual(first_action["res_id"], project.id)
-        self.assertEqual(second_action["res_id"], project.id)
+        self.assertEqual(first_project, project)
+        self.assertEqual(second_project, project)
         self.assertEqual(project.track_id.code, "medical")
         self.assertEqual(project.business_role_id.code, "integrator")
         self.assertEqual(set(project.product_ids.mapped("name")), set(MEDICAL_TEST_PRODUCT_NAMES))
@@ -45,3 +46,6 @@ class MedicalTestDataCase(TransactionCase):
         self.assertEqual(self.env["psc.customer.requirement"].search_count([
             ("name", "=", MEDICAL_TEST_REQUIREMENT_NAME), ("project_id", "=", project.id),
         ]), 1)
+
+        with self.assertRaises(UserError):
+            settings.action_prepare_medical_test_data()
