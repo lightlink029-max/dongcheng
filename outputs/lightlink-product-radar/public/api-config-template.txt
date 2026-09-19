@@ -1,0 +1,86 @@
+# LightLink Radar API 配置模板
+# 1. 将本文件保存为项目根目录的 .dev.vars
+# 2. 只填写你实际使用的平台；不要把 .dev.vars 发给别人或提交到 Git
+# 3. 重新启动 start-radar.cmd 后，页面会显示“已检测到配置”
+
+# AI 整理服务（通常按量计费；模型名称可留空使用默认值）
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.4-mini
+
+# TikTok for Developers（注册免费，数据权限通常需要申请/审核）
+TIKTOK_CLIENT_KEY=
+TIKTOK_CLIENT_SECRET=
+TIKTOK_ACCESS_TOKEN=
+
+# Meta Marketing API / Facebook（注册免费，需应用和账户授权）
+META_APP_ID=
+META_APP_SECRET=
+META_ACCESS_TOKEN=
+
+# Instagram Platform（与 Meta 开发者应用关联）
+INSTAGRAM_ACCESS_TOKEN=
+
+# Alibaba Open Platform（具体接口权限以平台审核为准）
+ALIBABA_APP_KEY=
+ALIBABA_APP_SECRET=
+
+# Google Trends API alpha / Google Ads Keyword Planner（按已获权限选择填写）
+GOOGLE_TRENDS_ACCESS_TOKEN=
+GOOGLE_ADS_CUSTOMER_ID=
+GOOGLE_ADS_CLIENT_ID=
+GOOGLE_ADS_CLIENT_SECRET=
+GOOGLE_ADS_REFRESH_TOKEN=
+
+# Amazon Selling Partner API
+AMAZON_SP_API_CLIENT_ID=
+AMAZON_SP_API_CLIENT_SECRET=
+AMAZON_SP_API_REFRESH_TOKEN=
+AMAZON_MARKETPLACE_ID=
+
+# Temu Partner Platform
+TEMU_APP_KEY=
+TEMU_APP_SECRET=
+TEMU_ACCESS_TOKEN=
+
+# SHEIN Open Platform
+SHEIN_APP_ID=
+SHEIN_APP_SECRET=
+SHEIN_ACCESS_TOKEN=
+
+# eBay Browse API
+EBAY_CLIENT_ID=
+EBAY_CLIENT_SECRET=
+
+# Walmart Marketplace API
+WALMART_CLIENT_ID=
+WALMART_CLIENT_SECRET=
+WALMART_ACCESS_TOKEN=
+
+# Etsy Open API
+ETSY_API_KEY=
+ETSY_SHARED_SECRET=
+ETSY_ACCESS_TOKEN=
+
+# AliExpress Open Platform
+ALIEXPRESS_APP_KEY=
+ALIEXPRESS_APP_SECRET=
+ALIEXPRESS_ACCESS_TOKEN=
+
+# Shopee Open Platform
+SHOPEE_PARTNER_ID=
+SHOPEE_PARTNER_KEY=
+SHOPEE_ACCESS_TOKEN=
+
+# Lazada Open Platform
+LAZADA_APP_KEY=
+LAZADA_APP_SECRET=
+LAZADA_ACCESS_TOKEN=
+
+# Mercado Libre Developers
+MERCADOLIBRE_CLIENT_ID=
+MERCADOLIBRE_CLIENT_SECRET=
+MERCADOLIBRE_ACCESS_TOKEN=
+
+# Rakuten Web Service
+RAKUTEN_APPLICATION_ID=
+RAKUTEN_ACCESS_KEY=

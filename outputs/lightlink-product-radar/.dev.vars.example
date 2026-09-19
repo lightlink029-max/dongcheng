@@ -1,0 +1,13 @@
+# Copy this file to .dev.vars only when you need to configure optional connectors.
+# start-radar.cmd automatically creates a unique local credential-vault key.
+# Never commit or share the generated .dev.vars file.
+
+# Optional UN Comtrade subscription key for higher API limits.
+UN_COMTRADE_API_KEY=
+
+# Optional integrations. Configure only the sources you are authorized to use.
+OPENAI_API_KEY=
+ODOO_URL=
+ODOO_DATABASE=
+ODOO_LOGIN=
+ODOO_API_KEY=

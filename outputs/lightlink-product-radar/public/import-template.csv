@@ -1,0 +1,6 @@
+keyword,groupName,category,keywordZh,imageUrl,imageUrls,imageSourceRef,purchasePriceMin,purchasePriceMax,purchasePriceCurrency,purchasePriceUnit,platform,metric,currentValue,previousValue,sampleN,uniqueActorN,coverageDays,sourceKind,sourceRef,geoScope,status,missingReason,collectedAt
+solar parking lot light,停车场照明,户外照明,太阳能停车场灯,,,,,,,,TikTok,attention,1480,760,126,42,30,manual_import,https://example.com/evidence,US,ok,,2026-09-15T06:30:00Z
+solar parking lot light,停车场照明,户外照明,太阳能停车场灯,,,,,,,,Meta Ads,commercial,74,41,74,18,30,manual_import,https://example.com/evidence,US,ok,,2026-09-15T06:30:00Z
+solar parking lot light,停车场照明,户外照明,太阳能停车场灯,,,,,,,,Google Trends,attention,68,43,,,30,official_export,https://trends.google.com/trends/,US,ok,,2026-09-15T06:30:00Z
+solar parking lot light,停车场照明,户外照明,太阳能停车场灯,,https://example.com/light-1.jpg|https://example.com/light-2.jpg,https://example.com/product,12.5,18,USD,件,Alibaba.com,competition,1810,1690,180,82,30,manual_import,https://example.com/product,US,ok,,2026-09-15T06:30:00Z
+solar parking lot light,停车场照明,户外照明,太阳能停车场灯,,,,19.9,29.9,USD,件,Amazon,commercial,,,,,30,open_source,https://example.com/product,US,unsupported,商品页价格可核验但没有同口径关键词热度,2026-09-15T06:30:00Z

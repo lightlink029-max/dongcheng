@@ -1,0 +1,6 @@
+# This repository also contains local Codex workspace artifacts. Only the maintained
+# application below is added from this checkout; files already tracked upstream stay tracked.
+/*
+!/.gitignore
+!/outputs/
+!/outputs/lightlink-product-radar/

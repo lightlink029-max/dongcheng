@@ -1,0 +1,161 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../vendor/shadcn-tailwind-4.13.0.css";
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+:root {
+  --background: #f4f7f7;
+  --foreground: #13272d;
+  --card: #ffffff;
+  --card-foreground: #13272d;
+  --popover: #ffffff;
+  --popover-foreground: #13272d;
+  --primary: #073b43;
+  --primary-foreground: #f8ffff;
+  --secondary: #edf3f3;
+  --secondary-foreground: #24434a;
+  --muted: #edf3f3;
+  --muted-foreground: #64777c;
+  --accent: #d9eeee;
+  --accent-foreground: #0a4148;
+  --destructive: #c9364d;
+  --border: #dce6e8;
+  --input: #cfdddf;
+  --ring: #2f8f99;
+  --chart-1: #0e7490;
+  --chart-2: #d97706;
+  --chart-3: #0f766e;
+  --chart-4: #7c3aed;
+  --chart-5: #e11d48;
+  --radius: 0.7rem;
+  --sidebar: #062e35;
+  --sidebar-foreground: #efffff;
+  --sidebar-primary: #67e8f9;
+  --sidebar-primary-foreground: #062e35;
+  --sidebar-accent: #0d4650;
+  --sidebar-accent-foreground: #efffff;
+  --sidebar-border: #15535c;
+  --sidebar-ring: #67e8f9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.radar-sidebar {
+  background:
+    radial-gradient(circle at 35% 0%, rgb(23 113 124 / 0.38), transparent 34%),
+    linear-gradient(165deg, #073a42 0%, #052b32 55%, #041f26 100%);
+}
+
+@media (min-width: 1024px) {
+  .radar-sidebar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    height: 100vh;
+    flex-direction: column;
+  }
+}
+
+.radar-mark {
+  color: #082e34;
+  background: linear-gradient(145deg, #a5f3fc, #4dd4e6);
+  box-shadow: 0 10px 28px rgb(34 211 238 / 0.22);
+}
+
+.radar-nav {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.7rem;
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  color: rgb(236 254 255 / 0.62);
+  font-size: 0.875rem;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.radar-nav svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.radar-nav:hover,
+.radar-nav-active {
+  color: #ffffff;
+  background: rgb(255 255 255 / 0.09);
+}
+
+.radar-nav-active {
+  box-shadow: inset 3px 0 0 #67e8f9;
+}
+
+.radar-command {
+  color: white;
+  background:
+    radial-gradient(circle at 90% 20%, rgb(34 211 238 / 0.22), transparent 28%),
+    linear-gradient(115deg, #082f36, #0a4d56);
+}
+
+@media (max-width: 720px) {
+  [data-slot="table-container"] {
+    scrollbar-width: thin;
+  }
+}
