@@ -96,6 +96,35 @@ class AiOperationsCase(TransactionCase):
         self.assertEqual(action["domain"], [("project_id", "=", project.id)])
         self.assertEqual(action["context"]["default_project_id"], project.id)
 
+    def test_footwear_project_cleanup_removes_exclusive_seed_data(self):
+        initialized = self.service._initialize_footwear_sourcing_project(
+            project_name="[AUTO TEST] Cleanup footwear sourcing project",
+        )
+        project = self.env["psc.publishing.project"].browse(initialized["id"])
+        readiness_items = project.readiness_item_ids
+        blueprint = project.blueprint_id
+        product_line = project.product_line_id
+        markets = project.market_ids
+        channels = project.channel_ids
+
+        prepared = self.service.prepare_action(
+            action_type="cleanup_footwear_sourcing_data",
+            title="[AUTO TEST] Cleanup footwear sourcing project",
+            reason="Remove the approved built-in footwear sourcing dataset.",
+            payload={"project_id": project.id},
+            risk_level="high",
+        )
+        self.assertEqual(prepared["risk_level"], "high")
+        result = self.service.commit_action(prepared["action_token"], str(uuid.uuid4()))
+
+        self.assertFalse(project.exists())
+        self.assertFalse(readiness_items.exists())
+        self.assertFalse(blueprint.exists())
+        self.assertFalse(product_line.exists())
+        self.assertFalse(markets.exists())
+        self.assertFalse(channels.exists())
+        self.assertIn("psc.publishing.project", result["deleted"])
+
     def test_readiness_progress_can_be_updated_in_one_approved_batch(self):
         initialized = self.service._initialize_footwear_sourcing_project(
             project_name="[AUTO TEST] Batch readiness update",

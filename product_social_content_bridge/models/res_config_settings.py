@@ -985,6 +985,101 @@ class ResConfigSettings(models.TransientModel):
             "retained_audit": retained_audit,
         }
 
+    def _cleanup_footwear_sourcing_data(self, project_id, exclude_action_id=None):
+        """Delete the built-in footwear sourcing project and its exclusive seed records."""
+        self.ensure_one()
+        if not self.env.user.has_group("base.group_system"):
+            raise AccessError(_("只有系统管理员可以清理运营项目数据。"))
+
+        project = self.env["psc.publishing.project"].browse(project_id).exists()
+        if not project or project.blueprint_id.code != "eu_us_footwear_sourcing":
+            raise ValidationError(_("只能清理内置的欧美鞋类采购代理项目。"))
+
+        blueprint = project.blueprint_id
+        product_line = project.product_line_id
+        markets = project.market_ids.filtered(lambda record: record.name in (
+            "US Footwear Importers & Wholesalers",
+            "UK Footwear Importers & Wholesalers",
+        ))
+        channels = project.channel_ids.filtered(lambda record: record.name in (
+            "English B2B Website",
+            "English B2B LinkedIn",
+            "English B2B Instagram",
+        ))
+        project_name = project.display_name
+        deleted = {}
+        retained_audit = {}
+
+        action_domain = [
+            ("project_id", "=", project.id),
+            ("state", "=", "waiting_approval"),
+        ]
+        if exclude_action_id:
+            action_domain.append(("id", "!=", exclude_action_id))
+        pending_actions = self.env["psc.ai.action"].search(action_domain)
+        if pending_actions:
+            deleted["rejected_psc.ai.action"] = pending_actions.ids
+            pending_actions.action_reject()
+
+        for model_name, field_name in (
+            ("crm.lead", "psc_project_id"),
+            ("sale.order", "psc_project_id"),
+            ("purchase.order", "psc_project_id"),
+        ):
+            records = self.env[model_name].search([(field_name, "=", project.id)])
+            if records:
+                retained_audit[model_name] = records.ids
+                records.write({field_name: False})
+
+        deleted["psc.publishing.project"] = project.ids
+        project.unlink()
+
+        def unlink_if_unreferenced(records, project_field, extra_domains=()):
+            removable = self.env[records._name]
+            for record in records:
+                referenced = self.env["psc.publishing.project"].search_count([
+                    (project_field, "in", record.ids),
+                ])
+                if not referenced:
+                    referenced = any(
+                        self.env[model_name].search_count([(field_name, "=", record.id)])
+                        for model_name, field_name in extra_domains
+                    )
+                if not referenced:
+                    removable |= record
+            if removable:
+                deleted[records._name] = removable.ids
+                removable.unlink()
+
+        if blueprint and not self.env["psc.publishing.project"].search_count([
+            ("blueprint_id", "=", blueprint.id),
+        ]):
+            deleted["psc.project.blueprint"] = blueprint.ids
+            blueprint.unlink()
+        unlink_if_unreferenced(
+            markets,
+            "market_ids",
+            (("psc.content.variant", "market_id"), ("psc.publishing.destination", "market_id")),
+        )
+        unlink_if_unreferenced(
+            channels,
+            "channel_ids",
+            (("psc.content.variant", "channel_id"), ("psc.publishing.destination", "channel_id")),
+        )
+        if product_line and not self.env["psc.publishing.project"].search_count([
+            ("product_line_id", "=", product_line.id),
+        ]) and not product_line.product_ids:
+            deleted["psc.product.line"] = product_line.ids
+            product_line.unlink()
+
+        return {
+            "model": "psc.publishing.project",
+            "id": project_id,
+            "display_name": project_name,
+            "deleted": deleted,
+            "retained_audit": retained_audit,
+        }
+
     def action_prepare_medical_test_data(self):
         project = self._upsert_medical_test_data()
         return {

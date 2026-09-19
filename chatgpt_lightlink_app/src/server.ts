@@ -173,6 +173,7 @@ export async function createServer(): Promise<McpServer> {
         "update_project_readiness",
         "initialize_medical_test_data", "complete_medical_test_scenario",
         "sync_project_business_state", "cleanup_medical_test_data",
+        "cleanup_footwear_sourcing_data",
       ]),
       title: z.string().min(1).max(200),
       reason: z.string().min(1).max(4000),

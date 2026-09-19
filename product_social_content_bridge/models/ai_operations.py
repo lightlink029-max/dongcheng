@@ -216,6 +216,7 @@ class AiAction(models.Model):
         ("complete_medical_test_scenario", "补齐医疗全业务测试场景"),
         ("sync_project_business_state", "同步项目业务阶段"),
         ("cleanup_medical_test_data", "清理医疗测试数据"),
+        ("cleanup_footwear_sourcing_data", "清理欧美鞋类采购代理项目数据"),
     ], string="动作类型", required=True, index=True)
     priority = fields.Selection([
         ("0", "P0"), ("1", "P1"), ("2", "P2"), ("3", "P3"),
@@ -585,6 +586,11 @@ class AiAction(models.Model):
             return self.env["res.config.settings"].create({})._cleanup_medical_test_data(
                 exclude_action_id=self.id,
             )
+        elif self.action_type == "cleanup_footwear_sourcing_data":
+            return self.env["res.config.settings"].create({})._cleanup_footwear_sourcing_data(
+                project_id=values.get("project_id"),
+                exclude_action_id=self.id,
+            )
         else:
             raise ValidationError(_("不支持的AI动作类型。"))
         return {"model": record._name, "id": record.id, "display_name": record.display_name}
@@ -864,6 +870,9 @@ class AiOperationsService(models.AbstractModel):
             "cleanup_medical_test_data": [
                 ("psc.publishing.project", "project_id", "测试运营项目", True),
             ],
+            "cleanup_footwear_sourcing_data": [
+                ("psc.publishing.project", "project_id", "欧美鞋类运营项目", True),
+            ],
         }
         records = []
         for model_name, field_name, label, required in target_specs.get(action_type, []):
@@ -938,6 +947,10 @@ class AiOperationsService(models.AbstractModel):
             project = next((record for record in records if record._name == "psc.publishing.project"), False)
             if not project or project.name != "[TEST] 西非医疗类综合采购商运营项目":
                 raise ValidationError(_("只能清理内置的医疗测试数据集。"))
+        if action_type == "cleanup_footwear_sourcing_data":
+            project = next((record for record in records if record._name == "psc.publishing.project"), False)
+            if not project or project.blueprint_id.code != "eu_us_footwear_sourcing":
+                raise ValidationError(_("只能清理内置的欧美鞋类采购代理项目。"))
         return records
 
     @api.model
@@ -1668,7 +1681,9 @@ class AiOperationsService(models.AbstractModel):
             "priority": metadata.get("priority") or "2",
             "reason": reason,
             "evidence_json": _json_dumps(metadata.get("evidence")),
-            "risk_level": "high" if action_type == "cleanup_medical_test_data"
+            "risk_level": "high" if action_type in (
+                "cleanup_medical_test_data", "cleanup_footwear_sourcing_data",
+            )
             else metadata.get("risk_level") or "medium",
             "estimated_impact": metadata.get("estimated_impact") or "",
             "payload_json": payload_json,
@@ -1684,6 +1699,8 @@ class AiOperationsService(models.AbstractModel):
                 "effect": (
                     _("将删除内置医疗测试数据及其测试依赖；任何目标变化或非测试引用都会拒绝执行。")
                     if action_type == "cleanup_medical_test_data"
+                    else _("将删除内置欧美鞋类采购代理项目、上线准备事项及其专属市场、渠道、产品线和蓝图；共享或审计记录会保留并解除项目关联。")
+                    if action_type == "cleanup_footwear_sourcing_data"
                     else _("将根据项目内已确认销售订单，把关联客户需求同步为已成交，并为空白的预计采购日期补入订单日期。")
                     if action_type == "sync_project_business_state"
                     else _("将创建或复用欧美鞋类采购代理蓝图、美国和英国英文B2B市场、网站/LinkedIn/Instagram渠道、筹备项目及28项总权重100%的上线准备清单；不会创建产品事实、账号授权或外部发布任务。")
