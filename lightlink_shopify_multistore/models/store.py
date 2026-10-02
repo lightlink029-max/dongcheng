@@ -66,7 +66,7 @@ class ShopifyStore(models.Model):
     sales_team_id = fields.Many2one("crm.team", string="销售团队")
     salesperson_id = fields.Many2one("res.users", string="默认销售员")
     shipping_product_id = fields.Many2one(
-        "product.product", domain="[('detailed_type', '=', 'service')]"
+        "product.product", domain="[('type', '=', 'service')]"
     )
     unmapped_product_id = fields.Many2one("product.product", string="未映射商品占位产品")
     auto_confirm_orders = fields.Boolean()
