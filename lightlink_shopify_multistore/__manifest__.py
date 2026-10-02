@@ -1,6 +1,6 @@
 {
     "name": "LightLink Shopify 多站点运营中台",
-    "version": "19.0.1.1.0",
+    "version": "19.0.1.2.0",
     "summary": "在一个 Odoo 数据库内管理多个 Shopify 店铺的商品、分类、库存、订单、履约、询盘和同步异常",
     "category": "Sales/Sales",
     "author": "LightLink",

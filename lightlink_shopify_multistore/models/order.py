@@ -149,6 +149,11 @@ class ShopifyOrderBinding(models.Model):
         commands = [(5, 0, 0)]
         line_nodes = ((payload.get("lineItems") or {}).get("nodes") or [])
         for line in line_nodes:
+            quantity = line.get("currentQuantity")
+            if quantity is None:
+                quantity = line.get("quantity", 1)
+            if quantity <= 0:
+                continue
             product = self._match_product(line)
             if not product:
                 product = self.store_id.unmapped_product_id
@@ -166,7 +171,7 @@ class ShopifyOrderBinding(models.Model):
                     {
                         "product_id": product.id,
                         "name": line.get("name") or product.display_name,
-                        "product_uom_qty": line.get("currentQuantity") or line.get("quantity") or 1,
+                        "product_uom_qty": quantity,
                         "price_unit": price,
                         "ll_shopify_line_gid": line.get("id"),
                     },

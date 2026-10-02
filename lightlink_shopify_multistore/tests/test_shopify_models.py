@@ -106,6 +106,7 @@ class TestShopifyModels(TransactionCase):
                 "product_ids": [(6, 0, self.product.product_tmpl_id.ids)],
                 "store_ids": [(6, 0, self.store.ids)],
                 "include_images": False,
+                "sync_inventory": False,
             }
         )
         wizard.action_confirm_publish()
@@ -113,12 +114,11 @@ class TestShopifyModels(TransactionCase):
             [("store_id", "=", self.store.id), ("product_tmpl_id", "=", self.product.product_tmpl_id.id)]
         )
         self.assertEqual(channel.sync_state, "queued")
-        self.assertEqual(
-            self.env["ll.shopify.job"].search_count(
-                [("operation", "=", "publish_product"), ("res_id", "=", channel.id)]
-            ),
-            1,
+        job = self.env["ll.shopify.job"].search(
+            [("operation", "=", "publish_product"), ("res_id", "=", channel.id)]
         )
+        self.assertEqual(len(job), 1)
+        self.assertFalse(job.payload_json["_lightlink_sync_inventory"])
 
     def test_batch_publish_idempotency(self):
         channel = self._create_channel()
@@ -197,6 +197,40 @@ class TestShopifyModels(TransactionCase):
         binding = self.env["ll.shopify.order.binding"].new({"store_id": self.store.id})
         matched = binding._match_product({"sku": self.product.default_code})
         self.assertEqual(matched, mapped_product)
+
+    def test_cancelled_order_line_is_not_recreated(self):
+        payload = {
+            "id": "gid://shopify/Order/cancelled-line",
+            "name": "#CANCELLED",
+            "createdAt": "2026-09-01T00:00:00Z",
+            "updatedAt": "2026-09-01T00:00:00Z",
+            "displayFinancialStatus": "PAID",
+            "displayFulfillmentStatus": "UNFULFILLED",
+            "email": "cancelled@example.com",
+            "lineItems": {
+                "nodes": [
+                    {
+                        "id": "gid://shopify/LineItem/cancelled",
+                        "name": self.product.name,
+                        "sku": self.product.default_code,
+                        "quantity": 1,
+                        "currentQuantity": 0,
+                        "variant": {},
+                        "originalUnitPriceSet": {
+                            "shopMoney": {
+                                "amount": "99.00",
+                                "currencyCode": self.company.currency_id.name,
+                            }
+                        },
+                    }
+                ]
+            },
+            "shippingLines": {"nodes": []},
+        }
+        binding = self.env["ll.shopify.order.binding"]._import_shopify_order(
+            self.store, payload
+        )
+        self.assertFalse(binding.sale_order_id.order_line)
 
     def test_order_nested_connections_are_fully_loaded(self):
         job = self.env["ll.shopify.job"].enqueue(

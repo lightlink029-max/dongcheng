@@ -145,6 +145,8 @@ class ShopifyChannelProduct(models.Model):
                 current.append("没有可发布的产品变体")
             if len(channel.variant_ids) > 100:
                 current.append("单个商品最多支持同步发布100个变体，请先拆分商品")
+            if len(channel.image_ids) > 250:
+                current.append("单个商品最多支持250张店铺图片")
             if len(channel.variant_ids) > 1 and any(not item.sku for item in channel.variant_ids):
                 current.append("多变体商品的每个变体必须有唯一SKU")
             if channel.collection_ids.filtered(lambda collection: not collection.shopify_collection_gid):
@@ -224,18 +226,31 @@ class ShopifyChannelProduct(models.Model):
             "identifier": {"id": self.shopify_product_gid} if self.shopify_product_gid else None,
         }
 
-    def action_queue_publish(self):
+    def action_queue_publish(self, sync_inventory=None):
         errors = self._validate_publish()
         if errors:
             raise UserError("发布前检查未通过：\n" + "\n".join(errors))
         for channel in self:
-            self.env["ll.shopify.job"].enqueue(
+            payload = channel._build_product_payload()
+            payload["_lightlink_sync_inventory"] = (
+                channel.store_id.sync_inventory
+                if sync_inventory is None
+                else bool(sync_inventory)
+            )
+            job = self.env["ll.shopify.job"].enqueue(
                 channel.store_id,
                 "publish_product",
                 channel,
-                payload=channel._build_product_payload(),
+                payload=payload,
+                force=True,
             )
-            channel.sync_state = "queued"
+            channel.sync_state = (
+                "queued"
+                if job.state in {"queued", "running", "retry"}
+                else "archived"
+                if channel.shopify_status == "ARCHIVED"
+                else "synced"
+            )
         return self.env["ll.shopify.store"]._notify(
             "已进入后台队列", f"已创建 {len(self)} 个独立发布任务。"
         )
@@ -272,7 +287,7 @@ class ShopifyChannelProduct(models.Model):
     def action_archive_remote(self):
         for channel in self:
             channel.write({"shopify_status": "ARCHIVED", "sync_state": "queued"})
-        return self.action_queue_publish()
+        return self.action_queue_publish(sync_inventory=False)
 
     def name_get(self):
         return [(record.id, f"{record.store_id.name} / {record.title}") for record in self]
@@ -439,13 +454,16 @@ class ShopifyCollection(models.Model):
 
     def action_queue_sync(self):
         for collection in self:
-            self.env["ll.shopify.job"].enqueue(
+            job = self.env["ll.shopify.job"].enqueue(
                 collection.store_id,
                 "sync_collection",
                 collection,
                 payload=collection._build_collection_payload(),
+                force=True,
             )
-            collection.sync_state = "queued"
+            collection.sync_state = (
+                "queued" if job.state in {"queued", "running", "retry"} else "synced"
+            )
         return self.env["ll.shopify.store"]._notify("已进入后台队列", "分类集合将在后台同步。")
 
 

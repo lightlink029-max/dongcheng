@@ -149,7 +149,7 @@ class ShopifyPublishWizard(models.TransientModel):
                     )
                     channel.collection_ids = [(6, 0, collections.ids)]
                 created_channels |= channel
-        created_channels.action_queue_publish()
+        created_channels.action_queue_publish(sync_inventory=self.sync_inventory)
         return {
             "type": "ir.actions.act_window",
             "name": _("Shopify 渠道商品"),

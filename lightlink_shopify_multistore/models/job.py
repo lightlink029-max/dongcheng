@@ -245,8 +245,26 @@ class ShopifyJob(models.Model):
             raise ShopifyAPIError("；".join(messages))
 
     def _run_fetch_locations(self):
-        data = self.store_id._graphql("query { locations(first: 100) { nodes { id name isActive } } }")
-        nodes = (data.get("locations") or {}).get("nodes") or []
+        query = """
+            query Locations($cursor: String) {
+              locations(first: 250, after: $cursor) {
+                nodes { id name isActive }
+                pageInfo { hasNextPage endCursor }
+              }
+            }
+        """
+        nodes = []
+        cursor = None
+        while True:
+            data = self.store_id._graphql(query, {"cursor": cursor})
+            connection = data.get("locations") or {}
+            nodes.extend(connection.get("nodes") or [])
+            page_info = connection.get("pageInfo") or {}
+            if not page_info.get("hasNextPage"):
+                break
+            cursor = page_info.get("endCursor")
+            if not cursor:
+                raise ShopifyAPIError("Shopify Location 分页缺少游标。", retryable=True)
         maps = self.env["ll.shopify.location.map"]
         created = 0
         for node in nodes:
@@ -342,7 +360,10 @@ class ShopifyJob(models.Model):
         )
         self._sync_product_media(channel)
         self.store_id.last_product_sync_at = fields.Datetime.now()
-        if self.store_id.sync_inventory:
+        should_sync_inventory = (self.payload_json or {}).get(
+            "_lightlink_sync_inventory", self.store_id.sync_inventory
+        )
+        if should_sync_inventory:
             self.enqueue(
                 self.store_id,
                 "sync_inventory",
