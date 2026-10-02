@@ -306,7 +306,7 @@ class ShopifyJob(models.Model):
         mutation = """
             mutation SetProduct($input: ProductSetInput!, $synchronous: Boolean!, $identifier: ProductSetIdentifiers) {
               productSet(input: $input, synchronous: $synchronous, identifier: $identifier) {
-                product { id handle variants(first: 100) { nodes { id sku inventoryItem { id } } } }
+                product { id handle variants(first: 250) { nodes { id sku inventoryItem { id } } } }
                 userErrors { field message code }
               }
             }
@@ -337,7 +337,7 @@ class ShopifyJob(models.Model):
                 "last_payload_hash": payload_hash(payload),
                 "last_synced_at": fields.Datetime.now(),
                 "last_error": False,
-                "sync_state": "synced",
+                "sync_state": "archived" if channel.shopify_status == "ARCHIVED" else "synced",
             }
         )
         self._sync_product_media(channel)
@@ -546,8 +546,14 @@ class ShopifyJob(models.Model):
                   email phone note tags
                   customer { id email phone firstName lastName }
                   shippingAddress { firstName lastName company address1 address2 city province zip country countryCodeV2 phone }
-                  lineItems(first: 100) { nodes { id name sku quantity currentQuantity variant { id } originalUnitPriceSet { shopMoney { amount currencyCode } } } }
-                  shippingLines(first: 10) { nodes { title originalPriceSet { shopMoney { amount currencyCode } } } }
+                  lineItems(first: 250) {
+                    nodes { id name sku quantity currentQuantity variant { id } originalUnitPriceSet { shopMoney { amount currencyCode } } }
+                    pageInfo { hasNextPage endCursor }
+                  }
+                  shippingLines(first: 250) {
+                    nodes { title originalPriceSet { shopMoney { amount currencyCode } } }
+                    pageInfo { hasNextPage endCursor }
+                  }
                 }
                 pageInfo { hasNextPage endCursor }
               }
@@ -562,6 +568,7 @@ class ShopifyJob(models.Model):
             connection = data.get("orders") or {}
             nodes = connection.get("nodes") or []
             for order in nodes:
+                self._complete_order_connections(order)
                 self.env["ll.shopify.order.binding"]._import_shopify_order(self.store_id, order)
             seen += len(nodes)
             page_info = connection.get("pageInfo") or {}
@@ -580,6 +587,48 @@ class ShopifyJob(models.Model):
                 limit=1,
             ).write({"state": "done", "last_error": False})
         return {"orders_seen": seen}
+
+    def _complete_order_connections(self, order):
+        """Load all nested order rows instead of silently truncating at Shopify's page limit."""
+        queries = {
+            "lineItems": """
+                query OrderLineItems($id: ID!, $cursor: String) {
+                  order(id: $id) {
+                    lineItems(first: 250, after: $cursor) {
+                      nodes { id name sku quantity currentQuantity variant { id } originalUnitPriceSet { shopMoney { amount currencyCode } } }
+                      pageInfo { hasNextPage endCursor }
+                    }
+                  }
+                }
+            """,
+            "shippingLines": """
+                query OrderShippingLines($id: ID!, $cursor: String) {
+                  order(id: $id) {
+                    shippingLines(first: 250, after: $cursor) {
+                      nodes { title originalPriceSet { shopMoney { amount currencyCode } } }
+                      pageInfo { hasNextPage endCursor }
+                    }
+                  }
+                }
+            """,
+        }
+        for field_name, query in queries.items():
+            connection = order.get(field_name) or {"nodes": []}
+            page_info = connection.get("pageInfo") or {}
+            while page_info.get("hasNextPage"):
+                cursor = page_info.get("endCursor")
+                if not cursor:
+                    raise ShopifyAPIError(
+                        f"Shopify 订单 {order.get('name') or order.get('id')} 的 {field_name} 分页缺少游标。",
+                        retryable=True,
+                    )
+                data = self.store_id._graphql(
+                    query, {"id": order.get("id"), "cursor": cursor}
+                )
+                page = ((data.get("order") or {}).get(field_name) or {})
+                connection.setdefault("nodes", []).extend(page.get("nodes") or [])
+                page_info = page.get("pageInfo") or {}
+            order[field_name] = connection
 
     def _run_import_order(self):
         payload = self.payload_json or {}

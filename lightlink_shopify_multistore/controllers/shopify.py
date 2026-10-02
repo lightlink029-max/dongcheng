@@ -60,6 +60,13 @@ class LightLinkShopifyController(http.Controller):
             }
         )
         oauth_state.used = True
+        missing_scopes = store._missing_granted_scopes()
+        if missing_scopes:
+            message = "Shopify 授权缺少权限：%s，请更新应用权限后重新连接。" % ", ".join(
+                missing_scopes
+            )
+            store.write({"state": "error", "last_error": message})
+            return request.make_response(message, status=400)
         job_model = request.env["ll.shopify.job"].sudo()
         connection_marker = hashlib.sha256(token.encode()).hexdigest()[:16]
         job_model.enqueue(store, "fetch_locations", store, payload={"connection": connection_marker})

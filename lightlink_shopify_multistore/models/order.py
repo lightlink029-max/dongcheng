@@ -204,7 +204,18 @@ class ShopifyOrderBinding(models.Model):
                 return variant.product_id
         sku = line.get("sku")
         if sku:
-            return self.env["product.product"].search([("default_code", "=", sku)], limit=1)
+            variant = self.env["ll.shopify.channel.variant"].search(
+                [("store_id", "=", self.store_id.id), ("sku", "=", sku)], limit=1
+            )
+            if variant:
+                return variant.product_id
+            return self.env["product.product"].search(
+                [
+                    ("default_code", "=", sku),
+                    ("company_id", "in", [False, self.store_id.company_id.id]),
+                ],
+                limit=1,
+            )
         return self.env["product.product"]
 
     @api.model
@@ -265,6 +276,38 @@ class StockPicking(models.Model):
             if store.state == "connected" and store.sync_fulfillments:
                 self.env["ll.shopify.job"].enqueue(store, "push_fulfillment", picking)
 
+    @api.model
+    def _shopify_allocate_fulfillment_lines(self, nodes, quantities_by_line):
+        remaining = dict(quantities_by_line)
+        remote_line_gids = {
+            (line.get("lineItem") or {}).get("id")
+            for node in nodes
+            for line in ((node.get("lineItems") or {}).get("nodes") or [])
+            if (line.get("lineItem") or {}).get("id")
+        }
+        fulfillment_orders = []
+        for node in nodes:
+            if node.get("status") in {"CLOSED", "CANCELLED"}:
+                continue
+            line_connection = node.get("lineItems") or {}
+            if (line_connection.get("pageInfo") or {}).get("hasNextPage"):
+                raise UserError("单个履约单的订单行超过250个，系统已停止回传以避免遗漏。")
+            line_items = []
+            for line in line_connection.get("nodes") or []:
+                line_gid = (line.get("lineItem") or {}).get("id")
+                if not line_gid:
+                    continue
+                available = remaining.get(line_gid, 0)
+                quantity = min(available, line.get("remainingQuantity") or 0)
+                if quantity > 0:
+                    line_items.append({"id": line["id"], "quantity": quantity})
+                    remaining[line_gid] -= quantity
+            if line_items:
+                fulfillment_orders.append(
+                    {"fulfillmentOrderId": node["id"], "fulfillmentOrderLineItems": line_items}
+                )
+        return fulfillment_orders, remote_line_gids, remaining
+
     def _shopify_push_fulfillment(self, store):
         self.ensure_one()
         binding = self.env["ll.shopify.order.binding"].search(
@@ -272,17 +315,47 @@ class StockPicking(models.Model):
         )
         if not binding:
             raise UserError("该发货单没有对应的 Shopify 订单绑定。")
+        quantities_by_line = {}
+        for move in self.move_ids.filtered(
+            lambda item: item.state == "done" and item.sale_line_id.ll_shopify_line_gid
+        ):
+            quantity = move.product_uom._compute_quantity(
+                move.quantity, move.sale_line_id.product_uom_id
+            )
+            integer_quantity = int(round(quantity))
+            if abs(quantity - integer_quantity) > 0.000001:
+                raise UserError(
+                    _("Shopify 订单行 %s 的本次发货数量必须是整数。")
+                    % move.sale_line_id.display_name
+                )
+            if integer_quantity > 0:
+                line_gid = move.sale_line_id.ll_shopify_line_gid
+                quantities_by_line[line_gid] = (
+                    quantities_by_line.get(line_gid, 0) + integer_quantity
+                )
+        if not quantities_by_line:
+            return {"status": "nothing_to_fulfill"}
         query = """
             query FulfillmentOrders($id: ID!) {
               order(id: $id) {
-                fulfillmentOrders(first: 50) {
-                  nodes { id status lineItems(first: 100) { nodes { id remainingQuantity } } }
+                fulfillmentOrders(first: 250) {
+                  nodes {
+                    id status
+                    lineItems(first: 250) {
+                      nodes { id remainingQuantity lineItem { id } }
+                      pageInfo { hasNextPage }
+                    }
+                  }
+                  pageInfo { hasNextPage }
                 }
               }
             }
         """
         data = store._graphql(query, {"id": binding.shopify_order_gid})
-        nodes = (((data.get("order") or {}).get("fulfillmentOrders") or {}).get("nodes") or [])
+        fulfillment_connection = (data.get("order") or {}).get("fulfillmentOrders") or {}
+        if (fulfillment_connection.get("pageInfo") or {}).get("hasNextPage"):
+            raise UserError("该订单的履约单超过250个，系统已停止回传以避免遗漏。")
+        nodes = fulfillment_connection.get("nodes") or []
         open_nodes = [node for node in nodes if node.get("status") not in {"CLOSED", "CANCELLED"}]
         if not open_nodes:
             return {"status": "nothing_to_fulfill"}
@@ -293,17 +366,14 @@ class StockPicking(models.Model):
             tracking["company"] = carrier.name
         if tracking_ref:
             tracking["number"] = tracking_ref
-        fulfillment_orders = []
-        for node in open_nodes:
-            line_items = [
-                {"id": line["id"], "quantity": line.get("remainingQuantity") or 0}
-                for line in ((node.get("lineItems") or {}).get("nodes") or [])
-                if line.get("remainingQuantity")
-            ]
-            if line_items:
-                fulfillment_orders.append(
-                    {"fulfillmentOrderId": node["id"], "fulfillmentOrderLineItems": line_items}
-                )
+        fulfillment_orders, remote_line_gids, remaining = (
+            self._shopify_allocate_fulfillment_lines(nodes, quantities_by_line)
+        )
+        missing = set(remaining) - remote_line_gids
+        if missing:
+            raise UserError("本次发货包含 Shopify 未返回的订单行，已停止回传以避免错发。")
+        if not fulfillment_orders:
+            return {"status": "nothing_to_fulfill"}
         mutation = """
             mutation CreateFulfillment($fulfillment: FulfillmentInput!) {
               fulfillmentCreate(fulfillment: $fulfillment) {
@@ -312,17 +382,24 @@ class StockPicking(models.Model):
               }
             }
         """
-        variables = {
-            "fulfillment": {
-                "lineItemsByFulfillmentOrder": fulfillment_orders,
-                "notifyCustomer": True,
-                **({"trackingInfo": tracking} if tracking else {}),
+        fulfillment_gids = []
+        for fulfillment_order in fulfillment_orders:
+            variables = {
+                "fulfillment": {
+                    "lineItemsByFulfillmentOrder": [fulfillment_order],
+                    "notifyCustomer": True,
+                    **({"trackingInfo": tracking} if tracking else {}),
+                }
             }
-        }
-        response = store._graphql(mutation, variables)
-        container = response.get("fulfillmentCreate") or {}
-        errors = container.get("userErrors") or []
-        if errors:
-            raise UserError("；".join(error.get("message") or "履约失败" for error in errors))
+            response = store._graphql(mutation, variables)
+            container = response.get("fulfillmentCreate") or {}
+            errors = container.get("userErrors") or []
+            if errors:
+                raise UserError(
+                    "；".join(error.get("message") or "履约失败" for error in errors)
+                )
+            fulfillment_gid = (container.get("fulfillment") or {}).get("id")
+            if fulfillment_gid:
+                fulfillment_gids.append(fulfillment_gid)
         binding.last_fulfillment_at = fields.Datetime.now()
-        return {"fulfillment_gid": (container.get("fulfillment") or {}).get("id")}
+        return {"fulfillment_gids": fulfillment_gids}

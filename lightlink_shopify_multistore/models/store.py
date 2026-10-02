@@ -46,7 +46,8 @@ class ShopifyStore(models.Model):
         default=(
             "read_products,write_products,read_inventory,write_inventory,"
             "read_locations,read_orders,write_orders,read_fulfillments,"
-            "write_fulfillments,read_customers"
+            "write_fulfillments,read_merchant_managed_fulfillment_orders,"
+            "write_merchant_managed_fulfillment_orders,read_customers"
         )
     )
     webhook_secret = fields.Char(groups="base.group_system", copy=False)
@@ -172,6 +173,16 @@ class ShopifyStore(models.Model):
             self.shop_domain, self.api_version, self.access_token, query, variables
         )
 
+    def _missing_granted_scopes(self):
+        self.ensure_one()
+        requested = {
+            scope.strip() for scope in (self.requested_scopes or "").split(",") if scope.strip()
+        }
+        granted = {
+            scope.strip() for scope in (self.granted_scopes or "").split(",") if scope.strip()
+        }
+        return sorted(requested - granted)
+
     def action_start_oauth(self):
         self.ensure_one()
         if not self.client_id or not self.client_secret:
@@ -196,6 +207,12 @@ class ShopifyStore(models.Model):
     def action_test_connection(self):
         for store in self:
             try:
+                missing_scopes = store._missing_granted_scopes()
+                if missing_scopes:
+                    raise UserError(
+                        _("Shopify 授权缺少权限：%s，请重新连接店铺。")
+                        % ", ".join(missing_scopes)
+                    )
                 data = store._graphql("query { shop { name myshopifyDomain currencyCode } }")
                 shop = data.get("shop") or {}
                 if normalize_shop_domain(shop.get("myshopifyDomain")) != store.shop_domain:
@@ -217,7 +234,7 @@ class ShopifyStore(models.Model):
 
     def action_resume(self):
         for store in self:
-            if not store.access_token:
+            if not store.sudo().access_token:
                 raise UserError("没有访问令牌，请重新连接 Shopify。")
         self.write({"state": "connected", "last_error": False})
 

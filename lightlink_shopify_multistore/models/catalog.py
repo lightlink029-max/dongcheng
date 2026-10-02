@@ -143,6 +143,8 @@ class ShopifyChannelProduct(models.Model):
                 current.append("币种与价格表不一致")
             if not channel.variant_ids:
                 current.append("没有可发布的产品变体")
+            if len(channel.variant_ids) > 100:
+                current.append("单个商品最多支持同步发布100个变体，请先拆分商品")
             if len(channel.variant_ids) > 1 and any(not item.sku for item in channel.variant_ids):
                 current.append("多变体商品的每个变体必须有唯一SKU")
             if channel.collection_ids.filtered(lambda collection: not collection.shopify_collection_gid):

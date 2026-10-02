@@ -78,6 +78,15 @@ class TestShopifyModels(TransactionCase):
         self.store.action_resume()
         self.assertEqual(self.store.state, "connected")
 
+    def test_store_required_scopes(self):
+        self.store.granted_scopes = self.store.requested_scopes
+        self.assertFalse(self.store._missing_granted_scopes())
+        self.store.granted_scopes = "read_products"
+        self.assertIn(
+            "write_merchant_managed_fulfillment_orders",
+            self.store._missing_granted_scopes(),
+        )
+
     def test_channel_product_unique_per_store(self):
         self._create_channel()
         with self.assertRaises(Exception), self.env.cr.savepoint():
@@ -176,6 +185,48 @@ class TestShopifyModels(TransactionCase):
         self.assertEqual(first, second)
         self.assertEqual(first.sale_order_id.order_line.product_id, self.product)
 
+    def test_order_sku_match_prefers_store_mapping(self):
+        mapped_product = self.env["product.product"].create(
+            {
+                "name": "Mapped duplicate SKU",
+                "default_code": self.product.default_code,
+                "list_price": 88,
+            }
+        )
+        self._create_channel(product=mapped_product)
+        binding = self.env["ll.shopify.order.binding"].new({"store_id": self.store.id})
+        matched = binding._match_product({"sku": self.product.default_code})
+        self.assertEqual(matched, mapped_product)
+
+    def test_order_nested_connections_are_fully_loaded(self):
+        job = self.env["ll.shopify.job"].enqueue(
+            self.store, "import_orders", self.store, payload={"pagination": self.id()}
+        )
+        order = {
+            "id": "gid://shopify/Order/250",
+            "name": "#250",
+            "lineItems": {
+                "nodes": [{"id": "gid://shopify/LineItem/1"}],
+                "pageInfo": {"hasNextPage": True, "endCursor": "cursor-1"},
+            },
+            "shippingLines": {
+                "nodes": [],
+                "pageInfo": {"hasNextPage": False, "endCursor": None},
+            },
+        }
+        response = {
+            "order": {
+                "lineItems": {
+                    "nodes": [{"id": "gid://shopify/LineItem/2"}],
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                }
+            }
+        }
+        with patch.object(type(self.store), "_graphql", return_value=response) as graphql:
+            job._complete_order_connections(order)
+        self.assertEqual(len(order["lineItems"]["nodes"]), 2)
+        graphql.assert_called_once()
+
     def test_inquiry_creates_lead(self):
         inquiry = self.env["ll.shopify.inquiry"].create_from_public(
             self.store,
@@ -210,6 +261,34 @@ class TestShopifyModels(TransactionCase):
         with patch.object(job_model_class, "enqueue", autospec=True) as enqueue:
             picking._shopify_enqueue_fulfillment_if_needed()
         enqueue.assert_called_once()
+
+    def test_partial_fulfillment_allocates_only_done_quantity(self):
+        nodes = [
+            {
+                "id": "gid://shopify/FulfillmentOrder/1",
+                "status": "OPEN",
+                "lineItems": {
+                    "nodes": [
+                        {
+                            "id": "gid://shopify/FulfillmentOrderLineItem/1",
+                            "remainingQuantity": 5,
+                            "lineItem": {"id": "gid://shopify/LineItem/1"},
+                        }
+                    ],
+                    "pageInfo": {"hasNextPage": False},
+                },
+            }
+        ]
+        orders, remote_gids, remaining = self.env[
+            "stock.picking"
+        ]._shopify_allocate_fulfillment_lines(
+            nodes, {"gid://shopify/LineItem/1": 2}
+        )
+        self.assertEqual(
+            orders[0]["fulfillmentOrderLineItems"][0]["quantity"], 2
+        )
+        self.assertIn("gid://shopify/LineItem/1", remote_gids)
+        self.assertEqual(remaining["gid://shopify/LineItem/1"], 0)
 
     def test_shopify_frontend_independence(self):
         manifest = load_information_from_description_file("lightlink_shopify_multistore")
