@@ -95,6 +95,6 @@
         <field name="binding_view_types">list</field>
         <field name="state">code</field>
         <field name="code">action = records.action_shopify_publish_wizard()</field>
-        <field name="groups_id" eval="[(4, ref('lightlink_shopify_multistore.group_shopify_operator'))]"/>
+        <field name="group_ids" eval="[(4, ref('lightlink_shopify_multistore.group_shopify_operator'))]"/>
     </record>
 </odoo>
