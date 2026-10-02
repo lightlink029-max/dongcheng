@@ -13,7 +13,8 @@
                 <field name="shopify_status" widget="badge"/>
                 <field name="sync_state" widget="badge"/>
                 <field name="last_synced_at"/>
-                <button name="action_queue_publish" type="object" string="发布" icon="fa-cloud-upload"/>
+                <button name="action_queue_publish" type="object" string="发布" icon="fa-cloud-upload"
+                        groups="lightlink_shopify_multistore.group_shopify_operator"/>
             </list>
         </field>
     </record>
@@ -24,10 +25,12 @@
         <field name="arch" type="xml">
             <form string="Shopify 渠道商品">
                 <header>
-                    <button name="action_queue_publish" type="object" string="发布/更新到 Shopify" class="btn-primary"/>
+                    <button name="action_queue_publish" type="object" string="发布/更新到 Shopify" class="btn-primary"
+                            groups="lightlink_shopify_multistore.group_shopify_operator"/>
                     <button name="action_archive_remote" type="object" string="远端下架"
                             confirm="将把这个店铺中的商品状态改为已归档。Odoo产品和历史订单不会删除，是否继续？"
-                            invisible="shopify_status == 'ARCHIVED'"/>
+                            invisible="shopify_status == 'ARCHIVED'"
+                            groups="lightlink_shopify_multistore.group_shopify_operator"/>
                     <field name="sync_state" widget="statusbar" statusbar_visible="draft,queued,synced,warning,error,archived"/>
                 </header>
                 <sheet>
@@ -75,7 +78,8 @@
                                     <field name="media_status" widget="badge" readonly="1"/>
                                     <button name="action_remove_remote" type="object" string="从店铺移除" icon="fa-trash"
                                             confirm="将创建 Shopify 图片删除任务并移除本行。此操作不会删除 Odoo 产品主图，是否继续？"
-                                            invisible="not shopify_media_gid"/>
+                                            invisible="not shopify_media_gid"
+                                            groups="lightlink_shopify_multistore.group_shopify_operator"/>
                                 </list>
                             </field>
                         </page>
@@ -146,7 +150,8 @@
                 <field name="handle"/>
                 <field name="sync_state" widget="badge"/>
                 <field name="last_synced_at"/>
-                <button name="action_queue_sync" type="object" string="同步" icon="fa-refresh"/>
+                <button name="action_queue_sync" type="object" string="同步" icon="fa-refresh"
+                        groups="lightlink_shopify_multistore.group_shopify_operator"/>
             </list>
         </field>
     </record>
@@ -157,7 +162,8 @@
         <field name="arch" type="xml">
             <form string="分类与集合映射">
                 <header>
-                    <button name="action_queue_sync" type="object" string="同步到 Shopify" class="btn-primary"/>
+                    <button name="action_queue_sync" type="object" string="同步到 Shopify" class="btn-primary"
+                            groups="lightlink_shopify_multistore.group_shopify_operator"/>
                     <field name="sync_state" widget="statusbar"/>
                 </header>
                 <sheet>
