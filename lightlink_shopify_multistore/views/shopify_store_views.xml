@@ -128,7 +128,7 @@
                 <field name="shop_domain"/>
                 <filter name="connected" string="已连接" domain="[('state','=','connected')]"/>
                 <filter name="errors" string="异常" domain="[('state','=','error')]"/>
-                <group expand="0" string="分组">
+                <group name="group_by">
                     <filter name="group_company" string="公司" context="{'group_by':'company_id'}"/>
                     <filter name="group_state" string="状态" context="{'group_by':'state'}"/>
                 </group>

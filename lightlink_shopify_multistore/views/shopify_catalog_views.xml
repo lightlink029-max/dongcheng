@@ -118,7 +118,7 @@
                 <field name="store_id"/>
                 <filter name="errors" string="同步失败" domain="[('sync_state','=','error')]"/>
                 <filter name="pending" string="待处理" domain="[('sync_state','=','queued')]"/>
-                <group expand="0" string="分组">
+                <group name="group_by">
                     <filter name="group_store" string="店铺" context="{'group_by':'store_id'}"/>
                     <filter name="group_state" string="同步状态" context="{'group_by':'sync_state'}"/>
                 </group>

@@ -67,7 +67,7 @@
                 <filter name="pending" string="待处理" domain="[('state','in',['queued','running','retry'])]"/>
                 <filter name="failed" string="失败" domain="[('state','=','failed')]"/>
                 <filter name="done" string="完成" domain="[('state','=','done')]"/>
-                <group expand="0" string="分组">
+                <group name="group_by">
                     <filter name="group_store" string="店铺" context="{'group_by':'store_id'}"/>
                     <filter name="group_operation" string="操作" context="{'group_by':'operation'}"/>
                     <filter name="group_state" string="状态" context="{'group_by':'state'}"/>
