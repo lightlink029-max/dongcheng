@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shopify_store_list" model="ir.ui.view">
+        <field name="name">ll.shopify.store.list</field>
+        <field name="model">ll.shopify.store</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state == 'connected'" decoration-warning="state == 'paused'" decoration-danger="state == 'error'">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="shop_domain"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id"/>
+                <field name="warehouse_id"/>
+                <field name="state" widget="badge"/>
+                <field name="channel_product_count" string="商品"/>
+                <field name="order_count" string="订单"/>
+                <field name="pending_job_count" string="待处理"/>
+                <field name="failed_job_count" string="失败"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_store_form" model="ir.ui.view">
+        <field name="name">ll.shopify.store.form</field>
+        <field name="model">ll.shopify.store</field>
+        <field name="arch" type="xml">
+            <form string="Shopify 店铺">
+                <header>
+                    <button name="action_start_oauth" type="object" string="连接 Shopify" class="btn-primary"
+                            groups="base.group_system" invisible="state == 'connected'"/>
+                    <button name="action_test_connection" type="object" string="测试连接"
+                            groups="base.group_system" invisible="state not in ['connected', 'error']"/>
+                    <button name="action_sync_now" type="object" string="立即同步" class="btn-primary"
+                            invisible="state != 'connected'"/>
+                    <button name="action_pause" type="object" string="暂停" invisible="state != 'connected'"/>
+                    <button name="action_resume" type="object" string="恢复" invisible="state != 'paused'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,connected,paused,error"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_channels" type="object" class="oe_stat_button" icon="fa-cubes">
+                            <field name="channel_product_count" widget="statinfo" string="渠道商品"/>
+                        </button>
+                        <button name="action_open_jobs" type="object" class="oe_stat_button" icon="fa-tasks">
+                            <field name="pending_job_count" widget="statinfo" string="待处理任务"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="已暂停" bg_color="text-bg-warning" invisible="state != 'paused'"/>
+                    <widget name="web_ribbon" title="连接异常" bg_color="text-bg-danger" invisible="state != 'error'"/>
+                    <h1><field name="name" placeholder="例如：美国品牌站"/></h1>
+                    <group>
+                        <group string="店铺身份">
+                            <field name="active"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="shop_domain" placeholder="store.myshopify.com"/>
+                            <field name="public_domain" placeholder="https://www.example.com"/>
+                            <field name="api_version"/>
+                        </group>
+                        <group string="业务归属">
+                            <field name="currency_id"/>
+                            <field name="pricelist_id" options="{'no_create_edit': True}"/>
+                            <field name="warehouse_id" options="{'no_create_edit': True}"/>
+                            <field name="sales_team_id"/>
+                            <field name="salesperson_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="同步规则">
+                            <group>
+                                <group>
+                                    <field name="sync_products"/>
+                                    <field name="sync_inventory"/>
+                                    <field name="sync_orders"/>
+                                    <field name="sync_fulfillments"/>
+                                    <field name="auto_confirm_orders"/>
+                                </group>
+                                <group>
+                                    <field name="safety_stock"/>
+                                    <field name="shipping_product_id"/>
+                                    <field name="unmapped_product_id"/>
+                                    <field name="requested_scopes"/>
+                                    <field name="granted_scopes" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="询盘接口">
+                            <group>
+                                <field name="public_inquiry_token" readonly="1"/>
+                                <field name="inquiry_endpoint_url" readonly="1" widget="url"/>
+                                <field name="allowed_origins" placeholder="https://store.example.com&#10;https://www.example.com"/>
+                            </group>
+                            <div class="alert alert-info" role="alert">
+                                Shopify 主题只调用本页所示公开询盘接口；页面、导航、博客和主题渲染不依赖 Odoo。
+                            </div>
+                        </page>
+                        <page string="连接凭证" groups="base.group_system">
+                            <group>
+                                <field name="client_id" password="True"/>
+                                <field name="client_secret" password="True"/>
+                                <field name="access_token" password="True" readonly="1"/>
+                                <field name="webhook_secret" password="True" readonly="1"/>
+                                <field name="oauth_callback_url" readonly="1" widget="url"/>
+                                <field name="webhook_callback_url" readonly="1" widget="url"/>
+                            </group>
+                        </page>
+                        <page string="运行状态">
+                            <group>
+                                <field name="last_connection_at" readonly="1"/>
+                                <field name="last_product_sync_at" readonly="1"/>
+                                <field name="last_inventory_sync_at" readonly="1"/>
+                                <field name="last_order_sync_at" readonly="1"/>
+                            </group>
+                            <field name="last_error" readonly="1" class="text-danger"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_shopify_store_search" model="ir.ui.view">
+        <field name="name">ll.shopify.store.search</field>
+        <field name="model">ll.shopify.store</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="shop_domain"/>
+                <filter name="connected" string="已连接" domain="[('state','=','connected')]"/>
+                <filter name="errors" string="异常" domain="[('state','=','error')]"/>
+                <group expand="0" string="分组">
+                    <filter name="group_company" string="公司" context="{'group_by':'company_id'}"/>
+                    <filter name="group_state" string="状态" context="{'group_by':'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_shopify_store" model="ir.actions.act_window">
+        <field name="name">店铺管理</field>
+        <field name="res_model">ll.shopify.store</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_shopify_store_search"/>
+        <field name="context">{'search_default_connected': 0}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">添加第一家 Shopify 店铺</p>
+            <p>一家店一个配置。以后新增店铺无需修改代码。</p>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_shopify_root" name="Shopify 多站点" sequence="55"
+              groups="lightlink_shopify_multistore.group_shopify_viewer"/>
+    <menuitem id="menu_shopify_dashboard" name="运营总览" parent="menu_shopify_root"
+              action="action_shopify_dashboard" sequence="10"/>
+    <menuitem id="menu_shopify_store" name="店铺管理" parent="menu_shopify_root"
+              action="action_shopify_store" sequence="20" groups="lightlink_shopify_multistore.group_shopify_manager"/>
+    <menuitem id="menu_shopify_catalog" name="商品与分类" parent="menu_shopify_root" sequence="30"/>
+    <menuitem id="menu_shopify_channel_product" name="渠道商品" parent="menu_shopify_catalog"
+              action="action_shopify_channel_product" sequence="10"/>
+    <menuitem id="menu_shopify_collection" name="分类与集合" parent="menu_shopify_catalog"
+              action="action_shopify_collection" sequence="20"/>
+    <menuitem id="menu_shopify_location_map" name="库存与库位映射" parent="menu_shopify_catalog"
+              action="action_shopify_location_map" sequence="30" groups="lightlink_shopify_multistore.group_shopify_manager"/>
+    <menuitem id="menu_shopify_operations" name="订单与运行" parent="menu_shopify_root" sequence="40"/>
+    <menuitem id="menu_shopify_orders" name="订单与履约" parent="menu_shopify_operations"
+              action="action_shopify_order_binding" sequence="10"/>
+    <menuitem id="menu_shopify_inquiries" name="采购询盘" parent="menu_shopify_operations"
+              action="action_shopify_inquiry" sequence="20"/>
+    <menuitem id="menu_shopify_jobs" name="发布任务与异常" parent="menu_shopify_operations"
+              action="action_shopify_job" sequence="30"/>
+    <menuitem id="menu_shopify_webhooks" name="Webhook 审计" parent="menu_shopify_operations"
+              action="action_shopify_webhook_event" sequence="40" groups="lightlink_shopify_multistore.group_shopify_manager"/>
+</odoo>

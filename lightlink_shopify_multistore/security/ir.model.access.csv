@@ -1,0 +1,23 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_shopify_store_viewer,ll.shopify.store viewer,model_ll_shopify_store,group_shopify_viewer,1,0,0,0
+access_shopify_store_manager,ll.shopify.store manager,model_ll_shopify_store,group_shopify_manager,1,1,1,0
+access_shopify_channel_product_viewer,ll.shopify.channel.product viewer,model_ll_shopify_channel_product,group_shopify_viewer,1,0,0,0
+access_shopify_channel_product_operator,ll.shopify.channel.product operator,model_ll_shopify_channel_product,group_shopify_operator,1,1,1,0
+access_shopify_channel_image_viewer,ll.shopify.channel.image viewer,model_ll_shopify_channel_image,group_shopify_viewer,1,0,0,0
+access_shopify_channel_image_operator,ll.shopify.channel.image operator,model_ll_shopify_channel_image,group_shopify_operator,1,1,1,1
+access_shopify_channel_variant_viewer,ll.shopify.channel.variant viewer,model_ll_shopify_channel_variant,group_shopify_viewer,1,0,0,0
+access_shopify_channel_variant_operator,ll.shopify.channel.variant operator,model_ll_shopify_channel_variant,group_shopify_operator,1,1,1,0
+access_shopify_collection_viewer,ll.shopify.collection viewer,model_ll_shopify_collection,group_shopify_viewer,1,0,0,0
+access_shopify_collection_operator,ll.shopify.collection operator,model_ll_shopify_collection,group_shopify_operator,1,1,1,0
+access_shopify_location_map_viewer,ll.shopify.location.map viewer,model_ll_shopify_location_map,group_shopify_viewer,1,0,0,0
+access_shopify_location_map_manager,ll.shopify.location.map manager,model_ll_shopify_location_map,group_shopify_manager,1,1,1,1
+access_shopify_job_viewer,ll.shopify.job viewer,model_ll_shopify_job,group_shopify_viewer,1,0,0,0
+access_shopify_job_operator,ll.shopify.job operator,model_ll_shopify_job,group_shopify_operator,1,1,1,0
+access_shopify_order_binding_viewer,ll.shopify.order.binding viewer,model_ll_shopify_order_binding,group_shopify_viewer,1,0,0,0
+access_shopify_order_binding_operator,ll.shopify.order.binding operator,model_ll_shopify_order_binding,group_shopify_operator,1,1,1,0
+access_shopify_webhook_event_manager,ll.shopify.webhook.event manager,model_ll_shopify_webhook_event,group_shopify_manager,1,1,1,0
+access_shopify_oauth_state_admin,ll.shopify.oauth.state admin,model_ll_shopify_oauth_state,base.group_system,1,1,1,1
+access_shopify_inquiry_viewer,ll.shopify.inquiry viewer,model_ll_shopify_inquiry,group_shopify_viewer,1,0,0,0
+access_shopify_inquiry_operator,ll.shopify.inquiry operator,model_ll_shopify_inquiry,group_shopify_operator,1,1,1,0
+access_shopify_dashboard_viewer,ll.shopify.dashboard viewer,model_ll_shopify_dashboard,group_shopify_viewer,1,0,0,0
+access_shopify_publish_wizard_operator,ll.shopify.publish.wizard operator,model_ll_shopify_publish_wizard,group_shopify_operator,1,1,1,1

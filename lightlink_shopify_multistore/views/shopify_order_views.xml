@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shopify_order_binding_list" model="ir.ui.view">
+        <field name="name">ll.shopify.order.binding.list</field>
+        <field name="model">ll.shopify.order.binding</field>
+        <field name="arch" type="xml">
+            <list create="0" delete="0">
+                <field name="shopify_order_name"/>
+                <field name="store_id"/>
+                <field name="sale_order_id"/>
+                <field name="financial_status" widget="badge"/>
+                <field name="fulfillment_status" widget="badge"/>
+                <field name="shopify_updated_at"/>
+                <field name="last_import_at"/>
+                <field name="last_error"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_order_binding_form" model="ir.ui.view">
+        <field name="name">ll.shopify.order.binding.form</field>
+        <field name="model">ll.shopify.order.binding</field>
+        <field name="arch" type="xml">
+            <form create="0" edit="0" delete="0">
+                <sheet>
+                    <h1><field name="shopify_order_name"/></h1>
+                    <group>
+                        <group>
+                            <field name="store_id"/>
+                            <field name="sale_order_id"/>
+                            <field name="shopify_order_gid"/>
+                            <field name="shopify_customer_gid"/>
+                        </group>
+                        <group>
+                            <field name="financial_status"/>
+                            <field name="fulfillment_status"/>
+                            <field name="shopify_updated_at"/>
+                            <field name="last_import_at"/>
+                            <field name="last_fulfillment_at"/>
+                        </group>
+                    </group>
+                    <field name="last_error" class="text-danger"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shopify_order_binding" model="ir.actions.act_window">
+        <field name="name">订单与履约</field>
+        <field name="res_model">ll.shopify.order.binding</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_shopify_inquiry_list" model="ir.ui.view">
+        <field name="name">ll.shopify.inquiry.list</field>
+        <field name="model">ll.shopify.inquiry</field>
+        <field name="arch" type="xml">
+            <list create="0" delete="0">
+                <field name="create_date"/>
+                <field name="store_id"/>
+                <field name="name"/>
+                <field name="company_name"/>
+                <field name="email"/>
+                <field name="phone"/>
+                <field name="product_reference"/>
+                <field name="lead_id"/>
+                <field name="consent"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_inquiry_form" model="ir.ui.view">
+        <field name="name">ll.shopify.inquiry.form</field>
+        <field name="model">ll.shopify.inquiry</field>
+        <field name="arch" type="xml">
+            <form create="0" edit="0" delete="0">
+                <sheet>
+                    <h1><field name="name"/></h1>
+                    <group>
+                        <group>
+                            <field name="store_id"/>
+                            <field name="lead_id"/>
+                            <field name="company_name"/>
+                            <field name="email"/>
+                            <field name="phone"/>
+                            <field name="product_reference"/>
+                        </group>
+                        <group>
+                            <field name="page_url"/>
+                            <field name="utm_source"/>
+                            <field name="utm_medium"/>
+                            <field name="utm_campaign"/>
+                            <field name="consent"/>
+                            <field name="consent_at"/>
+                        </group>
+                    </group>
+                    <field name="message"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shopify_inquiry" model="ir.actions.act_window">
+        <field name="name">Shopify 采购询盘</field>
+        <field name="res_model">ll.shopify.inquiry</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

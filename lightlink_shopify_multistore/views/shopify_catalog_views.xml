@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shopify_channel_product_list" model="ir.ui.view">
+        <field name="name">ll.shopify.channel.product.list</field>
+        <field name="model">ll.shopify.channel.product</field>
+        <field name="arch" type="xml">
+            <list multi_edit="1" decoration-success="sync_state == 'synced'" decoration-danger="sync_state == 'error'">
+                <field name="product_tmpl_id"/>
+                <field name="store_id"/>
+                <field name="title"/>
+                <field name="price"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="shopify_status" widget="badge"/>
+                <field name="sync_state" widget="badge"/>
+                <field name="last_synced_at"/>
+                <button name="action_queue_publish" type="object" string="发布" icon="fa-cloud-upload"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_channel_product_form" model="ir.ui.view">
+        <field name="name">ll.shopify.channel.product.form</field>
+        <field name="model">ll.shopify.channel.product</field>
+        <field name="arch" type="xml">
+            <form string="Shopify 渠道商品">
+                <header>
+                    <button name="action_queue_publish" type="object" string="发布/更新到 Shopify" class="btn-primary"/>
+                    <button name="action_archive_remote" type="object" string="远端下架"
+                            confirm="将把这个店铺中的商品状态改为已归档。Odoo产品和历史订单不会删除，是否继续？"
+                            invisible="shopify_status == 'ARCHIVED'"/>
+                    <field name="sync_state" widget="statusbar" statusbar_visible="draft,queued,synced,warning,error,archived"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_jobs" type="object" class="oe_stat_button" icon="fa-tasks">
+                            <field name="pending_job_count" widget="statinfo" string="后台任务"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="同步失败" bg_color="text-bg-danger" invisible="sync_state != 'error'"/>
+                    <h1><field name="title"/></h1>
+                    <group>
+                        <group>
+                            <field name="active"/>
+                            <field name="store_id" options="{'no_create_edit': True}" readonly="shopify_product_gid"/>
+                            <field name="product_tmpl_id" options="{'no_create_edit': True}" readonly="shopify_product_gid"/>
+                            <field name="shopify_status"/>
+                            <field name="price"/>
+                            <field name="compare_at_price"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="handle"/>
+                            <field name="vendor"/>
+                            <field name="product_type"/>
+                            <field name="tags"/>
+                            <field name="collection_ids" widget="many2many_tags" domain="[('store_id','=',store_id)]"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="店铺文案">
+                            <group>
+                                <field name="seo_title"/>
+                                <field name="seo_description"/>
+                            </group>
+                            <field name="description_html" widget="html"/>
+                        </page>
+                        <page string="图片">
+                            <field name="image_ids" context="{'default_channel_product_id': id}">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="image" widget="image" options="{'size': [80, 80]}"/>
+                                    <field name="filename"/>
+                                    <field name="alt_text"/>
+                                    <field name="checksum" readonly="1" optional="hide"/>
+                                    <field name="media_status" widget="badge" readonly="1"/>
+                                    <button name="action_remove_remote" type="object" string="从店铺移除" icon="fa-trash"
+                                            confirm="将创建 Shopify 图片删除任务并移除本行。此操作不会删除 Odoo 产品主图，是否继续？"
+                                            invisible="not shopify_media_gid"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="变体">
+                            <field name="variant_ids" readonly="sync_state == 'queued'">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="sku" readonly="1"/>
+                                    <field name="barcode" readonly="1"/>
+                                    <field name="price_override"/>
+                                    <field name="effective_price" readonly="1"/>
+                                    <field name="currency_id" column_invisible="True"/>
+                                    <field name="shopify_variant_gid" readonly="1" optional="hide"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="同步记录">
+                            <group>
+                                <field name="shopify_product_gid" readonly="1"/>
+                                <field name="shopify_handle" readonly="1"/>
+                                <field name="last_payload_hash" readonly="1"/>
+                                <field name="last_synced_at" readonly="1"/>
+                            </group>
+                            <field name="last_error" readonly="1" class="text-danger"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_shopify_channel_product_search" model="ir.ui.view">
+        <field name="name">ll.shopify.channel.product.search</field>
+        <field name="model">ll.shopify.channel.product</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="title"/>
+                <field name="product_tmpl_id"/>
+                <field name="store_id"/>
+                <filter name="errors" string="同步失败" domain="[('sync_state','=','error')]"/>
+                <filter name="pending" string="待处理" domain="[('sync_state','=','queued')]"/>
+                <group expand="0" string="分组">
+                    <filter name="group_store" string="店铺" context="{'group_by':'store_id'}"/>
+                    <filter name="group_state" string="同步状态" context="{'group_by':'sync_state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_shopify_channel_product" model="ir.actions.act_window">
+        <field name="name">渠道商品</field>
+        <field name="res_model">ll.shopify.channel.product</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_shopify_channel_product_search"/>
+        <field name="help" type="html"><p class="o_view_nocontent_smiling_face">从产品工作台选择产品并发布到 Shopify</p></field>
+    </record>
+
+    <record id="view_shopify_collection_list" model="ir.ui.view">
+        <field name="name">ll.shopify.collection.list</field>
+        <field name="model">ll.shopify.collection</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" decoration-success="sync_state == 'synced'" decoration-danger="sync_state == 'error'">
+                <field name="sequence" widget="handle"/>
+                <field name="store_id"/>
+                <field name="category_id"/>
+                <field name="title"/>
+                <field name="handle"/>
+                <field name="sync_state" widget="badge"/>
+                <field name="last_synced_at"/>
+                <button name="action_queue_sync" type="object" string="同步" icon="fa-refresh"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_collection_form" model="ir.ui.view">
+        <field name="name">ll.shopify.collection.form</field>
+        <field name="model">ll.shopify.collection</field>
+        <field name="arch" type="xml">
+            <form string="分类与集合映射">
+                <header>
+                    <button name="action_queue_sync" type="object" string="同步到 Shopify" class="btn-primary"/>
+                    <field name="sync_state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="active"/>
+                            <field name="store_id" readonly="shopify_collection_gid"/>
+                            <field name="category_id" readonly="shopify_collection_gid"/>
+                            <field name="title"/>
+                            <field name="handle"/>
+                        </group>
+                        <group>
+                            <field name="image" widget="image" class="oe_avatar"/>
+                            <field name="image_alt"/>
+                            <field name="shopify_collection_gid" readonly="1"/>
+                            <field name="last_synced_at" readonly="1"/>
+                        </group>
+                    </group>
+                    <field name="description_html" widget="html"/>
+                    <field name="last_error" readonly="1" class="text-danger"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shopify_collection" model="ir.actions.act_window">
+        <field name="name">分类与集合</field>
+        <field name="res_model">ll.shopify.collection</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_shopify_location_map_list" model="ir.ui.view">
+        <field name="name">ll.shopify.location.map.list</field>
+        <field name="model">ll.shopify.location.map</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="active"/>
+                <field name="store_id"/>
+                <field name="name"/>
+                <field name="location_id"/>
+                <field name="shopify_location_gid"/>
+                <field name="safety_stock"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_shopify_location_map" model="ir.actions.act_window">
+        <field name="name">库存与库位映射</field>
+        <field name="res_model">ll.shopify.location.map</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shopify_job_list" model="ir.ui.view">
+        <field name="name">ll.shopify.job.list</field>
+        <field name="model">ll.shopify.job</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state == 'done'" decoration-info="state == 'running'" decoration-warning="state == 'retry'" decoration-danger="state == 'failed'">
+                <field name="create_date"/>
+                <field name="store_id"/>
+                <field name="operation"/>
+                <field name="display_name" optional="hide"/>
+                <field name="state" widget="badge"/>
+                <field name="attempt_count"/>
+                <field name="next_run_at"/>
+                <field name="last_error" optional="show"/>
+                <button name="action_retry" type="object" string="重试" icon="fa-repeat" invisible="state not in ['failed','retry','cancelled']"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_job_form" model="ir.ui.view">
+        <field name="name">ll.shopify.job.form</field>
+        <field name="model">ll.shopify.job</field>
+        <field name="arch" type="xml">
+            <form string="Shopify 后台任务" create="0" delete="0">
+                <header>
+                    <button name="action_retry" type="object" string="人工重试" class="btn-primary" invisible="state not in ['failed','retry','cancelled']"/>
+                    <button name="action_cancel" type="object" string="取消" confirm="取消后可人工重试，是否继续？" invisible="state not in ['queued','retry','failed']"/>
+                    <button name="action_open_record" type="object" string="打开关联记录"/>
+                    <field name="state" widget="statusbar" statusbar_visible="queued,running,retry,done,failed,cancelled"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="store_id" readonly="1"/>
+                            <field name="operation" readonly="1"/>
+                            <field name="model_name" readonly="1"/>
+                            <field name="res_id" readonly="1"/>
+                            <field name="idempotency_key" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="attempt_count" readonly="1"/>
+                            <field name="max_attempts" readonly="state not in ['queued','retry','failed']"/>
+                            <field name="next_run_at" readonly="1"/>
+                            <field name="started_at" readonly="1"/>
+                            <field name="finished_at" readonly="1"/>
+                            <field name="retryable" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="错误"><field name="last_error" readonly="1" nolabel="1"/></page>
+                        <page string="请求摘要"><field name="payload_json" readonly="1" nolabel="1" widget="json"/></page>
+                        <page string="执行结果"><field name="result_json" readonly="1" nolabel="1" widget="json"/></page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_shopify_job_search" model="ir.ui.view">
+        <field name="name">ll.shopify.job.search</field>
+        <field name="model">ll.shopify.job</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="store_id"/>
+                <field name="operation"/>
+                <filter name="pending" string="待处理" domain="[('state','in',['queued','running','retry'])]"/>
+                <filter name="failed" string="失败" domain="[('state','=','failed')]"/>
+                <filter name="done" string="完成" domain="[('state','=','done')]"/>
+                <group expand="0" string="分组">
+                    <filter name="group_store" string="店铺" context="{'group_by':'store_id'}"/>
+                    <filter name="group_operation" string="操作" context="{'group_by':'operation'}"/>
+                    <filter name="group_state" string="状态" context="{'group_by':'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_shopify_job" model="ir.actions.act_window">
+        <field name="name">发布任务与异常</field>
+        <field name="res_model">ll.shopify.job</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_shopify_job_search"/>
+        <field name="context">{'search_default_pending': 1}</field>
+    </record>
+
+    <record id="view_shopify_webhook_event_list" model="ir.ui.view">
+        <field name="name">ll.shopify.webhook.event.list</field>
+        <field name="model">ll.shopify.webhook.event</field>
+        <field name="arch" type="xml">
+            <list create="0" delete="0">
+                <field name="received_at"/>
+                <field name="store_id"/>
+                <field name="topic"/>
+                <field name="webhook_id"/>
+                <field name="state" widget="badge"/>
+                <field name="last_error"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_webhook_event_form" model="ir.ui.view">
+        <field name="name">ll.shopify.webhook.event.form</field>
+        <field name="model">ll.shopify.webhook.event</field>
+        <field name="arch" type="xml">
+            <form create="0" edit="0" delete="0">
+                <sheet>
+                    <group>
+                        <field name="store_id"/>
+                        <field name="webhook_id"/>
+                        <field name="topic"/>
+                        <field name="shop_domain"/>
+                        <field name="state"/>
+                        <field name="received_at"/>
+                    </group>
+                    <field name="payload_json" widget="json"/>
+                    <field name="last_error"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shopify_webhook_event" model="ir.actions.act_window">
+        <field name="name">Webhook 审计</field>
+        <field name="res_model">ll.shopify.webhook.event</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

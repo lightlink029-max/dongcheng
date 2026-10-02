@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="shopify_dashboard_main" model="ll.shopify.dashboard">
+        <field name="name">Shopify 多站点运营总览</field>
+    </record>
+
+    <record id="view_shopify_dashboard_form" model="ir.ui.view">
+        <field name="name">ll.shopify.dashboard.form</field>
+        <field name="model">ll.shopify.dashboard</field>
+        <field name="arch" type="xml">
+            <form create="0" edit="0" delete="0" class="o_shopify_dashboard_form">
+                <sheet>
+                    <field name="dashboard_widget" widget="ll_shopify_dashboard" nolabel="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shopify_dashboard" model="ir.actions.act_window">
+        <field name="name">Shopify 多站点运营总览</field>
+        <field name="res_model">ll.shopify.dashboard</field>
+        <field name="res_id" ref="shopify_dashboard_main"/>
+        <field name="view_mode">form</field>
+        <field name="target">current</field>
+    </record>
+</odoo>

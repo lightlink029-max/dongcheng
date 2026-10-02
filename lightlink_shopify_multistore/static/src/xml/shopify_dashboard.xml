@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="lightlink_shopify_multistore.ShopifyDashboard">
+        <section class="o_ll_shopify_dashboard" aria-label="Shopify 多站点运营总览">
+            <header>
+                <div>
+                    <h1>Shopify 多站点运营总览</h1>
+                    <p>每家店独立配置、独立任务、独立异常；Shopify 前端页面不由 Odoo 渲染。</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary" t-on-click="refresh" t-att-disabled="state.loading">
+                        <i t-att-class="state.loading ? 'fa fa-refresh fa-spin me-1' : 'fa fa-refresh me-1'"/>刷新
+                    </button>
+                    <button type="button" class="btn btn-primary" t-on-click="openStores">
+                        <i class="fa fa-plus me-1"/>管理店铺
+                    </button>
+                </div>
+            </header>
+            <div class="o_ll_shopify_metrics">
+                <button type="button" t-on-click="openStores"><strong t-esc="state.summary.connected"/><span>已连接 / <t t-esc="state.summary.stores"/> 家</span></button>
+                <button type="button" t-on-click="openProducts"><strong t-esc="state.summary.products"/><span>渠道商品</span></button>
+                <button type="button" t-on-click="openOrders"><strong t-esc="state.summary.orders"/><span>已导入订单</span></button>
+                <button type="button" t-on-click="() => this.openJobs(false)"><strong t-esc="state.summary.pending_jobs"/><span>待处理任务</span></button>
+                <button type="button" class="danger" t-on-click="() => this.openJobs(true)"><strong t-esc="state.summary.failed_jobs"/><span>失败任务</span></button>
+            </div>
+            <div class="o_ll_shopify_empty" t-if="!state.loading &amp;&amp; !state.stores.length">
+                <i class="fa fa-shopping-bag"/>
+                <strong>尚未配置 Shopify 店铺</strong>
+                <span>点击“管理店铺”创建第一家店；以后增加店铺无需修改代码。</span>
+            </div>
+            <div class="o_ll_shopify_store_grid" t-else="">
+                <button type="button" class="o_ll_shopify_store_card" t-foreach="state.stores" t-as="store" t-key="store.id"
+                        t-on-click="() => this.openStore(store)">
+                    <span class="o_ll_shopify_store_head">
+                        <strong t-esc="store.name"/>
+                        <span t-att-class="'badge ' + (store.state === 'connected' ? 'text-bg-success' : store.state === 'error' ? 'text-bg-danger' : 'text-bg-secondary')"
+                              t-esc="store.state === 'connected' ? '已连接' : store.state === 'paused' ? '已暂停' : store.state === 'error' ? '异常' : '未连接'"/>
+                    </span>
+                    <small t-esc="store.domain"/>
+                    <span class="o_ll_shopify_store_numbers">
+                        <span><b t-esc="store.products"/> 商品</span>
+                        <span><b t-esc="store.orders"/> 订单</span>
+                        <span><b t-esc="store.pending"/> 待处理</span>
+                        <span t-att-class="store.failed ? 'text-danger' : ''"><b t-esc="store.failed"/> 失败</span>
+                    </span>
+                    <span class="text-danger text-truncate" t-if="store.last_error" t-att-title="store.last_error" t-esc="store.last_error"/>
+                </button>
+            </div>
+        </section>
+    </t>
+</templates>

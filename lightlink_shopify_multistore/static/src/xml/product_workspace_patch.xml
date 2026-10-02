@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="lightlink_shopify_multistore.ProductWorkspacePatch"
+       t-inherit="product_social_content_bridge.ProductWorkspace" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('o_psc_product_workspace_actions')]" position="inside">
+            <button type="button" class="btn btn-outline-primary" t-on-click="publishVisibleProducts">
+                <i class="fa fa-cloud-upload me-1"/>发布当前结果到 Shopify
+            </button>
+            <button type="button" class="btn btn-outline-secondary" t-on-click="openShopifyDashboard">
+                <i class="fa fa-shopping-bag me-1"/>多店运营总览
+            </button>
+        </xpath>
+        <xpath expr="//small[hasclass('o_psc_product_updated')]" position="before">
+            <span class="o_ll_shopify_badges" t-if="product.shopify &amp;&amp; product.shopify.channels.length">
+                <span class="badge rounded-pill text-bg-success" t-if="product.shopify.synced">
+                    <i class="fa fa-check me-1"/><t t-esc="product.shopify.synced"/> 已同步
+                </span>
+                <span class="badge rounded-pill text-bg-light">
+                    <i class="fa fa-shopping-bag me-1"/><t t-esc="product.shopify.count"/> 家店
+                </span>
+                <span class="badge rounded-pill text-bg-danger" t-if="product.shopify.has_error">有失败任务</span>
+            </span>
+        </xpath>
+    </t>
+</templates>

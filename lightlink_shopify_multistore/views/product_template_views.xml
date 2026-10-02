@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_template_form_shopify" model="ir.ui.view">
+        <field name="name">product.template.form.shopify.multistore</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_shopify_channels" type="object" class="oe_stat_button" icon="fa-shopping-bag"
+                        groups="lightlink_shopify_multistore.group_shopify_viewer">
+                    <field name="ll_shopify_channel_count" widget="statinfo" string="Shopify 店铺"/>
+                </button>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Shopify 多店" groups="lightlink_shopify_multistore.group_shopify_viewer">
+                    <div class="d-flex justify-content-end mb-2">
+                        <button name="action_shopify_publish_wizard" type="object" string="发布到 Shopify"
+                                class="btn btn-primary" groups="lightlink_shopify_multistore.group_shopify_operator"/>
+                    </div>
+                    <field name="ll_shopify_channel_ids" context="{'default_product_tmpl_id': id}">
+                        <list>
+                            <field name="store_id"/>
+                            <field name="title"/>
+                            <field name="price"/>
+                            <field name="currency_id" column_invisible="True"/>
+                            <field name="shopify_status" widget="badge"/>
+                            <field name="sync_state" widget="badge"/>
+                            <field name="last_synced_at"/>
+                            <field name="last_error" optional="hide"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_product_category_form_shopify" model="ir.ui.view">
+        <field name="name">product.category.form.shopify.multistore</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="Shopify 分类集合" groups="lightlink_shopify_multistore.group_shopify_viewer">
+                    <field name="ll_shopify_collection_ids" context="{'default_category_id': id}">
+                        <list>
+                            <field name="store_id"/>
+                            <field name="title"/>
+                            <field name="handle"/>
+                            <field name="sync_state" widget="badge"/>
+                            <field name="last_synced_at"/>
+                        </list>
+                    </field>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_sale_order_form_shopify" model="ir.ui.view">
+        <field name="name">sale.order.form.shopify.multistore</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='client_order_ref']" position="after">
+                <field name="ll_shopify_store_id" readonly="1" invisible="not ll_shopify_store_id"/>
+                <field name="ll_shopify_order_name" readonly="1" invisible="not ll_shopify_store_id"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_crm_lead_form_shopify" model="ir.ui.view">
+        <field name="name">crm.lead.form.shopify.multistore</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Shopify 来源" invisible="not ll_shopify_store_id">
+                    <group>
+                        <field name="ll_shopify_store_id" readonly="1"/>
+                        <field name="ll_shopify_product_reference" readonly="1"/>
+                        <field name="ll_shopify_page_url" readonly="1" widget="url"/>
+                        <field name="ll_shopify_consent_at" readonly="1"/>
+                        <field name="ll_shopify_utm_source" readonly="1"/>
+                        <field name="ll_shopify_utm_medium" readonly="1"/>
+                        <field name="ll_shopify_utm_campaign" readonly="1"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_server_shopify_publish_products" model="ir.actions.server">
+        <field name="name">发布到 Shopify</field>
+        <field name="model_id" ref="product.model_product_template"/>
+        <field name="binding_model_id" ref="product.model_product_template"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = records.action_shopify_publish_wizard()</field>
+        <field name="groups_id" eval="[(4, ref('lightlink_shopify_multistore.group_shopify_operator'))]"/>
+    </record>
+</odoo>

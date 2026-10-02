@@ -1,0 +1,84 @@
+.o_ll_shopify_dashboard {
+    padding: 0.5rem;
+
+    > header {
+        align-items: flex-start;
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+    }
+
+    h1 { margin: 0 0 0.25rem; }
+    p { color: $text-muted; margin: 0; }
+}
+
+.o_ll_shopify_metrics {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    margin-bottom: 1.25rem;
+
+    button {
+        background: $o-view-background-color;
+        border: 1px solid $border-color;
+        border-radius: 0.75rem;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+        text-align: left;
+    }
+
+    strong { font-size: 1.75rem; }
+    span { color: $text-muted; }
+    .danger strong { color: $danger; }
+}
+
+.o_ll_shopify_store_grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.o_ll_shopify_store_card {
+    background: $o-view-background-color;
+    border: 1px solid $border-color;
+    border-radius: 0.75rem;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    text-align: left;
+
+    &:hover { border-color: $primary; box-shadow: 0 0.2rem 0.75rem rgba($primary, 0.12); }
+}
+
+.o_ll_shopify_store_head,
+.o_ll_shopify_store_numbers,
+.o_ll_shopify_badges {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.o_ll_shopify_store_head { justify-content: space-between; }
+.o_ll_shopify_store_numbers { color: $text-muted; justify-content: space-between; }
+
+.o_ll_shopify_empty {
+    align-items: center;
+    border: 1px dashed $border-color;
+    border-radius: 0.75rem;
+    color: $text-muted;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 3rem;
+    text-align: center;
+}
+
+@media (max-width: 767px) {
+    .o_ll_shopify_dashboard > header { flex-direction: column; }
+}

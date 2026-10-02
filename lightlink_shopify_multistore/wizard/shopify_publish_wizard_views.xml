@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shopify_publish_wizard_form" model="ir.ui.view">
+        <field name="name">ll.shopify.publish.wizard.form</field>
+        <field name="model">ll.shopify.publish.wizard</field>
+        <field name="arch" type="xml">
+            <form string="发布到 Shopify">
+                <group>
+                    <field name="product_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                    <field name="store_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                </group>
+                <group string="本次发布范围" col="4">
+                    <field name="update_price"/>
+                    <field name="include_images"/>
+                    <field name="include_collections"/>
+                    <field name="sync_inventory"/>
+                </group>
+                <separator string="执行前预览"/>
+                <field name="validation_error_count" invisible="1"/>
+                <field name="preview_html" nolabel="1" readonly="1"/>
+                <div class="alert alert-danger" invisible="validation_error_count == 0">
+                    当前预览存在必填或配置错误，不能创建后台任务。
+                </div>
+                <footer>
+                    <button name="action_confirm_publish" type="object" string="确认并创建后台任务" class="btn-primary"/>
+                    <button string="取消" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
